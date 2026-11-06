@@ -3,7 +3,8 @@ export interface InputFile {
   bytes: Uint8Array;
 }
 
-export type Format = "txt" | "markdown" | "html" | "epub" | "zip" | "pdf" | "mobi" | "rtf" | "rar" | "unknown";
+export type Format =
+  | "txt" | "markdown" | "html" | "epub" | "zip" | "odt" | "docx" | "cbz" | "pdf" | "mobi" | "rtf" | "rar" | "unknown";
 
 /** What detect() learned from the magic bytes and the file name. */
 export interface Sniff {
