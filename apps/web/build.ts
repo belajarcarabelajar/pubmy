@@ -48,6 +48,10 @@ const libarchiveDist = dirname(Bun.resolveSync("libarchive.js", join(root, "..",
 await mkdir(join(out, "libarchive"), { recursive: true });
 for (const f of LIBARCHIVE_FILES) await copyFile(join(libarchiveDist, f), join(out, "libarchive", f));
 
+// foliate-js (MIT) is bundled into the preview chunks, so its licence ships with the site.
+await mkdir(join(out, "licenses"), { recursive: true });
+await copyFile(join(root, "vendor", "foliate", "LICENSE"), join(out, "licenses", "foliate-js.txt"));
+
 let total = 0;
 for (const name of await readdir(out, { recursive: true })) {
   const s = await stat(join(out, name));

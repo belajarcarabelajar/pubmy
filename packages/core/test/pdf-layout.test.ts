@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { layoutPage, type TextItem } from "../src/pdf/layout.ts";
+import { layoutPage, layoutPages, type TextItem } from "../src/pdf/layout.ts";
 
 // Hand-built pdf.js-like items on a 600 x 800 page. PDF y grows upward.
 const it = (str: string, x: number, y: number, fontSize = 10, width = str.length * 5): TextItem => ({
@@ -84,7 +84,108 @@ test("a lone page number at the bottom of the page is dropped", () => {
   expect(texts([it("Body text.", 50, 700), it("7", 295, 20)])).toEqual(["Body text."]);
 });
 
+test("a heading wrapped onto a second line 1.67 times its size below stays one heading", () => {
+  // nihms496502 page 2: 12 pt heading lines on a 20 pt pitch, then 10 pt body text
+  const items = [
+    it("Parental Harsh Verbal Discipline and Youth Conduct Problems and", 90, 295.6, 12, 381.4),
+    it("Depressive Symptoms", 90, 275.6, 12, 128.7),
+    it("Parental harsh verbal discipline has been linked with conduct problems in children and", 150, 255.6, 10, 347.2),
+  ];
+  expect(layoutPage(items, { ...page, bodySize: 10 })[0]).toEqual({
+    kind: "heading",
+    level: 2,
+    text: "Parental Harsh Verbal Discipline and Youth Conduct Problems and Depressive Symptoms",
+  });
+});
+
+test("two headings of one size more than two lines apart stay apart", () => {
+  const items = [it("Method", 50, 700, 12), it("Participants", 50, 670, 12), it("Body text line.", 50, 650)];
+  expect(layoutPage(items, { ...page, bodySize: 10 }).map((b) => b.text)).toEqual(["Method", "Participants", "Body text line."]);
+});
+
 test("a body size passed in for the whole document marks a page of larger text as headings", () => {
   const blocks = layoutPage([it("Chapter Two", 50, 700, 11)], { ...page, bodySize: 10 });
   expect(blocks).toEqual([{ kind: "heading", level: 2, text: "Chapter Two" }]);
+});
+
+// A page of the whole document for layoutPages; figures sit at `top` points down from the top edge.
+const pageText = (items: TextItem[], figures: { top: number; html: string }[] = []) => ({ ...page, items, figures });
+const doc = { bodySize: 10, titleSize: Infinity };
+
+test("a figure lands among the page's blocks by its position on the page", () => {
+  const blocks = layoutPages(
+    [pageText([it("Text above the figure.", 50, 700), it("Text below the figure.", 50, 300)], [{ top: 200, html: "<figure>F</figure>" }])],
+    doc,
+  );
+  expect(blocks.map((b) => [b.kind, b.text])).toEqual([
+    ["para", "Text above the figure."],
+    ["html", "<figure>F</figure>"],
+    ["para", "Text below the figure."],
+  ]);
+});
+
+test("a paragraph cut by a page break joins across a figure at the top of the next page", () => {
+  const blocks = layoutPages(
+    [
+      pageText([it("Problem behavior in youth (Gutman,", 50, 100)]),
+      pageText([it("Sameroff, & Cole, 2003).", 50, 500)], [{ top: 60, html: "<figure>F</figure>" }]),
+    ],
+    doc,
+  );
+  expect(blocks.map((b) => [b.kind, b.text])).toEqual([
+    ["para", "Problem behavior in youth (Gutman, Sameroff, & Cole, 2003)."],
+    ["html", "<figure>F</figure>"],
+  ]);
+});
+
+test("a page whose text is replaced by a table keeps the table as one block", () => {
+  const blocks = layoutPages([pageText([], [{ top: 0, html: "<table><tbody><tr><td>1</td></tr></tbody></table>" }])], doc);
+  expect(blocks).toEqual([{ kind: "html", text: "<table><tbody><tr><td>1</td></tr></tbody></table>", page: 1 }]);
+});
+
+test("a figure caption opening the next page never continues the last paragraph", () => {
+  // nihms496502: the reference list ends without a period, and page 20 opens with "Figure 1."
+  const blocks = layoutPages(
+    [
+      pageText([it("Wang MT. Developmental Psychology. 2011; 47:1251.10.1037/a0024318", 50, 100)]),
+      pageText([it("Figure 1.", 50, 500), it("Cross-lagged associations between parents and adolescents.", 50, 488)], [{ top: 60, html: "<figure>F</figure>" }]),
+    ],
+    doc,
+  );
+  expect(blocks.map((b) => b.text)).toEqual([
+    "Wang MT. Developmental Psychology. 2011; 47:1251.10.1037/a0024318",
+    "<figure>F</figure>",
+    "Figure 1. Cross-lagged associations between parents and adolescents.",
+  ]);
+});
+
+// Page-break joins measured on arXiv 2302.13971 and nihms496502 (all 600 x 800, body 10 pt).
+const twoPages = (end: string, start: string) =>
+  layoutPages([pageText([it(end, 50, 100)]), pageText([it(start, 50, 700)])], doc).map((b) => b.text);
+
+test("a table header row opening the next page does not continue a cut sentence", () => {
+  expect(twoPages("To fully benefit from this optimization, we need to", "BoolQ PIQA SIQA HellaSwag WinoGrande ARC-e ARC-c OBQA")).toEqual([
+    "To fully benefit from this optimization, we need to",
+    "BoolQ PIQA SIQA HellaSwag WinoGrande ARC-e ARC-c OBQA",
+  ]);
+});
+
+test("a reference entry opening the next page does not continue the entry before it", () => {
+  const end = "Developmental Psychology. 2006; 42:1289-1298. [PubMed: 17087561]";
+  const start = "Buss DM. Toward a psychology of person-environment correlation: the role of spouse selection.";
+  expect(twoPages(end, start)).toEqual([end, start]);
+});
+
+test("a sentence cut before a capitalised word still joins when the next page reads as prose", () => {
+  expect(twoPages("ethnicity (WHITE: 0 =", "African American, 1 = European American, 2 = other), parent education, and family income.")).toEqual([
+    "ethnicity (WHITE: 0 = African American, 1 = European American, 2 = other), parent education, and family income.",
+  ]);
+});
+
+test("a table header row after a cut sentence ending in a comma stays apart", () => {
+  // arXiv 2302.13971 page 7 opens with the header of Table 9 after "...variance in performance,"
+  expect(twoPages("Most notably, on SIQA, we observe a lot of variance in performance,", "Humanities STEM Social Sciences Other Average")).toEqual([
+    "Most notably, on SIQA, we observe a lot of variance in performance,",
+    "Humanities STEM Social Sciences Other Average",
+  ]);
 });

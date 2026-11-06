@@ -6,7 +6,17 @@ const HEADERS_FILE = join(import.meta.dir, "..", "public", "_headers");
 const LIVE_URL = "https://pubmy.belajarcarabelajar.com";
 const BEACON = "https://cloudflareinsights.com";
 const EXPECTED_CSP =
-  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' blob: 'unsafe-inline'; connect-src 'self' https://cloudflareinsights.com; img-src 'self' blob: data:; font-src blob:; frame-src blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
+// The EPUB preview renders each section in a frame loaded from a blob: URL, and those frames inherit this policy.
+const PREVIEW_DIRECTIVES: Record<string, string[]> = {
+  "frame-src": ["blob:"],
+  // The book's stylesheets become blob: URLs; foliate's reader and pubmy's comic pages use inline styles.
+  "style-src": ["'self'", "blob:", "'unsafe-inline'"],
+  // Fonts embedded in a book (AZW3/MOBI conversions keep them) load from blob: URLs.
+  "font-src": ["blob:"],
+  // Unchanged from before the preview, so a script inside a previewed EPUB still never runs.
+  "script-src": ["'self'", "'wasm-unsafe-eval'", "https://static.cloudflareinsights.com"],
+};
 
 // Cloudflare _headers format: an unindented URL pattern, then indented "Name: value" lines.
 function parseHeadersFile(text: string): Map<string, Map<string, string>> {
@@ -50,6 +60,12 @@ describe("_headers", () => {
   test("CSP matches the approved policy", () => {
     expect(siteHeaders().get("content-security-policy")).toBe(EXPECTED_CSP);
   });
+
+  for (const [name, sources] of Object.entries(PREVIEW_DIRECTIVES)) {
+    test(`${name} is exactly ${sources.join(" ")}`, () => {
+      expect(directive(siteHeaders().get("content-security-policy") ?? "", name)).toEqual(sources);
+    });
+  }
 
   test("sets nosniff", () => {
     expect(siteHeaders().get("x-content-type-options")).toBe("nosniff");
