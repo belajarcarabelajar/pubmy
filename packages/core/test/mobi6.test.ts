@@ -1,6 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { copyFileSync, mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { strFromU8, unzipSync } from "fflate";
+import { fetchFixtures } from "../../../fixtures/fetch.ts";
 import { domFor } from "../src/dom.ts";
-import { mobi6HtmlToXhtml, preferKf8 } from "../src/adapters/mobi/mobi6.ts";
+import { mobiAdapter } from "../src/adapters/mobi/index.ts";
+import { isCombo, mobi6HtmlToXhtml, preferKf8, withoutKf8Boundary } from "../src/adapters/mobi/mobi6.ts";
+import { convert, registerAdapter, type Ctx, type Result } from "../src/index.ts";
 import type { Book } from "../src/types.ts";
 
 const ctx = { dom: domFor("bun") };
@@ -85,4 +92,92 @@ describe("combo files prefer the KF8 part", () => {
     const r = await preferKf8(null, async () => book("mobi6"));
     expect([r.book.meta.title, r.warnings]).toEqual(["mobi6", []]);
   });
+});
+
+// Minimal record 0: PDB header, MOBI header with the EXTH flag, one EXTH 121 record.
+function withExth121(value: number): Uint8Array {
+  const rec0 = 96;
+  const headerLen = 232;
+  const b = new Uint8Array(rec0 + 16 + headerLen + 24);
+  const v = new DataView(b.buffer);
+  v.setUint32(78, rec0);
+  v.setUint32(rec0 + 20, headerLen);
+  v.setUint32(rec0 + 128, 0x40);
+  const exth = rec0 + 16 + headerLen;
+  b.set([0x45, 0x58, 0x54, 0x48], exth);
+  v.setUint32(exth + 4, 24);
+  v.setUint32(exth + 8, 1);
+  v.setUint32(exth + 12, 121);
+  v.setUint32(exth + 16, 12);
+  v.setUint32(exth + 20, value);
+  return b;
+}
+
+describe("combo file detection", () => {
+  test("EXTH 121 naming a record marks a combo file", () => {
+    expect(isCombo(withExth121(5))).toBe(true);
+  });
+
+  test("EXTH 121 of 0xffffffff is not a combo file", () => {
+    expect(isCombo(withExth121(0xffffffff))).toBe(false);
+  });
+
+  test("hiding the boundary leaves the original bytes untouched", () => {
+    const bytes = withExth121(5);
+    expect([isCombo(withoutKf8Boundary(bytes)), isCombo(bytes)]).toEqual([false, true]);
+  });
+});
+
+const FIXTURES = join(import.meta.dir, "../../../fixtures");
+const DL = join(FIXTURES, "out/dl");
+const fullCtx: Ctx = {
+  dom: domFor("bun"),
+  loadOcr: () => Promise.reject(new Error("no OCR")),
+  progress: () => {},
+  signal: new AbortController().signal,
+};
+const bytesOf = (name: string) => new Uint8Array(readFileSync(join(DL, name)));
+const read = (name: string): Promise<Book> => mobiAdapter.read({ name, bytes: bytesOf(name) }, fullCtx);
+type Ok = Extract<Result, { ok: true }>;
+function expectOk(r: Result): Ok {
+  if (!r.ok) throw new Error(`expected ok, got ${r.code}: ${r.message}`);
+  return r;
+}
+// Visible characters only, so markup and whitespace differences between the two paths do not count.
+const textLength = (b: Book) =>
+  b.chapters
+    .map((c) => c.body.replace(/<[^>]*>/g, "").replace(/&#?\w+;/g, "x").replace(/\s+/g, ""))
+    .join("").length;
+
+describe("mobi adapter: Gutenberg MOBI6", () => {
+  let unregister = () => {};
+  beforeAll(async () => {
+    unregister = registerAdapter(mobiAdapter);
+    const sources = mkdtempSync(join(tmpdir(), "pubmy-gutenberg-"));
+    copyFileSync(join(FIXTURES, "sources/gutenberg.json"), join(sources, "gutenberg.json"));
+    expect(await fetchFixtures(sources, DL)).toBe(0);
+  }, 120_000);
+  afterAll(() => unregister());
+
+  for (const id of ["pg11", "pg28885"]) {
+    test(`${id} converts with 0 epubcheck errors`, async () => {
+      const r = expectOk(await convert({ name: `${id}-kindle.mobi`, bytes: bytesOf(`${id}-kindle.mobi`) }, fullCtx));
+      expect(r.check.errors).toBe(0);
+    }, 120_000);
+
+    test(`${id} text length is within 1 % of the AZW3 of the same book`, async () => {
+      const mobi6 = textLength(await read(`${id}-kindle.mobi`));
+      const kf8 = textLength(await read(`${id}-kf8.azw3`));
+      expect(Math.abs(mobi6 - kf8) / kf8).toBeLessThanOrEqual(0.01);
+    }, 120_000);
+  }
+
+  test("a centered paragraph keeps text-align: center in the EPUB", async () => {
+    const r = expectOk(await convert({ name: "pg11-kindle.mobi", bytes: bytesOf("pg11-kindle.mobi") }, fullCtx));
+    const xhtml = Object.entries(unzipSync(r.epub))
+      .filter(([p]) => p.endsWith(".xhtml") && !p.endsWith("nav.xhtml"))
+      .map(([, b]) => strFromU8(b))
+      .join("\n");
+    expect(xhtml).toMatch(/<(p|div)\b[^>]*style="[^"]*text-align: center/);
+  }, 120_000);
 });
