@@ -23,9 +23,10 @@ function wrap(worker: Worker, toInput: (png: Uint8Array) => ImageInput): Ocr {
 type Tesseract = typeof import("tesseract.js");
 
 /**
- * tesseract.js picks browser or node once, when it is first loaded, from `typeof document`. The linkedom
- * document that installDomGlobals leaves for mobi.js would send it down the browser path, which reads
- * `window.location`, so under Bun the global is hidden while the module loads.
+ * tesseract.js picks browser or node once, when it is first loaded, from `typeof document`. MOBI
+ * conversions now scope their linkedom globals (withDomGlobals), but a document left by any other code,
+ * or a scan converted while a MOBI conversion runs, would still send it down the browser path, which
+ * reads `window.location`; so under Bun the global stays hidden while the module loads.
  */
 async function importForNode(): Promise<Tesseract> {
   const g = globalThis as { document?: unknown };

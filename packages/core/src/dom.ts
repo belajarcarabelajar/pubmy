@@ -11,10 +11,50 @@ export function domFor(env: "browser" | "bun"): DomAdapter {
   return { parseHTML: (m) => p.parseFromString(m, "text/html") as unknown as Document };
 }
 
+const DOM_GLOBALS = ["DOMParser", "XMLSerializer", "document", "CSS"] as const;
+let scopes = 0;
+let saved: { key: string; value: unknown; own: PropertyDescriptor | undefined }[] = [];
+
+/**
+ * Runs fn with the globals foliate-js mobi.js expects (see installDomGlobals), then puts back the
+ * previous values, or removes the ones that were absent, also when fn throws. Libraries loaded
+ * later pick browser or node from `typeof document`, so the linkedom globals must not outlive
+ * the conversion. Overlapping scopes share one install that ends with the last scope.
+ */
+export async function withDomGlobals<T>(fn: () => T | Promise<T>): Promise<T> {
+  if (scopes++ === 0) {
+    const g = globalThis as Record<string, unknown>;
+    saved = DOM_GLOBALS.map((key) => ({ key, value: g[key], own: Object.getOwnPropertyDescriptor(g, key) }));
+    try {
+      installDomGlobals();
+    } catch (e) {
+      restoreDomGlobals();
+      throw e;
+    }
+  }
+  try {
+    return await fn();
+  } finally {
+    restoreDomGlobals();
+  }
+}
+
+function restoreDomGlobals(): void {
+  if (--scopes > 0) return;
+  const g = globalThis as Record<string, unknown>;
+  for (const { key, value, own } of saved) {
+    if (g[key] === value) continue;
+    if (own) Object.defineProperty(g, key, own);
+    else delete g[key];
+  }
+  saved = [];
+}
+
 /**
  * Fills the browser globals foliate-js mobi.js expects (DOMParser, XMLSerializer, document,
  * CSS.escape, innerText, textarea.value) with linkedom when they are missing, as under Bun.
- * In a browser every native global exists and nothing is replaced.
+ * In a browser every native global exists and nothing is replaced. The globals stay installed;
+ * conversions go through withDomGlobals instead.
  */
 export function installDomGlobals(): void {
   const g = globalThis as Record<string, any>;
