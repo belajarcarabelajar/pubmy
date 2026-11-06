@@ -1,5 +1,4 @@
-type Core = typeof import("@pubmy/core");
-type LibarchiveLoader = NonNullable<NonNullable<Parameters<Core["createComicsAdapter"]>[0]>["loadLibarchive"]>;
+import type { LibarchiveLoader } from "@pubmy/core/browser";
 
 /**
  * Files build.ts copies from libarchive.js/dist into dist/libarchive/. They must stay side by side:
@@ -7,7 +6,7 @@ type LibarchiveLoader = NonNullable<NonNullable<Parameters<Core["createComicsAda
  */
 export const LIBARCHIVE_FILES = ["libarchive.js", "worker-bundle.js", "libarchive.wasm"] as const;
 
-/** Loads the browser build of libarchive.js served same-origin from dist, never the Node build core defaults to. */
+/** Loads the browser build of libarchive.js served same-origin from dist, never the Node build (Bun/Node only). */
 export function browserLibarchiveLoader(
   base: string,
   importModule: (url: string) => Promise<unknown> = (url) => import(/* @vite-ignore */ url),

@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { makeCbz, makePng } from "../../../fixtures/make-cbz.ts";
 import { fetchFixtures, uudecode } from "../../../fixtures/fetch.ts";
-import { checkCaps, createComicsAdapter, imageSize, naturalCompare, readArchive } from "../src/adapters/comics.ts";
-import { convert, domFor, pack, PubmyError, registerAdapter, validate, type Ctx } from "../src/index.ts";
+import { checkCaps, DEFAULT_LIMITS, imageSize, naturalCompare, readArchive } from "../src/adapters/comics.ts";
+import { convert, createComicsAdapter, domFor, loadNodeLibarchive, pack, PubmyError, registerAdapter, validate, type Ctx } from "../src/index.ts";
 
 const ctx: Ctx = {
   dom: domFor("bun"),
@@ -183,7 +183,7 @@ describe("comics adapter on RAR (libarchive test files)", () => {
   });
 
   test("reads every file entry of a RAR4 archive, nested folders included", async () => {
-    const entries = await readArchive(new Uint8Array(readFileSync(join(dl, "rar4.cbr"))), "rar");
+    const entries = await readArchive(new Uint8Array(readFileSync(join(dl, "rar4.cbr"))), "rar", DEFAULT_LIMITS, loadNodeLibarchive);
     expect(entries.map((e) => [e.path, strFromU8(e.data)])).toEqual([
       ["test.txt", "test text document\r\n"],
       ["testdir/test.txt", "test text document\r\n"],
@@ -191,7 +191,7 @@ describe("comics adapter on RAR (libarchive test files)", () => {
   });
 
   test("reads a compressed RAR5 archive", async () => {
-    const entries = await readArchive(new Uint8Array(readFileSync(join(dl, "rar5.cbr"))), "rar");
+    const entries = await readArchive(new Uint8Array(readFileSync(join(dl, "rar5.cbr"))), "rar", DEFAULT_LIMITS, loadNodeLibarchive);
     expect(entries.map((e) => [e.path, e.data.length])).toEqual([["test.bin", 1200]]);
   });
 

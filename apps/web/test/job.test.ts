@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { Result } from "@pubmy/core";
+import type { Result } from "@pubmy/core/browser";
 import { createJobRunner, type FromWorker, type ToWorker } from "../src/job.ts";
 
-type Core = typeof import("@pubmy/core");
+type Core = typeof import("@pubmy/core/browser");
 const BASE = "https://pubmy.test/worker.js";
 const OK: Result = { ok: true, epub: new Uint8Array([1]), check: { errors: 0, warnings: 0 } };
 const FAILED: Result = { ok: false, code: "READ_FAILED", message: "read-failed" };

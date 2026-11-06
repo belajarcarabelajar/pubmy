@@ -19,11 +19,11 @@ interface LibArchive {
 export interface LibarchiveModule {
   Archive: { open(file: File): Promise<LibArchive> };
 }
-/** Loads libarchive.js; the browser build needs its worker URL set up, so the web app passes its own loader. */
+/**
+ * Loads libarchive.js. Always injected: Bun/Node pass loadNodeLibarchive (libarchive-node.ts), the web app
+ * passes a loader for the browser build served beside its worker.
+ */
 export type LibarchiveLoader = () => Promise<LibarchiveModule>;
-
-const NODE_BUILD = "libarchive.js/dist/libarchive-node.mjs";
-export const loadNodeLibarchive: LibarchiveLoader = () => import(/* @vite-ignore */ NODE_BUILD) as Promise<LibarchiveModule>;
 
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 /** Natural filename order: p2 before p10, case-insensitive. */
@@ -43,7 +43,8 @@ async function flatten(tree: unknown, prefix: string, out: Entry[]): Promise<voi
   }
 }
 
-async function readRar(bytes: Uint8Array, limits: Limits, load: LibarchiveLoader): Promise<Entry[]> {
+async function readRar(bytes: Uint8Array, limits: Limits, load: LibarchiveLoader | undefined): Promise<Entry[]> {
+  if (!load) throw new Error("readArchive needs a libarchive loader for RAR");
   const { Archive } = await load();
   const archive = await Archive.open(new File([bytes as Uint8Array<ArrayBuffer>], "archive.rar"));
   try {
@@ -58,7 +59,7 @@ async function readRar(bytes: Uint8Array, limits: Limits, load: LibarchiveLoader
 
 /** File entries of a zip or rar archive, natural-sorted, with `..` paths dropped and the caps enforced. */
 export async function readArchive(bytes: Uint8Array, format: "zip" | "rar", limits: Limits = DEFAULT_LIMITS,
-  load: LibarchiveLoader = loadNodeLibarchive): Promise<Entry[]> {
+  load?: LibarchiveLoader): Promise<Entry[]> {
   const entries = format === "zip" ? readZip(bytes, limits) : await readRar(bytes, limits, load);
   // The declared sizes can lie; check what was really extracted too.
   checkCaps(entries.map((e) => ({ size: e.data.length })), limits);
@@ -119,10 +120,10 @@ const EXT: Record<ImageType, string> = { png: "png", jpeg: "jpg", gif: "gif", we
 export interface ComicsOptions {
   direction?: "ltr" | "rtl";
   limits?: Limits;
-  loadLibarchive?: LibarchiveLoader;
+  loadLibarchive: LibarchiveLoader;
 }
 
-export function createComicsAdapter(opts: ComicsOptions = {}): Adapter {
+export function createComicsAdapter(opts: ComicsOptions): Adapter {
   return {
     id: "comics",
     accepts: (s) => (s.format === "zip" && s.ext === "cbz") || (s.format as string) === "cbz" || s.format === "rar",
@@ -160,5 +161,3 @@ export function createComicsAdapter(opts: ComicsOptions = {}): Adapter {
     },
   };
 }
-
-export const comicsAdapter = createComicsAdapter();

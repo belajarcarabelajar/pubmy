@@ -10,7 +10,7 @@ const scope = self as unknown as WorkerScope;
 
 const run = createJobRunner({
   // The core and its adapters load on the first file, as a separate chunk, so the page itself stays small.
-  importCore: () => import("@pubmy/core"),
+  importCore: () => import("@pubmy/core/browser"),
   base: self.location.href,
   post: (m, transfer) => scope.postMessage(m, transfer),
 });

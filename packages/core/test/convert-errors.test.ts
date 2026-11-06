@@ -37,6 +37,14 @@ describe("adapter failures keep their code", () => {
   });
 });
 
+describe("validation failures", () => {
+  test("a validator that throws yields INVALID_EPUB instead of a rejected promise", async () => {
+    const throwing = () => Promise.reject(new Error("epubcheck crashed"));
+    const r = await convert(file("note.txt", "plain words"), ctx, { validate: throwing });
+    expect(r).toEqual({ ok: false, code: "INVALID_EPUB", message: "invalid-epub" });
+  });
+});
+
 describe("adapter order", () => {
   test("a registered adapter wins over the text adapter for the same input", async () => {
     const unregister = registerAdapter({
