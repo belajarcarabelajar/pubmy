@@ -7,5 +7,12 @@
     "build": "bun build.ts",
     "check:assets": "bun scripts/check-assets.ts dist"
   },
-  "dependencies": { "@pubmy/core": "workspace:*" }
+  "dependencies": {
+    "@pubmy/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@tesseract.js-data/ind": "1.0.0",
+    "@tesseract.js-data/eng": "1.0.0",
+    "tesseract.js": "7.0.0"
+  }
 }

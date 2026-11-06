@@ -30,6 +30,11 @@
       "dependencies": {
         "@pubmy/core": "workspace:*",
       },
+      "devDependencies": {
+        "@tesseract.js-data/eng": "1.0.0",
+        "@tesseract.js-data/ind": "1.0.0",
+        "tesseract.js": "7.0.0",
+      },
     },
     "packages/core": {
       "name": "@pubmy/core",
@@ -86,6 +91,10 @@
     "@pubmy/core": ["@pubmy/core@workspace:packages/core"],
 
     "@pubmy/web": ["@pubmy/web@workspace:apps/web"],
+
+    "@tesseract.js-data/eng": ["@tesseract.js-data/eng@1.0.0", "", {}, "sha512-mbTumm6KQPUHyzTPQaF3ObXYnx0SqqfV2nabqFVQBwD6Kl7PhGSLSzOlfFTWy0P3BjghaSKA2W9GB19Jk+ZcTg=="],
+
+    "@tesseract.js-data/ind": ["@tesseract.js-data/ind@1.0.0", "", {}, "sha512-bykwjIpoIR9jqHm+juv2FSMR8Xg3gNnAqYzu6nI01wMiTTMamyZE6r27Kvp39Mi34j9XHsvNAuKdZKzqV+YcgA=="],
 
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
