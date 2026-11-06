@@ -9,7 +9,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./browser": "./src/browser.ts",
-    "./ocr": "./src/ocr/load.ts"
+    "./ocr": "./src/ocr/load.ts",
+    "./render-bun": "./src/render/bun.ts",
+    "./render-browser": "./src/render/browser.ts"
   },
   "dependencies": {
     "@likecoin/epubcheck-ts": "0.7.0",

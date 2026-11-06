@@ -72,9 +72,31 @@ export interface Ocr {
   terminate(): Promise<void>;
 }
 
+/** A rectangle on a PDF page in PDF points: pdf.js user space of page.view, origin bottom-left. */
+export interface PageBox {
+  /** 1-based page number. */
+  page: number;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
+ * Renders areas of a PDF (formulas, vector diagrams) to PNG. The CLI backs it with a Skia canvas
+ * downloaded on first use, the website with OffscreenCanvas in its worker.
+ */
+export interface PdfRenderer {
+  /** One 8-bit gray or RGB PNG without alpha per box, in order, at `dpi`; null for a box that failed. */
+  renderBoxes(pdf: Uint8Array, boxes: PageBox[], dpi: number, signal?: AbortSignal): Promise<(Uint8Array | null)[]>;
+  close(): Promise<void>;
+}
+
 export interface Ctx {
   dom: DomAdapter;
   loadOcr(): Promise<Ocr>;
+  /** null (or absent) when no renderer can be had, e.g. the CLI offline before its first download. */
+  loadRenderer?(): Promise<PdfRenderer | null>;
   progress(p: number): void;
   signal: AbortSignal;
 }
