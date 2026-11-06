@@ -58,12 +58,41 @@ function fontEm(v: string): string | null {
 
 const noLinks: Mobi6Links = { filepos: () => null, image: () => null };
 
-function serializeNode(node: Node, links: Mobi6Links): string {
+// What XHTML allows directly inside table structure. foliate inserts filepos anchors at byte
+// offsets, which can land between rows, and linkedom does not foster-parent them out.
+const TABLE_CHILDREN: Record<string, Set<string>> = {
+  table: new Set(["caption", "colgroup", "thead", "tbody", "tfoot", "tr"]),
+  thead: new Set(["tr"]),
+  tbody: new Set(["tr"]),
+  tfoot: new Set(["tr"]),
+  tr: new Set(["td", "th"]),
+};
+
+/** `stray` collects markup misplaced in table structure until the next cell takes it. */
+function serializeNode(node: Node, links: Mobi6Links, stray?: string[]): string {
   if (node.nodeType === 3) return esc(node.nodeValue ?? "");
   if (node.nodeType !== 1) return "";
   const el = node as Element;
   const tag = el.localName.toLowerCase();
-  const kids = () => Array.from(el.childNodes, (n) => serializeNode(n, links)).join("");
+  let after = "";
+  const kids = () => {
+    const allowed = TABLE_CHILDREN[tag];
+    if (!allowed) {
+      const pre = (tag === "td" || tag === "th") && stray ? stray.splice(0).join("") : "";
+      return pre + Array.from(el.childNodes, (n) => serializeNode(n, links)).join("");
+    }
+    const own = tag === "table" ? [] : (stray ?? []);
+    let s = "";
+    for (const n of Array.from(el.childNodes)) {
+      const name = n.nodeType === 1 ? (n as Element).localName.toLowerCase() : "";
+      if (allowed.has(name)) s += serializeNode(n, links, own);
+      else if (n.nodeType === 3 && !(n.nodeValue ?? "").trim()) s += esc(n.nodeValue ?? "");
+      else own.push(serializeNode(n, links));
+    }
+    // Leftovers with no later cell go right after the table, so their ids stay in the file.
+    if (tag === "table") after = own.join("");
+    return s;
+  };
   if (DROP.has(tag)) return "";
   if (tag.includes(":") || tag === "html" || tag === "body") return kids();
   const out = OBSOLETE[tag] ?? tag;
@@ -99,7 +128,8 @@ function serializeNode(node: Node, links: Mobi6Links): string {
   const style = styles.filter(Boolean).join("; ");
   if (style) attrs += ` style="${escAttr(style)}"`;
   if (VOID.has(out)) return `<${out}${attrs}/>`;
-  return `<${out}${attrs}>${kids()}</${out}>`;
+  const inner = kids();
+  return `<${out}${attrs}>${inner}</${out}>${after}`;
 }
 
 /**

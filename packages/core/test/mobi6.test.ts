@@ -66,6 +66,24 @@ describe("MOBI6 markup transforms", () => {
   });
 });
 
+describe("filepos anchors inside table structure (RSC-005)", () => {
+  const cases: Record<string, string> = {
+    "directly in table": `<table><a id="filepos123"></a><tr><td>x</td></tr></table>`,
+    "in tbody": `<table><tbody><a id="filepos123"></a><tr><td>x</td></tr></tbody></table>`,
+    "in tr": `<table><tr><a id="filepos123"></a><td>x</td></tr></table>`,
+    "after the last row": `<table><tr><td>x</td></tr><a id="filepos123"></a></table>`,
+  };
+  for (const [where, markup] of Object.entries(cases)) {
+    test(`an anchor ${where} moves out of the table structure and keeps its id`, () => {
+      const doc = ctx.dom.parseHTML(`<div>${x(markup)}</div><p><a href="#filepos123">back</a></p>`);
+      expect(doc.querySelectorAll("table > a, thead > a, tbody > a, tfoot > a, tr > a").length).toBe(0);
+      const href = doc.querySelector("a[href]")?.getAttribute("href") ?? "";
+      expect(doc.getElementById(href.slice(1))?.localName).toBe("a");
+      expect(doc.querySelector("td")?.textContent).toBe("x");
+    });
+  }
+});
+
 const book = (title: string): Book => ({
   meta: { title, creators: [], language: "en" },
   chapters: [],
@@ -171,6 +189,16 @@ describe("mobi adapter: Gutenberg MOBI6", () => {
       expect(Math.abs(mobi6 - kf8) / kf8).toBeLessThanOrEqual(0.01);
     }, 120_000);
   }
+
+  // Java EPUBCheck 5.4.0 reported 17 RSC-005 here that epubcheck-ts missed.
+  test("pg28885 has no anchor directly inside table structure", async () => {
+    const book = await read("pg28885-kindle.mobi");
+    const misplaced = book.chapters.reduce(
+      (n, c) => n + fullCtx.dom.parseHTML(`<div>${c.body}</div>`).querySelectorAll("table > a, thead > a, tbody > a, tfoot > a, tr > a").length,
+      0,
+    );
+    expect(misplaced).toBe(0);
+  }, 120_000);
 
   test("a centered paragraph keeps text-align: center in the EPUB", async () => {
     const r = expectOk(await convert({ name: "pg11-kindle.mobi", bytes: bytesOf("pg11-kindle.mobi") }, fullCtx));
