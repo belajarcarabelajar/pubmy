@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { InputFile, Result } from "@pubmy/core";
@@ -9,14 +9,21 @@ import { run, type ConvertFn } from "../src/main.ts";
 import { exitCode, formatReport, type Row } from "../src/report.ts";
 import { outputPath, walk } from "../src/walk.ts";
 
+let base: string;
 let root: string;
+// A sibling of root, so a link into it points outside the converted folder.
+let outside: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "pubmy-cli-"));
+  base = await mkdtemp(join(tmpdir(), "pubmy-cli-"));
+  root = join(base, "root");
+  outside = join(base, "outside");
+  await mkdir(root);
+  await mkdir(outside);
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await rm(base, { recursive: true, force: true });
 });
 
 const T0 = new Date("2026-01-01T00:00:00Z");
@@ -76,6 +83,28 @@ describe("walk", () => {
     await put("sub/b.md");
     await symlink(root, join(root, "sub", "loop"));
     expect(await walk(root)).toEqual(["sub/b.md"]);
+  });
+
+  test("skips a symlinked folder whose real path is outside the folder", async () => {
+    await put("a.txt");
+    await writeFile(join(outside, "x.txt"), "secret");
+    await symlink(outside, join(root, "ext"));
+    expect(await walk(root)).toEqual(["a.txt"]);
+  });
+
+  test("skips a symlinked file whose real path is outside the folder", async () => {
+    await put("a.txt");
+    await writeFile(join(outside, "x.txt"), "secret");
+    await symlink(join(outside, "x.txt"), join(root, "link.txt"));
+    expect(await walk(root)).toEqual(["a.txt"]);
+  });
+
+  test("follows symlinks that stay inside the folder", async () => {
+    await put("a.txt");
+    await put(".src/x.md");
+    await symlink(join(root, ".src"), join(root, "books"));
+    await symlink(join(root, "a.txt"), join(root, "b.txt"));
+    expect(await walk(root)).toEqual(["a.txt", "b.txt", "books/x.md"]);
   });
 });
 
@@ -207,12 +236,73 @@ describe("run", () => {
   });
 
   test("an output that cannot be written is reported as failed WRITE_FAILED", async () => {
+    await put("sub/b.md");
+    // A plain file where an output subfolder should be makes mkdir fail.
+    await put("pubmy-epub/sub", "not a folder");
+    const c = capture();
+    expect(await run([root], { ...c.io, convert: fakeConvert() })).toBe(1);
+    expect(c.out()).toMatch(/sub\/b\.md\s+failed WRITE_FAILED/);
+  });
+
+  test("exits 2 when pubmy-epub is a plain file", async () => {
     await put("a.txt");
-    // A plain file where the output folder should be makes mkdir fail.
     await put("pubmy-epub", "not a folder");
+    const c = capture();
+    const conv = fakeConvert();
+    expect(await run([root], { ...c.io, convert: conv })).toBe(2);
+    expect(c.err()).toMatch(/pubmy-epub/);
+    expect(conv.calls).toEqual([]);
+  });
+
+  test("exits 2 when pubmy-epub is a symlink and writes nothing outside", async () => {
+    await put("a.txt");
+    await symlink(outside, join(root, "pubmy-epub"));
+    const c = capture();
+    const conv = fakeConvert();
+    expect(await run([root], { ...c.io, convert: conv })).toBe(2);
+    expect(c.err()).toMatch(/pubmy-epub/);
+    expect(conv.calls).toEqual([]);
+    expect(await readdir(outside)).toEqual([]);
+  });
+
+  test("a pre-existing symlinked output file is refused and its target is unchanged", async () => {
+    await put("a.txt");
+    const victim = join(outside, "victim.txt");
+    await writeFile(victim, "keep");
+    await mkdir(join(root, "pubmy-epub"));
+    await symlink(victim, join(root, "pubmy-epub/a.txt.epub"));
     const c = capture();
     expect(await run([root], { ...c.io, convert: fakeConvert() })).toBe(1);
     expect(c.out()).toMatch(/a\.txt\s+failed WRITE_FAILED/);
+    expect(await readFile(victim, "utf8")).toBe("keep");
+    expect((await lstat(join(root, "pubmy-epub/a.txt.epub"))).isSymbolicLink()).toBe(true);
+  });
+
+  test("a symlinked output subfolder is refused and nothing is written outside", async () => {
+    await put("sub/b.md");
+    await mkdir(join(root, "pubmy-epub"));
+    await symlink(outside, join(root, "pubmy-epub/sub"));
+    const c = capture();
+    expect(await run([root, "--force"], { ...c.io, convert: fakeConvert() })).toBe(1);
+    expect(c.out()).toMatch(/sub\/b\.md\s+failed WRITE_FAILED/);
+    expect(await readdir(outside)).toEqual([]);
+  });
+
+  test("a symlinked subfolder pointing outside is not converted", async () => {
+    await put("a.txt");
+    await writeFile(join(outside, "x.txt"), "secret");
+    await symlink(outside, join(root, "ext"));
+    const conv = fakeConvert();
+    expect(await run([root], { ...capture().io, convert: conv })).toBe(0);
+    expect(conv.calls).toEqual(["a.txt"]);
+    await expect(stat(join(root, "pubmy-epub/ext"))).rejects.toThrow();
+  });
+
+  test("an in-tree symlinked file is still converted", async () => {
+    await put("a.txt");
+    await symlink(join(root, "a.txt"), join(root, "b.txt"));
+    expect(await run([root], { ...capture().io, convert: fakeConvert() })).toBe(0);
+    expect(await readFile(join(root, "pubmy-epub/b.txt.epub"), "utf8")).toBe("epub:b.txt");
   });
 
   test("without an injected convert the core turns a txt file into a zip-based EPUB", async () => {

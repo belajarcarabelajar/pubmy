@@ -1,8 +1,9 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, mkdir, open, readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type { InputFile, Result } from "@pubmy/core";
 import { exitCode, formatReport, type Row } from "./report.ts";
-import { outputPath, walk } from "./walk.ts";
+import { isInside, OUT_DIR, outputPath, walk } from "./walk.ts";
 
 export type ConvertFn = (f: InputFile) => Promise<Result>;
 
@@ -43,9 +44,35 @@ async function mtimeMs(path: string): Promise<number | undefined> {
   return stat(path).then((s) => s.mtimeMs, () => undefined);
 }
 
+/** False when pubmy-epub, a folder below it on the way to the output, or the output itself is a symlink. */
+async function outputIsSafe(root: string, rel: string): Promise<boolean> {
+  let p = join(root, OUT_DIR);
+  for (const seg of ["", ...`${rel}.epub`.split("/")]) {
+    p = join(p, seg);
+    const s = await lstat(p).catch(() => undefined);
+    if (s === undefined) return true;
+    if (s.isSymbolicLink()) return false;
+  }
+  return true;
+}
+
+async function writeOutput(root: string, out: string, bytes: Uint8Array): Promise<void> {
+  await mkdir(dirname(out), { recursive: true });
+  const [realBase, realDir] = await Promise.all([realpath(join(root, OUT_DIR)), realpath(dirname(out))]);
+  if (!isInside(realBase, realDir)) throw new Error(`output escapes ${OUT_DIR}`);
+  // O_NOFOLLOW refuses a symlink planted at the target between the check and the write.
+  const fh = await open(out, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | (constants.O_NOFOLLOW ?? 0));
+  try {
+    await fh.writeFile(bytes);
+  } finally {
+    await fh.close();
+  }
+}
+
 async function convertOne(root: string, rel: string, force: boolean, convert: ConvertFn): Promise<Row> {
   const src = join(root, rel);
   const out = outputPath(root, rel);
+  if (!(await outputIsSafe(root, rel))) return { rel, status: "failed", code: "WRITE_FAILED" };
   const outTime = await mtimeMs(out);
   const srcTime = await mtimeMs(src);
   if (!force && outTime !== undefined && srcTime !== undefined && outTime >= srcTime) {
@@ -62,8 +89,7 @@ async function convertOne(root: string, rel: string, force: boolean, convert: Co
     return result.code === "UNSUPPORTED" ? { rel, status: "unsupported" } : { rel, status: "failed", code: result.code };
   }
   try {
-    await mkdir(dirname(out), { recursive: true });
-    await writeFile(out, result.epub);
+    await writeOutput(root, out, result.epub);
   } catch {
     return { rel, status: "failed", code: "WRITE_FAILED" };
   }
@@ -93,6 +119,12 @@ export async function run(argv: string[], io: Io): Promise<number> {
   const isDir = await stat(root).then((s) => s.isDirectory(), () => false);
   if (!isDir) {
     io.stderr(`not a directory: ${root}\n${USAGE}`);
+    return 2;
+  }
+  const outDir = join(root, OUT_DIR);
+  const outNotDir = await lstat(outDir).then((s) => !s.isDirectory(), () => false);
+  if (outNotDir) {
+    io.stderr(`${outDir} exists but is not a real folder (a symlink or a file); move it away and rerun\n${USAGE}`);
     return 2;
   }
 

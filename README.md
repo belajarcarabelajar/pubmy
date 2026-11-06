@@ -81,12 +81,13 @@ bun skills/pubmy/scripts/pubmy.js <folder> [--force] [--rtl]
 - `--force` reconverts every file.
 - `--rtl` uses right-to-left page order for comics (manga).
 - It prints one row per file: `converted`, `skipped`, `unsupported`, or `failed <CODE>`.
+- Symlinks that resolve outside `<folder>` are skipped, and an output whose path inside `pubmy-epub/` is a symlink fails with `WRITE_FAILED`.
 
 | Exit code | Meaning |
 |---|---|
 | 0 | Every file was converted, skipped, or is not a supported format |
 | 1 | At least one file failed |
-| 2 | Usage error: no folder given, the path is not a folder, or an unknown flag |
+| 2 | Usage error: no folder given, the path is not a folder, an unknown flag, or `<folder>/pubmy-epub` exists but is not a real folder |
 
 ## Send to Kindle
 

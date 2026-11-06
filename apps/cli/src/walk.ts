@@ -1,12 +1,18 @@
 import { readdir, realpath, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
 export const OUT_DIR = "pubmy-epub";
 
-/** Relative paths of every source file under root, sorted. */
+/** True when `path` is `dir` itself or lies below it; both must already be real paths. */
+export function isInside(dir: string, path: string): boolean {
+  return path === dir || path.startsWith(dir.endsWith(sep) ? dir : dir + sep);
+}
+
+/** Relative paths of every source file under root, sorted. Symlinks resolving outside root are skipped. */
 export async function walk(root: string): Promise<string[]> {
   const files: string[] = [];
   const seen = new Set<string>();
+  const realRoot = await realpath(root);
 
   async function visit(dir: string, rel: string): Promise<void> {
     const real = await realpath(dir);
@@ -19,6 +25,8 @@ export async function walk(root: string): Promise<string[]> {
       const childRel = rel ? `${rel}/${e.name}` : e.name;
       let isDir = e.isDirectory();
       if (e.isSymbolicLink()) {
+        const target = await realpath(abs).catch(() => undefined);
+        if (target !== undefined && !isInside(realRoot, target)) continue;
         // A dangling link stays in the list so the run reports it as READ_FAILED.
         isDir = await stat(abs).then((s) => s.isDirectory(), () => false);
       }
