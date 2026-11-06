@@ -6,7 +6,7 @@ const HEADERS_FILE = join(import.meta.dir, "..", "public", "_headers");
 const LIVE_URL = "https://pubmy.belajarcarabelajar.com";
 const BEACON = "https://cloudflareinsights.com";
 const EXPECTED_CSP =
-  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'";
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 
 // Cloudflare _headers format: an unindented URL pattern, then indented "Name: value" lines.
 function parseHeadersFile(text: string): Map<string, Map<string, string>> {
