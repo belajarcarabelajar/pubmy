@@ -1,3 +1,4 @@
+import { comicsAdapter } from "./adapters/comics.ts";
 import { docxAdapter } from "./adapters/docx.ts";
 import { textAdapter } from "./adapters/text.ts";
 import { detect } from "./detect.ts";
@@ -13,7 +14,7 @@ export { pack } from "./packager.ts";
 export { validate } from "./validate.ts";
 export { PubmyError } from "./errors.ts";
 
-const adapters: Adapter[] = [docxAdapter, textAdapter];
+const adapters: Adapter[] = [comicsAdapter, docxAdapter, textAdapter];
 
 /**
  * Adds an adapter ahead of the ones already registered (newest first, the built-in text adapter last),

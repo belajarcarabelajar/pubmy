@@ -1,0 +1,14 @@
+[
+  {
+    "name": "rar4.cbr",
+    "url": "https://raw.githubusercontent.com/libarchive/libarchive/eb57ffefe20e98eb7ba05829ee1c23b90e589a71/libarchive/test/test_read_format_rar.rar.uu",
+    "sha256": "d421b86f6290aefad61b2a36737253b2b30fe27c156bd95abfc230f24fe0307e",
+    "uudecode": true
+  },
+  {
+    "name": "rar5.cbr",
+    "url": "https://raw.githubusercontent.com/libarchive/libarchive/eb57ffefe20e98eb7ba05829ee1c23b90e589a71/libarchive/test/test_read_format_rar5_compressed.rar.uu",
+    "sha256": "68f9d7e2662cd5bc5607ba9c6bf1edbf121cf3b08011a7d8643091791750a7c8",
+    "uudecode": true
+  }
+]

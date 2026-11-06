@@ -69,7 +69,15 @@ function opf(book: Book, uid: string): string {
 </package>`;
 }
 
-const CONTAINER = `<?xml version="1.0"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">` +
+// Fixed layout: the page size is the width/height attributes of the first <img> in the body.
+function viewportMeta(body: string): string {
+  const img = body.match(/<img\b[^>]*>/i)?.[0] ?? "";
+  const w = img.match(/\swidth="(\d+)"/)?.[1];
+  const h = img.match(/\sheight="(\d+)"/)?.[1];
+  return w && h ? `<meta name="viewport" content="width=${w}, height=${h}"/>` : "";
+}
+
+const CONTAINER =`<?xml version="1.0"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">` +
   `<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`;
 
 /** Writes an EPUB 3 (OCF zip) from a Book model, with the Kindle fixes applied to every chapter. */
@@ -87,7 +95,10 @@ export function pack(book: Book): Uint8Array {
     "OEBPS/nav.xhtml": strToU8(nav),
     "OEBPS/toc.ncx": strToU8(ncx(book, uid, toc)),
   };
-  for (const c of book.chapters) files[`OEBPS/${c.href}`] = strToU8(xhtmlDoc(lang, c.title, "", kindleFix(c.body)));
+  for (const c of book.chapters) {
+    const head = book.layout === "fixed" ? viewportMeta(c.body) : "";
+    files[`OEBPS/${c.href}`] = strToU8(xhtmlDoc(lang, c.title, head, kindleFix(c.body)));
+  }
   for (const a of book.assets) files[`OEBPS/${a.href}`] = a.data;
   return zipSync(files);
 }
