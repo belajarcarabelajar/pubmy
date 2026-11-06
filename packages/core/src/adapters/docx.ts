@@ -1,6 +1,7 @@
 import mammoth from "mammoth";
 import { PubmyError } from "../errors.ts";
 import type { Adapter, Asset, Book, Chapter, InputFile } from "../types.ts";
+import { decode } from "../xml.ts";
 import { checkZipCaps } from "../zip-caps.ts";
 
 // Word saves a password-protected document as an encrypted CFB container instead of a ZIP.
@@ -11,9 +12,6 @@ const EXT_OF: Record<string, string> = {
 };
 
 const isCfb = (b: Uint8Array) => CFB_MAGIC.every((m, i) => b[i] === m);
-
-const decode = (s: string) =>
-  s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
 
 const textOf = (html: string) => decode(html.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim();
 

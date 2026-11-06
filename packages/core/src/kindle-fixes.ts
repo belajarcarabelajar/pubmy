@@ -6,7 +6,8 @@ const TAG = /<(\/?)([a-zA-Z][\w:.-]*)((?:\s+[^\s=\/>]+(?:\s*=\s*(?:"[^"]*"|'[^']
 const ATTR = /([^\s=\/>]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>"']+))?/g;
 const COMMENT = /<!--([\s\S]*?)-->/g;
 
-const escAttr = (s: string) => s.replace(/&(?!#?\w+;)/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+// Unlike xml.ts escAttr, the value is already markup, so an existing entity must not be escaped twice.
+const escRawAttr = (s: string) => s.replace(/&(?!#?\w+;)/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
 export function stripControls(s: string): string {
   return s.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B-\u001F]/g, "");
@@ -28,7 +29,7 @@ function fixTag(_m: string, close: string, name: string, attrs: string): string 
     const attr = rawName.toLowerCase();
     if (attr.startsWith("on")) continue;
     const value = rawValue === undefined ? attr : rawValue.replace(/^(["'])([\s\S]*)\1$/, "$2");
-    out += ` ${rawName}="${escAttr(value)}"`;
+    out += ` ${rawName}="${escRawAttr(value)}"`;
   }
   return VOID.has(tag) ? `<${name}${out}/>` : `<${name}${out}>`;
 }

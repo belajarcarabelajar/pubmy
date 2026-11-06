@@ -11,6 +11,7 @@ const EXTH_TAMPER_KEYS = 209;
 export interface DrmFlag {
   /** PalmDoc encryption type: 0 none, 1 old Mobipocket, 2 Mobipocket DRM. */
   encryption: number;
+  /** Informational only (EXTH 209 present); the adapter refuses a book on `encryption` alone. */
   exthDrm: boolean;
 }
 
