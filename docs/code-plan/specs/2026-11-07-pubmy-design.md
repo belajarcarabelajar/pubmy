@@ -2,7 +2,7 @@
 
 > Design doc for the Architectural path, written at brainstorm step 6. It stays at the level of behaviour and decisions; the implementation plan carries exact paths and commands.
 
-- **Status:** Draft (awaiting the `Spec` gate)
+- **Status:** Approved (`Spec` gate, 2026-11-07)
 - **Date:** 2026-11-07
 - **Path:** Architectural. pubmy is a new project with no existing flow: a shared conversion core, a CLI agent skill, and a public static website.
 - **Related:**
@@ -178,4 +178,4 @@ flowchart LR
 | `Section` 3 | Approve section 3 (Recommended) | 2026-11-07 |
 | `Section` 4 | Approve section 4 (Recommended) | 2026-11-07 |
 | `Section` 5 | Approve section 5 (Recommended) | 2026-11-07 |
-| `Spec` | pending | |
+| `Spec` | Approve spec (Recommended) | 2026-11-07 |

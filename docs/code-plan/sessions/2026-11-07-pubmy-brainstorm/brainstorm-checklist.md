@@ -88,8 +88,8 @@ Session started 2026-11-07. Brainstorm only: no plan, code, repo, worktree, or b
 - [x] S22 P4 (evidence: inspectPages scanned textLength 0 / imageCoverage 1 in pdf-layout.out.txt:66; reading order partly correct; headings 11.96 vs body 10.91 so 1.2 rule fails; parent decoded libarchive test RAR4 + RAR5 fixtures, `bun src/cbr-probe.ts` exit 0, entries listed and extracted (cbr-rar-probe.out.txt); libarchive COPYING = BSD-2 style, wrapper MIT)
 - [x] S23 Spike report (evidence: docs/code-plan/spikes/2026-11-07-pubmy-core/REPORT.md, Mermaid rendered by mmdc exit 0)
 - [x] S24 Approaches + matrix (evidence: A1 4.4 / A3 3.4 / A2 2.8 shown; answered "A1 adapter + own packager (Recommended)")
-- [ ] S25 Design sections approved and spec written + committed (finish line: commit sha)
-- [ ] S26 Spec gate answered (header Spec)
+- [x] S25 Spec written + committed (evidence: sections 1-5 approved; docs/code-plan/specs/2026-11-07-pubmy-design.md, Mermaid mmdc exit 0, 0 placeholders; commit d45ef3a exit 0)
+- [x] S26 Spec gate (evidence: answered "Approve spec (Recommended)")
 
 ### Design gate answers (2026-11-07), verbatim
 - Section 1 architecture: "A1 adapter + own packager (Recommended)" (Human-locked)
@@ -97,3 +97,5 @@ Session started 2026-11-07. Brainstorm only: no plan, code, repo, worktree, or b
 - Section 2: "Approve section 2 (Recommended)" (Human-locked)
 - Invalid EPUB: "Refuse, show errors (Recommended)" (Human-locked)
 - Section 3: "Approve section 3 (Recommended)" (Human-locked)
+- Section 4: "Approve section 4 (Recommended)" (Human-locked)
+- Section 5: "Approve section 5 (Recommended)" (Human-locked)
