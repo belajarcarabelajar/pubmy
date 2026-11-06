@@ -1,6 +1,8 @@
 /** A ready row while its download link lives (the retention window). */
 export interface CountdownItem {
   url?: string;
+  /** The EPUB bytes behind the URL; dropped with it so the memory is freed. */
+  epub?: Uint8Array;
   /** Milliseconds left, 0 once expired. */
   remaining: number;
   expired: boolean;
@@ -31,6 +33,7 @@ export function startCountdown(item: CountdownItem, o: CountdownOptions): () => 
     cancel = null;
     if (item.url) o.revoke(item.url);
     item.url = undefined;
+    item.epub = undefined;
     item.remaining = 0;
     item.expired = true;
     o.onTick?.(item);

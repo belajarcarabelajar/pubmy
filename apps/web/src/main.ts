@@ -1,8 +1,7 @@
-import type { Result } from "@pubmy/core";
 import { formatClock, startCountdown, type CountdownItem } from "./countdown.ts";
 import { failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
-import type { FromWorker, ToWorker } from "./worker.ts";
+import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
 
 const RETENTION_MS = 180_000;
 // A variable keeps the bundler from trying to resolve the built worker file at build time.
@@ -27,46 +26,16 @@ interface Row {
 const rows = new Map<number, Row>();
 let lastRefusals: Refusal[] = [];
 
-// One worker, rebuilt after a cancel: terminate() is the only way to stop a conversion mid-way.
-let worker: Worker | null = null;
-let jobSeq = 0;
-const pending = new Map<number, { file: File; resolve: (r: Result) => void }>();
-
-function getWorker(): Worker {
-  if (worker) return worker;
-  const w = new Worker(WORKER_URL, { type: "module" });
-  w.onmessage = (e: MessageEvent<FromWorker>) => {
-    const m = e.data;
-    const job = pending.get(m.id);
-    if (!job) return;
-    if (m.type === "progress") {
-      const row = [...rows.values()].find((r) => r.item.file === job.file);
-      if (row) row.progress = m.p;
-      if (row) render(row);
-      return;
-    }
-    pending.delete(m.id);
-    job.resolve(m.result);
-  };
-  worker = w;
-  return w;
-}
-
-async function convertInWorker(file: File, signal: AbortSignal): Promise<Result> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  if (signal.aborted) return { ok: false, code: "READ_FAILED", message: "cancelled" };
-  const id = ++jobSeq;
-  return new Promise<Result>((resolve) => {
-    pending.set(id, { file, resolve });
-    signal.addEventListener("abort", () => {
-      worker?.terminate();
-      worker = null;
-      for (const [k, j] of pending) j.resolve({ ok: false, code: "READ_FAILED", message: "cancelled" }), pending.delete(k);
-    });
-    const msg: ToWorker = { type: "convert", id, name: file.name, bytes };
-    getWorker().postMessage(msg, [bytes.buffer]);
-  });
-}
+// terminate() is the only way to stop a conversion mid-way, so the client rebuilds the worker after a cancel or crash.
+const client = createWorkerClient<File>({
+  create: () => new Worker(WORKER_URL, { type: "module" }) as WorkerLike,
+  onProgress: (file, p) => {
+    const row = [...rows.values()].find((r) => r.item.file === file);
+    if (!row) return;
+    row.progress = p;
+    render(row);
+  },
+});
 
 const epubName = (name: string) => `${name.replace(/\.[^.]+$/, "") || name}.epub`;
 
@@ -82,7 +51,11 @@ function onChange(item: QueueItem<File>) {
     row = { li, item, progress: 0 };
     rows.set(item.id, row);
   }
-  if (item.status === "ready" && item.result?.ok && !row.ready) startRetention(row, item.result.epub);
+  if (item.status === "ready" && item.result?.ok && !row.ready) {
+    startRetention(row, item.result.epub);
+    // The countdown now owns the bytes and drops them at expiry; the queue item must not keep them alive.
+    delete item.result;
+  }
   if (item.status === "ready" || item.status === "failed") {
     announce(`${item.name}: ${statusText(row)}`);
     // A finished row no longer counts against the 10-file limit.
@@ -93,7 +66,7 @@ function onChange(item: QueueItem<File>) {
 
 function startRetention(row: Row, epub: Uint8Array) {
   const url = URL.createObjectURL(new Blob([epub as BlobPart], { type: "application/epub+zip" }));
-  const ready: CountdownItem = { url, remaining: RETENTION_MS, expired: false };
+  const ready: CountdownItem = { url, epub, remaining: RETENTION_MS, expired: false };
   row.ready = ready;
   row.stop = startCountdown(ready, {
     ms: RETENTION_MS,
@@ -172,7 +145,7 @@ function renderRefusals() {
   );
 }
 
-const queue = createQueue<File>({ maxFiles: 10, maxBytes: 50 * 1024 * 1024, convert: convertInWorker, onChange });
+const queue = createQueue<File>({ maxFiles: 10, maxBytes: 50 * 1024 * 1024, convert: client.convert, onChange });
 
 function addFiles(list: FileList | null) {
   if (!list?.length) return;

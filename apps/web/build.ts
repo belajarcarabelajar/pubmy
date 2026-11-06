@@ -1,13 +1,31 @@
 import { copyFile, cp, mkdir, readdir, rm, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import type { BunPlugin } from "bun";
+import { LIBARCHIVE_FILES } from "./src/libarchive-loader.ts";
 import { OCR_FILES, ocrSource } from "./src/ocr-assets.ts";
 
 const root = import.meta.dir;
-const out = join(root, "dist");
+// An optional output directory lets tests build without touching dist.
+const out = process.argv[2] ? resolve(process.argv[2]) : join(root, "dist");
 
 await rm(out, { recursive: true, force: true });
 
+// Core's default comics loader names the Node build of libarchive.js. The worker registers the browser
+// loader instead, so that path is dead here; blanking it keeps the Node module name out of the bundle.
+const NODE_LIBARCHIVE = "libarchive.js/dist/libarchive-node.mjs";
+const dropNodeLibarchive: BunPlugin = {
+  name: "drop-node-libarchive",
+  setup(build) {
+    build.onLoad({ filter: /[\\/]core[\\/]src[\\/]adapters[\\/]comics\.ts$/ }, async ({ path }) => {
+      const src = await Bun.file(path).text();
+      if (!src.includes(NODE_LIBARCHIVE)) throw new Error(`${path} no longer names ${NODE_LIBARCHIVE}; review this plugin`);
+      return { contents: src.replaceAll(NODE_LIBARCHIVE, "pubmy:node-only"), loader: "ts" };
+    });
+  },
+};
+
 const result = await Bun.build({
+  plugins: [dropNodeLibarchive],
   entrypoints: [join(root, "src/main.ts"), join(root, "src/worker.ts")],
   outdir: out,
   target: "browser",
@@ -40,6 +58,11 @@ for (const f of OCR_FILES) {
   await mkdir(dirname(join(out, f.to)), { recursive: true });
   await copyFile(ocrSource(f, root), join(out, f.to));
 }
+
+// libarchive.js is a dependency of @pubmy/core, so it resolves from there; served same-origin for the CSP.
+const libarchiveDist = dirname(Bun.resolveSync("libarchive.js", join(root, "..", "..", "packages", "core")));
+await mkdir(join(out, "libarchive"), { recursive: true });
+for (const f of LIBARCHIVE_FILES) await copyFile(join(libarchiveDist, f), join(out, "libarchive", f));
 
 let total = 0;
 for (const name of await readdir(out, { recursive: true })) {

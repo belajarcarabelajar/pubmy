@@ -81,6 +81,16 @@ describe("startCountdown", () => {
     expect(revoked).toEqual(["blob:a"]);
   });
 
+  test("at 180 s the EPUB bytes are dropped along with the URL", () => {
+    const clock = fakeClock();
+    const a: CountdownItem = { url: "blob:a", epub: new Uint8Array([1, 2, 3]), remaining: 0, expired: false };
+    startCountdown(a, { ms: 180_000, now: clock.now, setTimer: clock.setTimer, revoke: () => {} });
+    clock.advance(179_999);
+    expect(a.epub).toEqual(new Uint8Array([1, 2, 3]));
+    clock.advance(1);
+    expect(a.epub).toBeUndefined();
+  });
+
   test("stop() revokes immediately and once, and no timer revokes again", () => {
     const clock = fakeClock();
     const revoked: string[] = [];
