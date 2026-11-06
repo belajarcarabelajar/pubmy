@@ -67,7 +67,9 @@ export interface DomAdapter {
 }
 
 export interface Ocr {
-  recognize(image: Uint8Array, signal?: AbortSignal): Promise<string>;
+  /** confidence is tesseract's 0-100 page score. */
+  recognize(image: Uint8Array, signal?: AbortSignal): Promise<{ text: string; confidence: number }>;
+  terminate(): Promise<void>;
 }
 
 export interface Ctx {

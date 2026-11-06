@@ -71,8 +71,25 @@ test("pdf adapter: a password-protected PDF fails with READ_FAILED encrypted-pdf
   expect(await run("locked.pdf", makeEncryptedPdf())).toEqual({ ok: false, code: "READ_FAILED", message: "encrypted-pdf" });
 });
 
-test("pdf adapter: an image-only page is refused with UNSUPPORTED scanned-pdf", async () => {
-  expect(await run("scan.pdf", await makeImageOnlyPdf())).toEqual({ ok: false, code: "UNSUPPORTED", message: "scanned-pdf" });
+// tesseract is the external boundary here; scan.test.ts runs the real engine.
+const fakeOcr = (confidence: number): Ctx => ({
+  ...ctx,
+  loadOcr: async () => ({
+    recognize: async () => ({ text: "Teks hasil pindaian.\n", confidence }),
+    terminate: async () => {},
+  }),
+});
+
+test("pdf adapter: an image-only page converts through OCR", async () => {
+  const r = expectOk(await convert({ name: "scan.pdf", bytes: await makeImageOnlyPdf() }, fakeOcr(88)));
+  expect(bookText(r)).toContain("Teks hasil pindaian.");
+  expect(r.notes?.ocr).toEqual({ pages: 1, meanConfidence: 88 });
+  expect(r.notes?.warnings ?? []).not.toContain("low-ocr-confidence");
+});
+
+test("pdf adapter: OCR confidence under 50 adds the low-ocr-confidence warning", async () => {
+  const r = expectOk(await convert({ name: "scan.pdf", bytes: await makeImageOnlyPdf() }, fakeOcr(30)));
+  expect(r.notes?.warnings).toContain("low-ocr-confidence");
 });
 
 describe("pdf adapter: arXiv 2302.13971v1 (CC BY 4.0)", () => {

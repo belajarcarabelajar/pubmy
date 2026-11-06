@@ -4,6 +4,7 @@ import { getDocumentProxy, inspectPages } from "unpdf";
 import { PubmyError } from "../errors.ts";
 import { bodySize, layoutPage, titleSizeOf, usableItems, type Block, type TextItem } from "../pdf/layout.ts";
 import type { Adapter, Book, Chapter, Ctx, InputFile } from "../types.ts";
+import { isScannedPage, ocrScan } from "./scan.ts";
 
 type Doc = Awaited<ReturnType<typeof getDocumentProxy>>;
 interface PageBlock extends Block {
@@ -98,7 +99,8 @@ function render(blocks: Block[], headAt: number): string {
 async function read(f: InputFile, ctx: Ctx): Promise<Book> {
   const doc = await open(f.bytes);
   const { pages } = await inspectPages(doc);
-  if (pages.some((p) => p.textLength === 0 && p.imageCoverage > 0)) throw new PubmyError("UNSUPPORTED", "scanned-pdf");
+  // scanned pages have no text items, so the text pass below yields nothing for them
+  const scanned = pages.flatMap((p, i) => (isScannedPage(p) ? [i + 1] : []));
 
   const raw: { items: TextItem[]; width: number; height: number }[] = [];
   for (let n = 1; n <= doc.numPages; n++) {
@@ -129,22 +131,36 @@ async function read(f: InputFile, ctx: Ctx): Promise<Book> {
   const title = titleBlock >= 0 ? blocks[titleBlock].text : str(info.Title) || f.name.replace(/\.[^.]+$/, "");
   const cuts = boundaries(blocks, await outlineOf(doc), titleBlock);
 
-  const chapters: Chapter[] = [];
+  const placed: { page: number; chapter: Chapter }[] = [];
   const href = (n: number) => `ch${String(n).padStart(3, "0")}.xhtml`;
-  if (cuts.length === 0) chapters.push({ href: href(1), title, body: render(blocks, titleBlock) });
+  if (cuts.length === 0 && (blocks.length > 0 || scanned.length === 0))
+    placed.push({ page: blocks[0]?.page ?? 1, chapter: { href: href(1), title, body: render(blocks, titleBlock) } });
   cuts.forEach((c, k) => {
     // text before the first chapter heading (title page, authors, abstract) opens chapter 1
     const start = k === 0 ? 0 : c.at;
     const slice = blocks.slice(start, cuts[k + 1]?.at ?? blocks.length);
-    chapters.push({ href: href(k + 1), title: c.title, body: render(slice, c.at - start) });
+    placed.push({ page: blocks[start].page, chapter: { href: href(k + 1), title: c.title, body: render(slice, c.at - start) } });
   });
+
+  let notes: Book["notes"];
+  if (scanned.length > 0) {
+    const scan = await ocrScan(f.bytes, scanned, ctx);
+    scan.chapters.forEach((chapter, k) => placed.push({ page: scanned[k], chapter }));
+    notes = {
+      ocr: { pages: scan.pages, meanConfidence: scan.meanConfidence },
+      warnings: scan.meanConfidence < 50 ? ["low-ocr-confidence"] : [],
+    };
+  }
+  // stable sort: a scanned page lands after the text chapter that starts on an earlier page
+  placed.sort((a, b) => a.page - b.page);
   return {
     meta: { title, creators: str(info.Author) ? [str(info.Author)] : [], language: str(info.Language) || "en" },
-    chapters,
+    chapters: placed.map((p) => p.chapter),
     assets: [],
     toc: [],
     layout: "reflow",
     direction: "ltr",
+    ...(notes ? { notes } : {}),
   };
 }
 
