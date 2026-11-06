@@ -1,0 +1,2 @@
+*.wasm binary
+skills/pubmy/scripts/*.js -diff linguist-generated
