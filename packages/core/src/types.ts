@@ -53,6 +53,13 @@ export interface Book {
   toc: TocEntry[];
   layout: "reflow" | "fixed";
   direction: "ltr" | "rtl";
+  /** Facts for the per-file report (OCR summary, non-fatal warnings); not written into the EPUB. */
+  notes?: BookNotes;
+}
+
+export interface BookNotes {
+  ocr?: { pages: number; meanConfidence: number };
+  warnings?: string[];
 }
 
 export interface DomAdapter {
@@ -79,7 +86,7 @@ export interface Adapter {
 export type FailureCode = "DRM" | "UNSUPPORTED" | "TOO_LARGE" | "READ_FAILED" | "INVALID_EPUB";
 
 export type Result =
-  | { ok: true; epub: Uint8Array; check: { errors: 0; warnings: number } }
+  | { ok: true; epub: Uint8Array; check: { errors: 0; warnings: number }; notes?: BookNotes }
   | { ok: false; code: FailureCode; message: string };
 
 export interface CheckResult {

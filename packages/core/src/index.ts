@@ -58,5 +58,5 @@ export async function convert(file: InputFile, ctx: Ctx): Promise<Result> {
   const check = await validate(epub);
   if (check.errors > 0) return fail("INVALID_EPUB", "invalid-epub");
   ctx.progress(1);
-  return { ok: true, epub, check: { errors: 0, warnings: check.warnings } };
+  return { ok: true, epub, check: { errors: 0, warnings: check.warnings }, ...(book.notes ? { notes: book.notes } : {}) };
 }
