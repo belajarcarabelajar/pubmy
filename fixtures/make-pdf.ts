@@ -73,6 +73,45 @@ function addOutline(pdf: PDFDocument, pageRef: ReturnType<PDFDocument["getPage"]
   pdf.catalog.set(PDFName.of("Outlines"), root);
 }
 
+/** Footer of makeRunningHeadPdf: at the foot of pages 2-4 and at the top of page 1. */
+export const RUNNING_FOOTER = "Sample Journal. Author manuscript; available in PMC 2015 May 01.";
+
+/**
+ * Four 600 x 800 pages shaped like the NIH author manuscript nihms496502: a running header
+ * ("Doe and Roe", "Page N") on pages 2-4, a running footer that page 1 prints at the top in a
+ * heading size, a paragraph cut mid-sentence by the page break with a footnote under it, and a
+ * 12 pt heading wrapped onto two lines on a 20 pt pitch.
+ */
+export async function makeRunningHeadPdf(): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const pages = [1, 2, 3, 4].map(() => pdf.addPage([600, 800]));
+  // the first line starts at x, the lines after it at the left margin
+  const lines = (n: number, x: number, top: number, text: string[], size = BODY, pitch = 14, f = font) =>
+    text.forEach((s, k) => pages[n - 1].drawText(s, { x: k === 0 ? x : 72, y: top - k * pitch, size, font: f }));
+  pages[0].drawText(RUNNING_FOOTER, { x: 72, y: 760, size: HEAD, font });
+  for (const n of [2, 3, 4]) {
+    pages[n - 1].drawText("Doe and Roe", { x: 72, y: 770, size: 8, font });
+    pages[n - 1].drawText(`Page ${n}`, { x: 500, y: 770, size: 8, font });
+    pages[n - 1].drawText(RUNNING_FOOTER, { x: 150, y: 40, size: 8, font });
+  }
+  lines(1, 72, 700, ["A Generated Paper With Running Heads"], 18, 0, bold);
+  lines(1, 72, 660, ["Introduction"], HEAD, 0, bold);
+  lines(1, 90, 640, ["The first paragraph sits under the heading and", "ends its last sentence on this line."]);
+  lines(1, 90, 300, ["The second paragraph runs to the foot of the", "page, where the measure it names was used in", "earlier work (Gutman,"]);
+  lines(1, 72, 100, ["Correspondence to A. Doe, a.doe@example.org."], 8);
+  lines(2, 72, 700, ["Sameroff, & Cole, 2003) and later studies used it in", "the same way."]);
+  lines(2, 72, 650, ["Parental Discipline and Youth Conduct Problems and", "Depressive Symptoms"], 12, 20, bold);
+  lines(2, 72, 610, ["Each section of this sample ends its last sentence", "at the foot of the page."]);
+  lines(3, 72, 700, ["Next page opens a new paragraph in upper case."]);
+  lines(3, 72, 660, ["Method"], HEAD, 0, bold);
+  lines(3, 72, 640, ["Every page is drawn with pdf-lib."]);
+  lines(4, 72, 700, ["Results"], HEAD, 0, bold);
+  lines(4, 72, 680, ["The running lines are gone from the book."]);
+  return pdf.save();
+}
+
 // 1 x 1 grey PNG.
 const PNG = Uint8Array.from(
   atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="),
@@ -118,6 +157,7 @@ if (import.meta.main) {
   mkdirSync(dir, { recursive: true });
   await Bun.write(join(dir, "two-column.pdf"), await makeTwoColumnPdf());
   await Bun.write(join(dir, "two-column-outline.pdf"), await makeTwoColumnPdf({ outline: ["Introduction", "Method", "Results"] }));
+  await Bun.write(join(dir, "running-head.pdf"), await makeRunningHeadPdf());
   await Bun.write(join(dir, "image-only.pdf"), await makeImageOnlyPdf());
   await Bun.write(join(dir, "encrypted.pdf"), makeEncryptedPdf());
 }
