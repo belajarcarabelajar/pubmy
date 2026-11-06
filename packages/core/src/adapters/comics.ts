@@ -1,15 +1,10 @@
 // Comics (CBZ = zip, CBR = rar) to a fixed-layout book: one image-only page per image,
 // in natural filename order. CBZ is read with fflate, CBR with libarchive.js (WASM).
-import { unzipSync } from "fflate";
 import { PubmyError } from "../errors.ts";
 import type { Adapter, Asset, Book, Chapter } from "../types.ts";
+import { checkCaps, DEFAULT_LIMITS, isUnsafePath, type Limits, unzipCapped } from "../zip-caps.ts";
 
-export interface Limits {
-  /** Total uncompressed bytes. */
-  maxBytes: number;
-  maxEntries: number;
-}
-export const DEFAULT_LIMITS: Limits = { maxBytes: 500 * 1024 * 1024, maxEntries: 5000 };
+export { checkCaps, DEFAULT_LIMITS, type Limits };
 
 export interface Entry {
   path: string;
@@ -34,26 +29,8 @@ const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })
 /** Natural filename order: p2 before p10, case-insensitive. */
 export const naturalCompare = (a: string, b: string): number => collator.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0);
 
-const tooLarge = () => new PubmyError("READ_FAILED", "archive-too-large");
-
-/** Zip-bomb guard: throws READ_FAILED archive-too-large over the entry or total-size cap. */
-export function checkCaps(entries: { size: number }[], limits: Limits = DEFAULT_LIMITS): void {
-  if (entries.length > limits.maxEntries) throw tooLarge();
-  let total = 0;
-  for (const e of entries) {
-    total += e.size;
-    if (total > limits.maxBytes) throw tooLarge();
-  }
-}
-
-const unsafe = (path: string) => path.split(/[\\/]/).includes("..");
-
 function readZip(bytes: Uint8Array, limits: Limits): Entry[] {
-  const declared: { size: number }[] = [];
-  unzipSync(bytes, { filter: (f) => (declared.push({ size: f.originalSize }), false) });
-  checkCaps(declared, limits);
-  const files = unzipSync(bytes, { filter: (f) => !f.name.endsWith("/") && !unsafe(f.name) });
-  return Object.entries(files).map(([path, data]) => ({ path, data }));
+  return Object.entries(unzipCapped(bytes, limits)).map(([path, data]) => ({ path, data }));
 }
 
 const isFile = (v: unknown): v is Blob => typeof (v as Blob | null)?.arrayBuffer === "function";
@@ -73,7 +50,7 @@ async function readRar(bytes: Uint8Array, limits: Limits, load: LibarchiveLoader
     checkCaps((await archive.getFilesArray()).map((e) => ({ size: e.file.size })), limits);
     const out: Entry[] = [];
     await flatten(await archive.extractFiles(), "", out);
-    return out.filter((e) => !unsafe(e.path));
+    return out.filter((e) => !isUnsafePath(e.path));
   } finally {
     await archive.close?.();
   }

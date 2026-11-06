@@ -1,5 +1,6 @@
-import { strFromU8, unzipSync } from "fflate";
+import { strFromU8 } from "fflate";
 import type { Adapter, Asset } from "../types.ts";
+import { unzipCapped } from "../zip-caps.ts";
 import { htmlBook } from "./rtf.ts";
 
 export interface OdtDoc {
@@ -68,7 +69,7 @@ const IMAGE_TYPES: Record<string, string> = {
 };
 
 export function readOdt(bytes: Uint8Array): OdtDoc {
-  const zip = unzipSync(bytes);
+  const zip = unzipCapped(bytes);
   if (!zip["content.xml"]) throw new Error("ODT has no content.xml");
   const body = find(parseXml(strFromU8(zip["content.xml"])), "office:text");
   const assets: Asset[] = [];

@@ -185,18 +185,55 @@ const DOC_RELS =
  * and one embedded PNG. With `headings: false` it holds two plain paragraphs only.
  */
 export function makeDocx(opts: { headings?: boolean } = {}): Uint8Array {
-  const body = opts.headings === false ? PLAIN_BODY : SAMPLE_BODY;
+  return buildDocx({ body: opts.headings === false ? PLAIN_BODY : SAMPLE_BODY });
+}
+
+interface DocxParts {
+  body: string;
+  /** Extra <Relationship/> elements for word/_rels/document.xml.rels. */
+  rels?: string;
+  /** Extra <Default/> or <Override/> elements for [Content_Types].xml. */
+  types?: string;
+  /** Extra zip entries, written after the standard parts. */
+  extra?: Record<string, Uint8Array>;
+}
+
+function buildDocx(p: DocxParts): Uint8Array {
   return storeZip({
-      "[Content_Types].xml": strToU8(CONTENT_TYPES),
-      "_rels/.rels": strToU8(ROOT_RELS),
-      "word/document.xml": strToU8(documentXml(body)),
-      "word/_rels/document.xml.rels": strToU8(DOC_RELS),
-      "word/styles.xml": strToU8(STYLES),
-      "word/numbering.xml": strToU8(NUMBERING),
-      "word/footnotes.xml": strToU8(FOOTNOTES),
-      "word/media/image1.png": makePng(),
+    "[Content_Types].xml": strToU8(CONTENT_TYPES.replace("</Types>", `${p.types ?? ""}</Types>`)),
+    "_rels/.rels": strToU8(ROOT_RELS),
+    "word/document.xml": strToU8(documentXml(p.body)),
+    "word/_rels/document.xml.rels": strToU8(DOC_RELS.replace("</Relationships>", `${p.rels ?? ""}</Relationships>`)),
+    "word/styles.xml": strToU8(STYLES),
+    "word/numbering.xml": strToU8(NUMBERING),
+    "word/footnotes.xml": strToU8(FOOTNOTES),
+    "word/media/image1.png": makePng(),
+    ...p.extra,
   });
 }
+
+/** The sample DOCX plus `extra` zip entries (for archive cap tests). */
+export const makeDocxWithEntries = (extra: Record<string, Uint8Array>): Uint8Array =>
+  buildDocx({ body: SAMPLE_BODY, extra });
+
+/** A DOCX with one external hyperlink, text "Click me", whose relationship Target is `target`. */
+export const makeDocxWithHyperlink = (target: string): Uint8Array =>
+  buildDocx({
+    body: para("Links", "Heading1") +
+      `<w:p><w:r><w:t xml:space="preserve">Before </w:t></w:r><w:hyperlink r:id="rIdLink"><w:r><w:t>Click me</w:t></w:r></w:hyperlink></w:p>`,
+    rels: `<Relationship Id="rIdLink" Type="${RT}/hyperlink" Target="${target.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" TargetMode="External"/>`,
+  });
+
+/** A DOCX with one EMF picture (alt text "Vector chart"), a format no EPUB reader is required to show. */
+export const makeDocxWithEmf = (): Uint8Array =>
+  buildDocx({
+    body: para("Chart", "Heading1") + para("Text before the chart.") +
+      IMAGE.replace('r:embed="rIdImg1"', 'r:embed="rIdEmf"').replace('descr="Red square"', 'descr="Vector chart"'),
+    rels: `<Relationship Id="rIdEmf" Type="${RT}/image" Target="media/chart.emf"/>`,
+    types: `<Default Extension="emf" ContentType="image/x-emf"/>`,
+    // An EMF header record (type 1) is enough: the converter never decodes the picture.
+    extra: { "word/media/chart.emf": new Uint8Array([1, 0, 0, 0, 108, 0, 0, 0, ...new Uint8Array(100)]) },
+  });
 
 /** What Word writes for a password-protected file: a CFB container, not a ZIP. Header only. */
 export function makeEncryptedDocx(): Uint8Array {

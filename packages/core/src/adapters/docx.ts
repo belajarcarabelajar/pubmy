@@ -1,6 +1,7 @@
 import mammoth from "mammoth";
 import { PubmyError } from "../errors.ts";
 import type { Adapter, Asset, Book, Chapter, InputFile } from "../types.ts";
+import { checkZipCaps } from "../zip-caps.ts";
 
 // Word saves a password-protected document as an encrypted CFB container instead of a ZIP.
 const CFB_MAGIC = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
@@ -15,6 +16,24 @@ const decode = (s: string) =>
   s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
 
 const textOf = (html: string) => decode(html.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim();
+
+// Only web and mail links survive, as in the other adapters; internal "#id" anchors stay too.
+const SAFE_HREF = /^(https?:|mailto:|#)/i;
+
+function dropUnsafeHrefs(html: string): string {
+  return html.replace(/<a\b([^>]*)>/g, (tag, attrs: string) => {
+    const href = /\shref="([^"]*)"/.exec(attrs);
+    return href && !SAFE_HREF.test(decode(href[1])) ? `<a${attrs.replace(href[0], "")}>` : tag;
+  });
+}
+
+// EPUB core media types only; any other picture (EMF, WMF, TIFF, BMP) makes epubcheck fail the book.
+const DROPPED_IMAGE = "pubmy:dropped-image";
+
+/** Replaces each dropped picture with its alt text, which mammoth has already escaped. */
+const altForDroppedImages = (html: string) =>
+  html.replace(/<img\b[^>]*>/g, (tag) =>
+    tag.includes(`src="${DROPPED_IMAGE}"`) ? (/\salt="([^"]*)"/.exec(tag)?.[1] ?? "") : tag);
 
 const baseName = (name: string) => name.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, "") || "Untitled";
 
@@ -52,6 +71,8 @@ export const docxAdapter: Adapter = {
   accepts: (s) => s.ext === "docx",
   async read(f: InputFile): Promise<Book> {
     if (isCfb(f.bytes)) throw new PubmyError("READ_FAILED", "encrypted-office");
+    // mammoth inflates every part itself, so the declared sizes are checked before it sees the bytes.
+    checkZipCaps(f.bytes);
     const assets: Asset[] = [];
     let imageCount = 0;
     const arrayBuffer = f.bytes.buffer.slice(f.bytes.byteOffset, f.bytes.byteOffset + f.bytes.byteLength) as ArrayBuffer;
@@ -62,15 +83,17 @@ export const docxAdapter: Adapter = {
       input,
       {
         convertImage: mammoth.images.imgElement(async (image) => {
+          const ext = EXT_OF[image.contentType];
+          if (!ext) return { src: DROPPED_IMAGE };
           // Numbered before the await: mammoth may convert several images concurrently.
-          const href = `images/image${++imageCount}.${EXT_OF[image.contentType] ?? "bin"}`;
+          const href = `images/image${++imageCount}.${ext}`;
           assets.push({ href, mediaType: image.contentType, data: new Uint8Array(await image.readAsArrayBuffer()) });
           return { src: href };
         }),
       },
     );
     const title = baseName(f.name);
-    const chapters = split(value, title);
+    const chapters = split(altForDroppedImages(dropUnsafeHrefs(value)), title);
     relinkAnchors(chapters);
     return {
       meta: { title, creators: [], language: "id" },

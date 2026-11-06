@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { strFromU8, unzipSync } from "fflate";
 import { convert, domFor, registerAdapter, type Ctx } from "../src/index.ts";
 import { odtAdapter, readOdt } from "../src/adapters/odt.ts";
-import { makeOdt } from "../../../fixtures/make-odt.ts";
+import { makeOdt, makeOdtWithEntries } from "../../../fixtures/make-odt.ts";
 import { PNG_1X1 } from "../../../fixtures/make-rtf.ts";
 
 const html = (body: string) => readOdt(makeOdt(body)).html;
@@ -126,5 +126,25 @@ describe("odt adapter through convert()", () => {
     const f = unzipSync(r.epub);
     expect(f["OEBPS/images/odt-1-dot.png"]).toEqual(PNG_1X1);
     expect(strFromU8(f["OEBPS/ch002.xhtml"])).toContain('src="images/odt-1-dot.png"');
+  });
+
+  test("an ODT with 6,000 entries fails as READ_FAILED archive-too-large", async () => {
+    const extra = Array.from({ length: 6000 }, (_, i): [string, Uint8Array] => [`junk/${i}.txt`, new Uint8Array()]);
+    const off = registerAdapter(odtAdapter);
+    try {
+      const r = await convert({ name: "bomb.odt", bytes: makeOdtWithEntries(extra) }, ctx);
+      expect(r).toEqual({ ok: false, code: "READ_FAILED", message: "archive-too-large" });
+    } finally {
+      off();
+    }
+  });
+});
+
+describe("ODT reader archive safety", () => {
+  test("ignores an entry whose path climbs out with `..`", () => {
+    const body = '<text:p><draw:frame><draw:image xlink:href="../evil.png"/></draw:frame>Text</text:p>';
+    const doc = readOdt(makeOdtWithEntries([["../evil.png", PNG_1X1]], body));
+    expect(doc.assets).toEqual([]);
+    expect(doc.html).toBe("<p>Text</p>");
   });
 });

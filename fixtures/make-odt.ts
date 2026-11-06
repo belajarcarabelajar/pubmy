@@ -90,7 +90,11 @@ export const SAMPLE_BODY = [
   '<text:p>Noted<text:note text:id="n1" text:note-class="footnote"><text:note-citation>1</text:note-citation><text:note-body><text:p>Footnote body.</text:p></text:note-body></text:note>.</text:p>',
 ].join("\n");
 
-export function makeOdt(body: string = SAMPLE_BODY, title = "Fixture ODT"): Uint8Array {
+/** The sample ODT plus `extra` zip entries appended after the standard ones. */
+export const makeOdtWithEntries = (extra: [string, Uint8Array][], body: string = SAMPLE_BODY): Uint8Array =>
+  makeOdt(body, "Fixture ODT", extra);
+
+export function makeOdt(body: string = SAMPLE_BODY, title = "Fixture ODT", extra: [string, Uint8Array][] = []): Uint8Array {
   const content = `<?xml version="1.0" encoding="UTF-8"?>
 <office:document-content ${NS} office:version="1.3">
 <office:automatic-styles><style:style style:name="P1" style:family="paragraph"><style:text-properties fo:font-weight="bold"/></style:style></office:automatic-styles>
@@ -113,6 +117,7 @@ ${body}
     ["content.xml", strToU8(content)],
     ["meta.xml", strToU8(meta)],
     ["Pictures/dot.png", PNG_1X1],
+    ...extra,
   ]);
 }
 

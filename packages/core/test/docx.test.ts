@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { strFromU8, unzipSync } from "fflate";
-import { makeDocx, makeEncryptedDocx, makePng } from "../../../fixtures/make-docx.ts";
+import {
+  makeDocx, makeDocxWithEmf, makeDocxWithEntries, makeDocxWithHyperlink, makeEncryptedDocx, makePng,
+} from "../../../fixtures/make-docx.ts";
 import { docxAdapter } from "../src/adapters/docx.ts";
 import { convert, domFor, registerAdapter, type Book, type Ctx, type Result } from "../src/index.ts";
 
@@ -91,5 +93,36 @@ describe("docx adapter: convert()", () => {
   test("a password-protected DOCX is READ_FAILED with encrypted-office", async () => {
     const r = await convert({ name: "locked.docx", bytes: makeEncryptedDocx() }, ctx);
     expect(r).toEqual({ ok: false, code: "READ_FAILED", message: "encrypted-office" });
+  });
+
+  test("a DOCX with 6,000 extra entries is READ_FAILED with archive-too-large", async () => {
+    const extra = Object.fromEntries(Array.from({ length: 6000 }, (_, i) => [`junk/${i}.txt`, new Uint8Array()]));
+    const r = await convert({ name: "bomb.docx", bytes: makeDocxWithEntries(extra) }, ctx);
+    expect(r).toEqual({ ok: false, code: "READ_FAILED", message: "archive-too-large" });
+  });
+
+  test("a javascript: hyperlink leaves no javascript: in any chapter but keeps its text", async () => {
+    const r = expectOk(await convert({ name: "links.docx", bytes: makeDocxWithHyperlink("javascript:alert(1)") }, ctx));
+    const files = unzipSync(r.epub);
+    const chapters = Object.keys(files).filter((p) => /^OEBPS\/ch\d+\.xhtml$/.test(p)).map((p) => strFromU8(files[p]));
+    expect(chapters.length).toBeGreaterThan(0);
+    const all = chapters.join("\n");
+    expect(all).not.toMatch(/javascript:/i);
+    expect(all).toContain("Click me");
+  });
+
+  test("an https hyperlink keeps its href", async () => {
+    const book = await read("links.docx", makeDocxWithHyperlink("https://example.com/a?b=1&c=2"));
+    expect(allBodies(book)).toContain('href="https://example.com/a?b=1&amp;c=2"');
+  });
+
+  test("an EMF picture is dropped with its alt text kept, and the book still passes epubcheck", async () => {
+    const r = expectOk(await convert({ name: "chart.docx", bytes: makeDocxWithEmf() }, ctx));
+    expect(r.check.errors).toBe(0);
+    const files = unzipSync(r.epub);
+    expect(Object.keys(files).filter((p) => p.startsWith("OEBPS/images/"))).toEqual([]);
+    const all = Object.keys(files).filter((p) => /^OEBPS\/ch\d+\.xhtml$/.test(p)).map((p) => strFromU8(files[p])).join("\n");
+    expect(all).toContain("Vector chart");
+    expect(all).not.toContain("<img");
   });
 });
