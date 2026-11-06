@@ -11,3 +11,4 @@ docs/code-plan/spikes/**/fixtures-dl/
 docs/code-plan/spikes/**/fixtures-made/
 docs/code-plan/spikes/**/*.png
 docs/code-plan/spikes/**/*.epub
+apps/web/dist/
