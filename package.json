@@ -3,7 +3,10 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "packageManager": "bun@1.4.4",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -11,6 +14,10 @@
   "devDependencies": {
     "@types/bun": "^1.4.4",
     "@types/markdown-it": "^14.2.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "@pubmy/core": "workspace:*",
+    "fflate": "0.8",
+    "pdf-lib": "1.17.1",
+    "@napi-rs/canvas": "1.1.0"
   }
 }

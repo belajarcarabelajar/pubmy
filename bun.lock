@@ -5,8 +5,12 @@
     "": {
       "name": "pubmy",
       "devDependencies": {
+        "@napi-rs/canvas": "1.1.0",
+        "@pubmy/core": "workspace:*",
         "@types/bun": "^1.4.4",
         "@types/markdown-it": "^14.2.0",
+        "fflate": "0.8",
+        "pdf-lib": "1.17.1",
         "typescript": "^7.0.2",
       },
     },
