@@ -31,4 +31,19 @@ describe("web build output", () => {
     const js = files.filter((f) => f.endsWith(".js") && !f.startsWith("libarchive/"));
     expect(js.some((f) => readFileSync(join(out, f), "utf8").includes("libarchive/libarchive.js"))).toBe(true);
   });
+
+  test("the preview reader ships the custom elements of both foliate renderers", () => {
+    const js = files.filter((f) => f.endsWith(".js"));
+    for (const tag of ["foliate-paginator", "foliate-fxl"]) expect(js.filter((f) => readFileSync(join(out, f), "utf8").includes(tag))).not.toEqual([]);
+  });
+
+  test("the reader lives only in chunks loaded on demand, not in the page entry", () => {
+    const hits = files.filter((f) => f.endsWith(".js") && readFileSync(join(out, f), "utf8").includes("foliate-paginator"));
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.filter((f) => !f.startsWith("chunks/"))).toEqual([]);
+  });
+
+  test("foliate-js ships with its MIT licence", () => {
+    expect(files).toContain("licenses/foliate-js.txt");
+  });
 });

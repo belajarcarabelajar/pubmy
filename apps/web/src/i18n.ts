@@ -38,6 +38,12 @@ const id = {
   "unsupported-format": "Format file ini tidak didukung.",
   "read-failed": "File tidak bisa dibaca.",
   "invalid-epub": "EPUB hasil konversi tidak valid, jadi tidak diberikan.",
+  preview: "Pratinjau",
+  "preview-close": "Tutup pratinjau",
+  "preview-prev": "Halaman sebelumnya",
+  "preview-next": "Halaman berikutnya",
+  "preview-toc": "Daftar isi",
+  "preview-failed": "Pratinjau tidak bisa dibuka.",
 };
 
 export type Key = keyof typeof id;
@@ -78,6 +84,12 @@ const en: Record<Key, string> = {
   "unsupported-format": "This file format is not supported.",
   "read-failed": "The file could not be read.",
   "invalid-epub": "The converted EPUB was invalid, so it was withheld.",
+  preview: "Preview",
+  "preview-close": "Close preview",
+  "preview-prev": "Previous page",
+  "preview-next": "Next page",
+  "preview-toc": "Contents",
+  "preview-failed": "The preview could not be opened.",
 };
 
 const dict: Record<Lang, Record<Key, string>> = { id, en };

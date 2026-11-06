@@ -1,6 +1,8 @@
 import { formatClock, startCountdown, type CountdownItem } from "./countdown.ts";
 import { failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
+import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
+import type { ReaderUi } from "./reader.ts";
 import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
 
 const RETENTION_MS = 180_000;
@@ -77,10 +79,55 @@ function startRetention(row: Row, epub: Uint8Array) {
     },
     revoke: (u) => URL.revokeObjectURL(u),
     onTick: (it) => {
+      // An open preview of this row closes and frees what it holds before the row shows Deleted.
+      preview.onTick(it);
       if (it.expired) announce(`${row.item.name}: ${t("deleted", lang)}`);
       render(row);
     },
   });
+}
+
+const dialog = $<HTMLDialogElement>("preview");
+const readerUi: ReaderUi = {
+  stage: $("pv-stage"),
+  page: $("pv-page"),
+  toc: $("pv-toc"),
+  tocList: $<HTMLOListElement>("pv-toc-list"),
+  tocToggle: $<HTMLButtonElement>("pv-toc-toggle"),
+  prev: $<HTMLButtonElement>("pv-prev"),
+  next: $<HTMLButtonElement>("pv-next"),
+  keys: dialog,
+  narrow: () => matchMedia("(max-width: 40rem)").matches,
+  escape: () => dialog.close(),
+};
+const preview = createPreview({
+  // The reader and foliate-js load on the first preview, as separate chunks.
+  mount: async (loader) => (await import("./reader.ts")).mountReader(loader, readerUi),
+  onClose: () => {
+    if (dialog.open) dialog.close();
+  },
+});
+let previewRow: Row | null = null;
+// Esc, the close button, and expiry all end here, so the reader is always torn down.
+dialog.addEventListener("close", () => {
+  preview.close();
+  const row = previewRow;
+  previewRow = null;
+  row?.li.querySelector<HTMLElement>('[data-action="preview"]:not(:disabled)')?.focus();
+});
+$<HTMLButtonElement>("pv-close").onclick = () => dialog.close();
+
+async function openPreview(row: Row) {
+  if (!row.ready) return;
+  previewRow = row;
+  $("pv-title").textContent = row.item.name;
+  dialog.showModal();
+  try {
+    if (!(await preview.open(row.ready))) dialog.close();
+  } catch {
+    dialog.close();
+    announce(`${row.item.name}: ${t("preview-failed", lang)}`);
+  }
 }
 
 function statusText(row: Row): string {
@@ -93,6 +140,9 @@ function statusText(row: Row): string {
 
 function render(row: Row) {
   const { li, item, ready } = row;
+  // The countdown rebuilds the row every second, so keyboard focus moves to the new copy of the focused control.
+  const active = document.activeElement;
+  const focused = active instanceof HTMLElement && li.contains(active) ? active.dataset.action : undefined;
   li.className = item.status;
   li.replaceChildren();
   const name = document.createElement("span");
@@ -106,11 +156,20 @@ function render(row: Row) {
   if (ready) {
     const a = document.createElement("a");
     a.className = "btn";
+    a.dataset.action = "download";
     a.textContent = t("download", lang);
     a.download = epubName(item.name);
     if (ready.url) a.href = ready.url;
     else a.setAttribute("aria-disabled", "true");
-    actions.append(a);
+    const pv = document.createElement("button");
+    pv.type = "button";
+    pv.className = "ghost";
+    pv.dataset.action = "preview";
+    pv.textContent = t("preview", lang);
+    pv.setAttribute("aria-label", `${t("preview", lang)} ${item.name}`);
+    pv.disabled = ready.expired;
+    pv.onclick = () => void openPreview(row);
+    actions.append(a, pv);
     if (!ready.expired) {
       const clock = document.createElement("span");
       clock.className = "clock";
@@ -123,9 +182,11 @@ function render(row: Row) {
   rm.className = "ghost";
   rm.textContent = t("remove", lang);
   rm.setAttribute("aria-label", `${t("remove", lang)} ${item.name}`);
+  rm.dataset.action = "remove";
   rm.onclick = () => removeRow(row);
   actions.append(rm);
   li.append(name, status, actions);
+  if (focused) li.querySelector<HTMLElement>(`[data-action="${focused}"]`)?.focus();
 }
 
 function removeRow(row: Row) {

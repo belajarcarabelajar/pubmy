@@ -18,10 +18,20 @@ const MESSAGE_KEYS = [
   "invalid-epub",
 ];
 const UI_KEYS = ["title", "drop-hint", "choose-files", "queue-label", "lang-toggle", "waiting", "converting", "ready", "failed", "deleted", "download", "remove", "LIMIT_10", "privacy"];
+const PREVIEW_KEYS = ["preview", "preview-close", "preview-prev", "preview-next", "preview-toc", "preview-failed"];
 
 describe("i18n", () => {
   test("every required key is known", () => {
     for (const k of [...FAILURE_CODES, ...MESSAGE_KEYS, ...UI_KEYS]) expect(KEYS).toContain(k as Key);
+  });
+
+  test("every preview key is known", () => {
+    for (const k of PREVIEW_KEYS) expect(KEYS).toContain(k as Key);
+  });
+
+  test("the preview button reads Pratinjau and Preview", () => {
+    expect(t("preview" as Key, "id")).toBe("Pratinjau");
+    expect(t("preview" as Key, "en")).toBe("Preview");
   });
 
   test("every key has a non-empty string in both languages", () => {

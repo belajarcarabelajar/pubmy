@@ -29,6 +29,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@pubmy/core": "workspace:*",
+        "fflate": "0.8",
       },
       "devDependencies": {
         "@tesseract.js-data/eng": "1.0.0",

@@ -9,7 +9,8 @@
     "deploy:dry": "bun run build && wrangler deploy --dry-run"
   },
   "dependencies": {
-    "@pubmy/core": "workspace:*"
+    "@pubmy/core": "workspace:*",
+    "fflate": "0.8"
   },
   "devDependencies": {
     "@tesseract.js-data/ind": "1.0.0",
