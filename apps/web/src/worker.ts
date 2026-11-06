@@ -1,4 +1,5 @@
 import type { Ctx, Result } from "@pubmy/core";
+import { ocrPaths } from "./ocr-paths.ts";
 
 export type ToWorker = { type: "convert"; id: number; name: string; bytes: Uint8Array };
 export type FromWorker = { type: "progress"; id: number; p: number } | { type: "result"; id: number; result: Result };
@@ -22,7 +23,8 @@ async function run(id: number, name: string, bytes: Uint8Array): Promise<Result>
   const ctx: Ctx = {
     // DOMParser is a Window API and is missing in dedicated workers, so linkedom stands in here.
     dom: c.domFor(typeof DOMParser === "function" ? "browser" : "bun"),
-    loadOcr: () => Promise.reject(new Error("ocr-unavailable")),
+    // A fresh engine per call; the CSP allows only same-origin fetches, so every OCR file comes from dist.
+    loadOcr: async () => (await import("@pubmy/core/ocr")).loadOcrBrowser(ocrPaths(self.location.href)),
     progress: (p) => scope.postMessage({ type: "progress", id, p }),
     // Cancelling terminates this worker from the page, so the signal never needs to fire here.
     signal: new AbortController().signal,

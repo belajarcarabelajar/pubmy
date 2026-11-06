@@ -1,5 +1,6 @@
-import { cp, readdir, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { copyFile, cp, mkdir, readdir, rm, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { OCR_FILES, ocrSource } from "./src/ocr-assets.ts";
 
 const root = import.meta.dir;
 const out = join(root, "dist");
@@ -34,6 +35,11 @@ await Bun.write(join(out, "index.html"), html.replace(style[0], '<link rel="styl
 await cp(join(root, "public"), out, { recursive: true }).catch((e: NodeJS.ErrnoException) => {
   if (e.code !== "ENOENT") throw e;
 });
+
+for (const f of OCR_FILES) {
+  await mkdir(dirname(join(out, f.to)), { recursive: true });
+  await copyFile(ocrSource(f, root), join(out, f.to));
+}
 
 let total = 0;
 for (const name of await readdir(out, { recursive: true })) {
