@@ -33,4 +33,10 @@ describe("decode", () => {
   test("leaves unknown named entities alone", () => {
     expect(decode("&nbsp; &bogus;")).toBe("&nbsp; &bogus;");
   });
+
+  test("an out-of-range or surrogate numeric reference becomes U+FFFD instead of throwing", () => {
+    expect(decode("a&#99999999;b")).toBe("a\uFFFDb");
+    expect(decode("a&#x110000;b")).toBe("a\uFFFDb");
+    expect(decode("a&#xD800;b")).toBe("a\uFFFDb");
+  });
 });
