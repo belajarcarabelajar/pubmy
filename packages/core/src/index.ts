@@ -1,5 +1,6 @@
 import { comicsAdapter } from "./adapters/comics.ts";
 import { docxAdapter } from "./adapters/docx.ts";
+import { mobiAdapter } from "./adapters/mobi/index.ts";
 import { odtAdapter } from "./adapters/odt.ts";
 import { pdfAdapter } from "./adapters/pdf.ts";
 import { rtfAdapter } from "./adapters/rtf.ts";
@@ -17,7 +18,7 @@ export { pack } from "./packager.ts";
 export { validate } from "./validate.ts";
 export { PubmyError } from "./errors.ts";
 
-const adapters: Adapter[] = [comicsAdapter, docxAdapter, odtAdapter, pdfAdapter, rtfAdapter, textAdapter];
+const adapters: Adapter[] = [comicsAdapter, docxAdapter, mobiAdapter, odtAdapter, pdfAdapter, rtfAdapter, textAdapter];
 
 /**
  * Adds an adapter ahead of the ones already registered (newest first, the built-in text adapter last),

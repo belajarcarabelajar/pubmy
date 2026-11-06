@@ -11,6 +11,39 @@ export function domFor(env: "browser" | "bun"): DomAdapter {
   return { parseHTML: (m) => p.parseFromString(m, "text/html") as unknown as Document };
 }
 
+/**
+ * Fills the browser globals foliate-js mobi.js expects (DOMParser, XMLSerializer, document,
+ * CSS.escape, innerText, textarea.value) with linkedom when they are missing, as under Bun.
+ * In a browser every native global exists and nothing is replaced.
+ */
+export function installDomGlobals(): void {
+  const g = globalThis as Record<string, any>;
+  if (!g.DOMParser) g.DOMParser = LinkedomParser;
+  if (!g.XMLSerializer) g.XMLSerializer = class { serializeToString(n: { toString(): string }) { return n.toString(); } };
+  if (!g.document) g.document = new LinkedomParser().parseFromString("<!DOCTYPE html><html><body></body></html>", "text/html");
+  if (!g.CSS?.escape) g.CSS = { ...g.CSS, escape: (s: string) => s.replace(/([^\w-])/g, "\\$1") };
+  const a = g.document.createElement("a");
+  if (a.innerText === undefined) {
+    Object.defineProperty(Object.getPrototypeOf(Object.getPrototypeOf(a)), "innerText", {
+      get() { return this.textContent; },
+      configurable: true,
+    });
+  }
+  const t = g.document.createElement("textarea");
+  t.innerHTML = "&amp;";
+  if (t.value !== "&") {
+    // linkedom keeps textarea content raw, so mobi.js metadata unescaping would keep "&amp;".
+    Object.defineProperty(Object.getPrototypeOf(t), "value", {
+      get() {
+        const d = g.document.createElement("div");
+        d.innerHTML = this.innerHTML;
+        return d.textContent;
+      },
+      configurable: true,
+    });
+  }
+}
+
 // HTML elements obsolete in HTML5 that epubcheck rejects (RSC-005).
 const OBSOLETE: Record<string, string> = { font: "span", center: "div", big: "span", tt: "code", strike: "s", blink: "span", basefont: "span" };
 const VOID = new Set(["area", "br", "col", "hr", "img", "wbr"]);

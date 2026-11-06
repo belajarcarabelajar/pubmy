@@ -45,7 +45,7 @@ function opf(book: Book, uid: string): string {
   const items = [
     `<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>`,
     `<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>`,
-    ...book.chapters.map((c, i) => `<item id="c${i + 1}" href="${escAttr(c.href)}" media-type="application/xhtml+xml"/>`),
+    ...book.chapters.map((c, i) => `<item id="c${i + 1}" href="${escAttr(c.href)}" media-type="application/xhtml+xml"${/<svg[\s>]/.test(c.body) ? ` properties="svg"` : ""}/>`),
     ...book.assets.map((a, i) =>
       `<item id="a${i + 1}" href="${escAttr(a.href)}" media-type="${escAttr(a.mediaType)}"${i === coverIdx ? ` properties="cover-image"` : ""}/>`),
   ];

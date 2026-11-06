@@ -1,0 +1,22 @@
+[
+  {
+    "name": "pg11-kf8.azw3",
+    "url": "https://www.gutenberg.org/ebooks/11.kf8.images",
+    "sha256": "d8211269aed55ded8302f289950936db8368b4d4d384c463b722034152f8f1d2"
+  },
+  {
+    "name": "pg11-kindle.mobi",
+    "url": "https://www.gutenberg.org/ebooks/11.kindle.images",
+    "sha256": "1b4222ffdf1862a39d0fae6d42c588f28a34c12ad73cc21c2849fe2646cac3e1"
+  },
+  {
+    "name": "pg28885-kf8.azw3",
+    "url": "https://www.gutenberg.org/ebooks/28885.kf8.images",
+    "sha256": "00b53929a304c0cf422f99b94a578b32e8bf5ade37718dd4ad37780980d4e896"
+  },
+  {
+    "name": "pg28885-kindle.mobi",
+    "url": "https://www.gutenberg.org/ebooks/28885.kindle.images",
+    "sha256": "e03d999c4a642f4478a4370613321ba951ef59678a12872f7687fab48d3fe494"
+  }
+]
