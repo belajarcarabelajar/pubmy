@@ -99,3 +99,9 @@ Session started 2026-11-07. Brainstorm only: no plan, code, repo, worktree, or b
 - Section 3: "Approve section 3 (Recommended)" (Human-locked)
 - Section 4: "Approve section 4 (Recommended)" (Human-locked)
 - Section 5: "Approve section 5 (Recommended)" (Human-locked)
+
+## Phase: writing plans (sucp-plan loaded 2026-11-07) (+3 items)
+
+- [x] S27 Plan written + validated (evidence: docs/code-plan/plans/2026-11-07-pubmy-v1.md, 56,514 chars < 60k; `bun ~/vivera/scripts/ultra-plan-runner.mjs` exit 0 "Validation: OK", 16 tasks, 3 NEEDS-AGENT warnings for gated T14-T16; Mermaid mmdc exit 0; placeholder scan 0 hits)
+- [x] S28 Draft published to vault (evidence: `PLAN_PUBLISH_CONFIG=<scratch config with pubmy> bun scripts/plan-publish.mjs` exit 0, staged in vault; GitHub issue sync skipped: no GitHub repo until T14)
+- [ ] S29 Plan gate answered (header Plan)
