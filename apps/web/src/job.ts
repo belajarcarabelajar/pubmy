@@ -1,11 +1,11 @@
-import type { Ctx, Result } from "@pubmy/core";
+import type { Ctx, Result } from "@pubmy/core/browser";
 import { browserLibarchiveLoader } from "./libarchive-loader.ts";
 import { ocrPaths } from "./ocr-paths.ts";
 
 export type ToWorker = { type: "convert"; id: number; name: string; bytes: Uint8Array };
 export type FromWorker = { type: "progress"; id: number; p: number } | { type: "result"; id: number; result: Result };
 
-type Core = typeof import("@pubmy/core");
+type Core = typeof import("@pubmy/core/browser");
 
 export interface JobDeps {
   importCore(): Promise<Core>;

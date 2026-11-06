@@ -3,7 +3,7 @@
 import { unzlibSync } from "fflate";
 // @ts-ignore: the vendored foliate-js file ships no type declarations.
 import { MOBI } from "../../../vendor/foliate-mobi.js";
-import { installDomGlobals } from "../../dom.ts";
+import { withDomGlobals } from "../../dom.ts";
 import { PubmyError } from "../../errors.ts";
 import type { Adapter, Book, Ctx, InputFile } from "../../types.ts";
 import { isBookMobi, readDrmFlag, recordsFit } from "./drm.ts";
@@ -27,9 +27,12 @@ export function checkMobiBytes(bytes: Uint8Array): void {
   if (!recordsFit(bytes)) throw new PubmyError("READ_FAILED", "truncated");
 }
 
-/** Opens the bytes with foliate-js; a KF8 book has `transformTarget`, a MOBI6 book does not. */
+/**
+ * Opens the bytes with foliate-js; a KF8 book has `transformTarget`, a MOBI6 book does not.
+ * Call it, and read the returned book, inside withDomGlobals: mobi.js looks up document and
+ * CSS.escape while sections load, not only while opening.
+ */
 export async function openMobi(bytes: Uint8Array): Promise<Kf8Book | FoliateMobi6Book> {
-  installDomGlobals();
   try {
     return await new MOBI({ unzlib: unzlibSync }).open(new Blob([bytes as BlobPart]));
   } catch {
@@ -44,24 +47,28 @@ export const mobiAdapter: Adapter = {
   accepts: (s) => s.format === "mobi",
   async read(file: InputFile, ctx: Ctx): Promise<Book> {
     checkMobiBytes(file.bytes);
-    if (!isCombo(file.bytes)) {
-      const book = await openMobi(file.bytes);
-      return isKf8(book) ? kf8ToBook(book) : mobi6Reader(book, ctx);
-    }
-    // foliate opens a combo file through its KF8 part; hiding EXTH 121 exposes the MOBI6 part.
-    const { book, warnings } = await preferKf8(
-      async () => {
-        const kf8 = await openMobi(file.bytes);
-        if (!isKf8(kf8)) throw new Error("no KF8 part");
-        return kf8ToBook(kf8);
-      },
-      async () => {
-        const mobi6 = await openMobi(withoutKf8Boundary(file.bytes));
-        if (isKf8(mobi6)) throw new PubmyError("READ_FAILED", "mobi-parse-failed");
-        return mobi6Reader(mobi6, ctx);
-      },
-    );
-    if (!warnings.length) return book;
-    return { ...book, notes: { ...book.notes, warnings: [...(book.notes?.warnings ?? []), ...warnings] } };
+    return withDomGlobals(() => readMobi(file, ctx));
   },
 };
+
+async function readMobi(file: InputFile, ctx: Ctx): Promise<Book> {
+  if (!isCombo(file.bytes)) {
+    const book = await openMobi(file.bytes);
+    return isKf8(book) ? kf8ToBook(book) : mobi6Reader(book, ctx);
+  }
+  // foliate opens a combo file through its KF8 part; hiding EXTH 121 exposes the MOBI6 part.
+  const { book, warnings } = await preferKf8(
+    async () => {
+      const kf8 = await openMobi(file.bytes);
+      if (!isKf8(kf8)) throw new Error("no KF8 part");
+      return kf8ToBook(kf8);
+    },
+    async () => {
+      const mobi6 = await openMobi(withoutKf8Boundary(file.bytes));
+      if (isKf8(mobi6)) throw new PubmyError("READ_FAILED", "mobi-parse-failed");
+      return mobi6Reader(mobi6, ctx);
+    },
+  );
+  if (!warnings.length) return book;
+  return { ...book, notes: { ...book.notes, warnings: [...(book.notes?.warnings ?? []), ...warnings] } };
+}

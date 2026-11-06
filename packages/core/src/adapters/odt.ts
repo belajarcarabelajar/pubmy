@@ -1,5 +1,6 @@
 import { strFromU8 } from "fflate";
 import type { Adapter, Asset } from "../types.ts";
+import { escText as esc, decode, escAttr } from "../xml.ts";
 import { unzipCapped } from "../zip-caps.ts";
 import { htmlBook } from "./rtf.ts";
 
@@ -16,14 +17,6 @@ interface El {
   attrs: Record<string, string>;
   children: (El | string)[];
 }
-
-const decode = (t: string) =>
-  t.replace(/&(#x[0-9a-f]+|#\d+|lt|gt|amp|quot|apos);/gi, (_, e: string) => {
-    if (e[0] === "#") return String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : Number(e.slice(1)));
-    return { lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" }[e.toLowerCase()]!;
-  });
-const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const escAttr = (t: string) => esc(t).replace(/"/g, "&quot;");
 
 /** A minimal XML tree builder; ODF content.xml is always well-formed, so no recovery is attempted. */
 function parseXml(src: string): El {

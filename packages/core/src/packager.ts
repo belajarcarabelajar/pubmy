@@ -1,12 +1,14 @@
 import { strToU8, zipSync, type Zippable } from "fflate";
 import { kindleFix, stripControls } from "./kindle-fixes.ts";
 import type { Book, TocEntry } from "./types.ts";
+import { escAttr, escText } from "./xml.ts";
 
-const esc = (s: string) => stripControls(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const escAttr = (s: string) => esc(s).replace(/"/g, "&quot;");
+// Metadata strings come from user files and are not run through kindleFix, so controls are stripped here.
+const esc = (s: string) => escText(stripControls(s));
+const attr = (s: string) => escAttr(stripControls(s));
 
 const xhtmlDoc = (lang: string, title: string, head: string, body: string, extraNs = "") =>
-  `<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml"${extraNs} lang="${escAttr(lang)}" xml:lang="${escAttr(lang)}">` +
+  `<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml"${extraNs} lang="${attr(lang)}" xml:lang="${attr(lang)}">` +
   `<head><title>${esc(title)}</title>${head}</head><body>${body}</body></html>`;
 
 function tocOf(book: Book): TocEntry[] {
@@ -15,7 +17,7 @@ function tocOf(book: Book): TocEntry[] {
 
 function navList(items: TocEntry[]): string {
   return `<ol>${items
-    .map((it) => `<li><a href="${escAttr(it.href)}">${esc(it.title.trim() || "Untitled")}</a>${it.children?.length ? navList(it.children) : ""}</li>`)
+    .map((it) => `<li><a href="${attr(it.href)}">${esc(it.title.trim() || "Untitled")}</a>${it.children?.length ? navList(it.children) : ""}</li>`)
     .join("")}</ol>`;
 }
 
@@ -28,12 +30,12 @@ function ncx(book: Book, uid: string, toc: TocEntry[]): string {
         depth = Math.max(depth, level);
         const n = ++order;
         return `<navPoint id="np${n}" playOrder="${n}"><navLabel><text>${esc(it.title.trim() || "Untitled")}</text></navLabel>` +
-          `<content src="${escAttr(it.href)}"/>${it.children?.length ? points(it.children, level + 1) : ""}</navPoint>`;
+          `<content src="${attr(it.href)}"/>${it.children?.length ? points(it.children, level + 1) : ""}</navPoint>`;
       })
       .join("");
   const map = points(toc, 1);
   return `<?xml version="1.0" encoding="utf-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head>` +
-    `<meta name="dtb:uid" content="${escAttr(uid)}"/><meta name="dtb:depth" content="${depth}"/>` +
+    `<meta name="dtb:uid" content="${attr(uid)}"/><meta name="dtb:depth" content="${depth}"/>` +
     `<meta name="dtb:totalPageCount" content="0"/><meta name="dtb:maxPageNumber" content="0"/></head>` +
     `<docTitle><text>${esc(book.meta.title)}</text></docTitle><navMap>${map}</navMap></ncx>`;
 }
@@ -45,9 +47,9 @@ function opf(book: Book, uid: string): string {
   const items = [
     `<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>`,
     `<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>`,
-    ...book.chapters.map((c, i) => `<item id="c${i + 1}" href="${escAttr(c.href)}" media-type="application/xhtml+xml"${/<svg[\s>]/.test(c.body) ? ` properties="svg"` : ""}/>`),
+    ...book.chapters.map((c, i) => `<item id="c${i + 1}" href="${attr(c.href)}" media-type="application/xhtml+xml"${/<svg[\s>]/.test(c.body) ? ` properties="svg"` : ""}/>`),
     ...book.assets.map((a, i) =>
-      `<item id="a${i + 1}" href="${escAttr(a.href)}" media-type="${escAttr(a.mediaType)}"${i === coverIdx ? ` properties="cover-image"` : ""}/>`),
+      `<item id="a${i + 1}" href="${attr(a.href)}" media-type="${attr(a.mediaType)}"${i === coverIdx ? ` properties="cover-image"` : ""}/>`),
   ];
   const fixed = book.layout === "fixed"
     ? `<meta property="rendition:layout">pre-paginated</meta><meta property="rendition:spread">landscape</meta>`
