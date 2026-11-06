@@ -67,6 +67,9 @@ describe("live", () => {
     const csp = res.headers.get("content-security-policy") ?? "";
     expect(directive(csp, "connect-src").sort()).toEqual(["'self'", BEACON].sort());
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+    // The zone rule security-headers-baseline sets Referrer-Policy for every host on
+    // belajarcarabelajar.com (owner decision 2026-11-07: keep it); the site makes no
+    // cross-origin requests except the analytics beacon, so this stays private enough.
+    expect(res.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
   });
 });
