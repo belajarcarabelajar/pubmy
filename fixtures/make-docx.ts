@@ -1,5 +1,5 @@
 // Builds small DOCX fixtures in memory so no binary test file is checked in.
-// Run directly to write fixtures/out/gen/sample.docx and friends.
+// Run: bun fixtures/make-docx.ts [outDir] to write sample.docx and friends (default fixtures/out/gen/).
 // Uses only node:zlib and a stored ZIP writer: fixtures/ is not a workspace, so packages like
 // fflate do not resolve from here.
 import { deflateSync } from "node:zlib";
@@ -206,11 +206,13 @@ export function makeEncryptedDocx(): Uint8Array {
 }
 
 if (import.meta.main) {
+  // Usage: bun fixtures/make-docx.ts [outDir]  (default fixtures/out/gen/)
   const { mkdirSync, writeFileSync } = await import("node:fs");
-  const dir = new URL("./out/gen/", import.meta.url);
+  const { join } = await import("node:path");
+  const dir = process.argv[2] ?? join(import.meta.dir, "out", "gen");
   mkdirSync(dir, { recursive: true });
-  writeFileSync(new URL("sample.docx", dir), makeDocx());
-  writeFileSync(new URL("memo.docx", dir), makeDocx({ headings: false }));
-  writeFileSync(new URL("encrypted.docx", dir), makeEncryptedDocx());
-  console.log(`wrote 3 DOCX fixtures to ${dir.pathname}`);
+  writeFileSync(join(dir, "sample.docx"), makeDocx());
+  writeFileSync(join(dir, "memo.docx"), makeDocx({ headings: false }));
+  writeFileSync(join(dir, "encrypted.docx"), makeEncryptedDocx());
+  console.log(`wrote 3 DOCX fixtures to ${dir}`);
 }

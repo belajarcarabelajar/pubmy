@@ -1,4 +1,4 @@
-// Writes fixtures/out/comic.cbz: three generated PNG pages plus a ComicInfo.xml that the
+// Writes <outDir>/comic.cbz (default fixtures/out/gen/): three generated PNG pages plus a ComicInfo.xml that the
 // comics adapter must ignore. Page names are stored out of order (p10, p1, p2) so natural
 // sorting is exercised. No dependencies: fixtures/ sits outside the workspace packages, so
 // fflate does not resolve here; PNG data uses zlib stored blocks and the zip uses method 0.
@@ -132,7 +132,8 @@ export function makeCbz(): Uint8Array {
 }
 
 if (import.meta.main) {
-  const out = join(import.meta.dir, "out");
+  // Usage: bun fixtures/make-cbz.ts [outDir]  (default fixtures/out/gen/)
+  const out = process.argv[2] ?? join(import.meta.dir, "out", "gen");
   mkdirSync(out, { recursive: true });
   await Bun.write(join(out, "comic.cbz"), makeCbz());
   console.log(join(out, "comic.cbz"));

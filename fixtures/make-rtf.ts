@@ -1,5 +1,5 @@
 // Generates a small RTF document with headings, a list, a table and a PNG picture.
-// Run: bun fixtures/make-rtf.ts <out.rtf>
+// Run: bun fixtures/make-rtf.ts [outDir] to write <outDir>/sample.rtf (default fixtures/out/gen/).
 
 /** A valid 1x1 PNG. */
 export const PNG_1X1 = Uint8Array.from(
@@ -34,7 +34,8 @@ export function makeRtf(): Uint8Array {
 }
 
 if (import.meta.main) {
-  const out = process.argv[2] ?? "fixtures/out/sample.rtf";
+  // Usage: bun fixtures/make-rtf.ts [outDir]  (default fixtures/out/gen/); Bun.write creates the dir.
+  const out = `${process.argv[2] ?? `${import.meta.dir}/out/gen`}/sample.rtf`;
   await Bun.write(out, makeRtf());
   console.log(out);
 }

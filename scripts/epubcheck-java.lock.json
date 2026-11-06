@@ -1,0 +1,9 @@
+{
+  "name": "epubcheck",
+  "version": "5.4.0",
+  "url": "https://github.com/w3c/epubcheck/releases/download/v5.4.0/epubcheck-5.4.0.zip",
+  "sha256": "33350c61038e71dfb3d45a76aed04bf5481e6d5500cb780f6e98db8bbd15a28c",
+  "jar": "epubcheck-5.4.0/epubcheck.jar",
+  "licence": "BSD-3-Clause",
+  "licenceSource": "https://github.com/w3c/epubcheck/blob/main/LICENSE.md"
+}

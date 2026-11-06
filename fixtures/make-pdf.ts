@@ -1,5 +1,5 @@
 // Generates the PDF fixtures used by packages/core/test/pdf.test.ts. Dev only (pdf-lib, MIT).
-// Run `bun fixtures/make-pdf.ts` to write them to fixtures/out/made/ for a manual look.
+// Run `bun fixtures/make-pdf.ts [outDir]` to write them to <outDir> (default fixtures/out/gen/).
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { degrees, PDFDocument, PDFName, PDFNull, PDFString, StandardFonts } from "pdf-lib";
@@ -113,7 +113,8 @@ export function makeEncryptedPdf(): Uint8Array {
 }
 
 if (import.meta.main) {
-  const dir = join(import.meta.dir, "out", "made");
+  // Usage: bun fixtures/make-pdf.ts [outDir]  (default fixtures/out/gen/)
+  const dir = process.argv[2] ?? join(import.meta.dir, "out", "gen");
   mkdirSync(dir, { recursive: true });
   await Bun.write(join(dir, "two-column.pdf"), await makeTwoColumnPdf());
   await Bun.write(join(dir, "two-column-outline.pdf"), await makeTwoColumnPdf({ outline: ["Introduction", "Method", "Results"] }));

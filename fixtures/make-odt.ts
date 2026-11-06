@@ -1,5 +1,5 @@
 // Generates a small ODT document with headings, a nested list, a table, an image and a footnote.
-// Run: bun fixtures/make-odt.ts <out.odt>
+// Run: bun fixtures/make-odt.ts [outDir] to write <outDir>/sample.odt (default fixtures/out/gen/).
 import { PNG_1X1 } from "./make-rtf.ts";
 
 const strToU8 = (s: string) => new TextEncoder().encode(s);
@@ -117,7 +117,8 @@ ${body}
 }
 
 if (import.meta.main) {
-  const out = process.argv[2] ?? "fixtures/out/sample.odt";
+  // Usage: bun fixtures/make-odt.ts [outDir]  (default fixtures/out/gen/); Bun.write creates the dir.
+  const out = `${process.argv[2] ?? `${import.meta.dir}/out/gen`}/sample.odt`;
   await Bun.write(out, makeOdt());
   console.log(out);
 }

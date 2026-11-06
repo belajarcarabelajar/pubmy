@@ -1,5 +1,5 @@
 // Builds an image-only (scanned-looking) two-page PDF from original Indonesian and English text.
-// Run directly to write fixtures/out/scan.pdf; tests import makeScan() and SCAN_PAGES instead.
+// Run: bun fixtures/make-scan.ts [outDir] to write <outDir>/scan.pdf (default fixtures/out/gen/); tests import makeScan() and SCAN_PAGES instead.
 import { existsSync } from "node:fs";
 import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { PDFDocument } from "pdf-lib";
@@ -103,7 +103,8 @@ export async function makeScan(): Promise<Uint8Array> {
 }
 
 if (import.meta.main) {
-  const out = `${import.meta.dir}/out/scan.pdf`;
+  // Usage: bun fixtures/make-scan.ts [outDir]  (default fixtures/out/gen/); Bun.write creates the dir.
+  const out = `${process.argv[2] ?? `${import.meta.dir}/out/gen`}/scan.pdf`;
   await Bun.write(out, await makeScan());
   console.log(`wrote ${out}`);
 }
