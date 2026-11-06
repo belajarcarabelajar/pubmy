@@ -1,18 +1,10 @@
-// Builds the self-contained skill script: skills/pubmy/scripts/pubmy.js (plus the OCR worker when tesseract.js is installed).
+// Builds the self-contained skill: skills/pubmy/scripts/pubmy.js, tesseract-worker.js, and the OCR wasm files.
 // Run: bun run --cwd apps/cli build   (or: bun apps/cli/build.ts)
-import { mkdir, readdir, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { copyFile, mkdir, readdir, rm, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 const repo = join(import.meta.dir, "../..");
 const outDir = join(repo, "skills/pubmy/scripts");
-
-function tryResolve(spec: string, from: string): string | undefined {
-  try {
-    return Bun.resolveSync(spec, from);
-  } catch {
-    return undefined;
-  }
-}
 
 const JSON_REQUIRE = /\brequire\((["'])([^"']+\.json)\1\)/g;
 
@@ -27,13 +19,36 @@ export function inlineJsonRequires(src: string): string {
   return imports.length ? `${imports.join("\n")}\n${body}` : src;
 }
 
-// css-tree (used by the EPUB validator) loads its data through createRequire(import.meta.url) at run time,
-// which Bun.build leaves as a runtime lookup of files that do not exist beside pubmy.js.
-const inlineCssTreeJson: Bun.BunPlugin = {
-  name: "inline-css-tree-json",
+// Every bundle starts with this line, so rewritten modules can find the folder that holds the bundled scripts.
+const BANNER = "const __PUBMY_DIR__ = import.meta.dir;";
+
+function replaceOnce(src: string, from: string, to: string, file: string): string {
+  if (!src.includes(from)) throw new Error(`build: expected text not found in ${file}; tesseract.js changed, update apps/cli/build.ts`);
+  return src.split(from).join(to);
+}
+
+const plugin: Bun.BunPlugin = {
+  name: "pubmy-skill-paths",
   setup(b) {
+    // css-tree (used by the EPUB validator) loads its data through createRequire(import.meta.url) at run time,
+    // which Bun.build leaves as a lookup of files that do not exist beside pubmy.js.
     b.onLoad({ filter: /[\\/]css-tree[\\/]lib[\\/].*\.js$/ }, async (args) => ({
       contents: inlineJsonRequires(await Bun.file(args.path).text()),
+      loader: "js",
+    }));
+    // tesseract.js spawns its worker from a path next to its own source file, which does not exist in the bundle.
+    b.onLoad({ filter: /[\\/]tesseract\.js[\\/]src[\\/]worker[\\/]node[\\/]defaultOptions\.js$/ }, async (args) => ({
+      contents: replaceOnce(
+        await Bun.file(args.path).text(),
+        "path.join(__dirname, '..', '..', 'worker-script', 'node', 'index.js')",
+        "path.join(__PUBMY_DIR__, 'tesseract-worker.js')",
+        args.path,
+      ),
+      loader: "js",
+    }));
+    // The tesseract core reads its .wasm from its own folder; the build copies the wasm files beside the worker.
+    b.onLoad({ filter: /[\\/]tesseract\.js-core[\\/]tesseract-core[^\\/]*\.js$/ }, async (args) => ({
+      contents: replaceOnce(await Bun.file(args.path).text(), "__dirname", "__PUBMY_DIR__", args.path),
       loader: "js",
     }));
   },
@@ -47,9 +62,8 @@ async function bundle(entry: string, naming: string): Promise<void> {
     target: "bun",
     format: "esm",
     minify: true,
-    plugins: [inlineCssTreeJson],
-    // Files the bundler cannot inline (wasm and similar) are emitted beside the script, so the skill folder stays self-contained.
-    loader: { ".wasm": "file", ".traineddata": "file" },
+    banner: BANNER,
+    plugins: [plugin],
   });
   if (!res.success) {
     for (const log of res.logs) console.error(log);
@@ -58,15 +72,22 @@ async function bundle(entry: string, naming: string): Promise<void> {
 }
 
 export async function build(): Promise<string[]> {
-  // Stale chunks from an earlier build would otherwise ship inside the skill folder.
+  // Stale files from an earlier build would otherwise ship inside the skill folder.
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
 
   await bundle(join(repo, "apps/cli/src/main.ts"), "pubmy.js");
 
-  // tesseract.js starts its OCR worker from a separate file at run time, so it cannot live inside pubmy.js.
-  const worker = tryResolve("tesseract.js/src/worker-script/node/index.js", join(repo, "packages/core"));
-  if (worker) await bundle(worker, "tesseract-worker.js");
+  // tesseract.js runs OCR in a worker thread loaded from a separate file, so it cannot live inside pubmy.js.
+  const worker = Bun.resolveSync("tesseract.js/src/worker-script/node/index.js", join(repo, "packages/core"));
+  await bundle(worker, "tesseract-worker.js");
+
+  // The worker picks its core by CPU SIMD support and OEM at run time (a probe loaded the non-LSTM
+  // tesseract-core-relaxedsimd.wasm), so every core wasm ships.
+  const coreDir = dirname(Bun.resolveSync("tesseract.js-core/package.json", dirname(worker)));
+  for (const f of (await readdir(coreDir)).filter((n) => n.endsWith(".wasm"))) {
+    await copyFile(join(coreDir, f), join(outDir, f));
+  }
 
   const files = (await readdir(outDir)).sort();
   for (const f of files) console.log(`${f}\t${(await stat(join(outDir, f))).size} B`);

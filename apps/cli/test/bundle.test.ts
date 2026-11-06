@@ -1,10 +1,19 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { copyFile, cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { makeCbz } from "../../../fixtures/make-cbz.ts";
+import { makeDocx } from "../../../fixtures/make-docx.ts";
+import { makeOdt } from "../../../fixtures/make-odt.ts";
+import { makeTwoColumnPdf } from "../../../fixtures/make-pdf.ts";
+import { makeRtf } from "../../../fixtures/make-rtf.ts";
+import { makeScan } from "../../../fixtures/make-scan.ts";
+import { fetchFixtures } from "../../../fixtures/fetch.ts";
 
 const repo = join(import.meta.dir, "../../..");
 const skillDir = join(repo, "skills/pubmy");
+const FIXTURES = join(repo, "fixtures");
+const DL = join(FIXTURES, "out/dl");
 
 describe("readme", () => {
   test("lists the three skill install dirs", async () => {
@@ -42,6 +51,13 @@ describe("readme", () => {
 describe("bundle", () => {
   let work: string;
 
+  beforeAll(async () => {
+    const sources = await mkdtemp(join(tmpdir(), "pubmy-gutenberg-"));
+    await copyFile(join(FIXTURES, "sources/gutenberg.json"), join(sources, "gutenberg.json"));
+    expect(await fetchFixtures(sources, DL)).toBe(0);
+    await rm(sources, { recursive: true, force: true });
+  }, 120_000);
+
   beforeEach(async () => {
     work = await mkdtemp(join(tmpdir(), "pubmy-bundle-"));
   });
@@ -70,30 +86,62 @@ describe("bundle", () => {
     return { code, out, err };
   }
 
-  async function makeTree(): Promise<string> {
+  async function put(root: string, rel: string, bytes: Uint8Array | string): Promise<void> {
+    await mkdir(join(root, rel, ".."), { recursive: true });
+    await writeFile(join(root, rel), bytes);
+  }
+
+  /** One file per supported format group, spread over three folder levels. */
+  async function makeFullTree(): Promise<string> {
     const root = join(work, "books");
-    await mkdir(join(root, "sub"), { recursive: true });
-    await writeFile(join(root, "a.txt"), "Chapter One\n\nHello from a plain text file.\n");
-    await writeFile(join(root, "sub/b.md"), "# Chapter One\n\nHello from *Markdown*.\n");
-    await writeFile(join(root, "sub/c.html"), "<!doctype html><html><head><title>C</title></head><body><h1>Chapter</h1><p>Hello HTML.</p></body></html>");
+    await put(root, "notes.md", "# Chapter One\n\nHello from *Markdown*.\n");
+    await put(root, "docs/report.docx", makeDocx());
+    await put(root, "docs/letter.odt", makeOdt());
+    await put(root, "docs/old/memo.rtf", makeRtf());
+    await put(root, "pdf/two-column.pdf", await makeTwoColumnPdf());
+    await put(root, "pdf/scan.pdf", await makeScan());
+    await put(root, "comics/issue.cbz", makeCbz());
+    await put(root, "ebooks/pg11.azw3", new Uint8Array(await readFile(join(DL, "pg11-kf8.azw3"))));
+    await put(root, "ebooks/pg11.mobi", new Uint8Array(await readFile(join(DL, "pg11-kindle.mobi"))));
     return root;
   }
 
-  const expected = ["a.txt.epub", "sub/b.md.epub", "sub/c.html.epub"];
+  const expected = [
+    "comics/issue.cbz.epub",
+    "docs/letter.odt.epub",
+    "docs/old/memo.rtf.epub",
+    "docs/report.docx.epub",
+    "ebooks/pg11.azw3.epub",
+    "ebooks/pg11.mobi.epub",
+    "notes.md.epub",
+    "pdf/scan.pdf.epub",
+    "pdf/two-column.pdf.epub",
+  ];
+
+  async function listTree(dir: string, prefix = ""): Promise<string[]> {
+    const out: string[] = [];
+    for (const e of await readdir(dir, { withFileTypes: true })) {
+      const rel = prefix + e.name;
+      if (e.isDirectory()) out.push(...(await listTree(join(dir, e.name), `${rel}/`)));
+      else out.push(rel);
+    }
+    return out.sort();
+  }
 
   test(
-    "converts a temp tree into a mirrored pubmy-epub folder and exits 0",
+    "converts one file per format into a mirrored pubmy-epub tree of EPUBs and exits 0",
     async () => {
       const script = await installedScript();
-      const root = await makeTree();
+      const root = await makeFullTree();
       const r = await runBundle(script, [root]);
-      expect(r.code).toBe(0);
+      expect({ code: r.code, out: r.out, err: r.err }).toMatchObject({ code: 0 });
+      expect(await listTree(join(root, "pubmy-epub"))).toEqual(expected);
       for (const rel of expected) {
         const bytes = new Uint8Array(await readFile(join(root, "pubmy-epub", rel)));
-        expect(new TextDecoder().decode(bytes.subarray(0, 2))).toBe("PK");
         expect(new TextDecoder().decode(bytes.subarray(30, 58))).toBe("mimetypeapplication/epub+zip");
       }
-      expect((await readdir(join(root, "pubmy-epub/sub"))).sort()).toEqual(["b.md.epub", "c.html.epub"]);
+      expect(r.out).toMatch(/pdf\/scan\.pdf\s+converted \(OCR \d+ pages/m);
+      expect((await stat(join(work, "home/.cache/pubmy/tesseract"))).isDirectory()).toBe(true);
     },
     300_000,
   );
@@ -102,12 +150,14 @@ describe("bundle", () => {
     "a rerun converts nothing and leaves the EPUBs untouched",
     async () => {
       const script = await installedScript();
-      const root = await makeTree();
+      const root = join(work, "books");
+      await put(root, "a.txt", "Chapter One\n\nHello from a plain text file.\n");
+      await put(root, "sub/c.html", "<!doctype html><html><head><title>C</title></head><body><h1>Chapter</h1><p>Hello HTML.</p></body></html>");
       expect((await runBundle(script, [root])).code).toBe(0);
       const before = (await stat(join(root, "pubmy-epub/a.txt.epub"))).mtimeMs;
       const r = await runBundle(script, [root]);
       expect(r.code).toBe(0);
-      expect(r.out).not.toMatch(/\sconverted$/m);
+      expect(r.out).not.toMatch(/\sconverted/m);
       expect(r.out).toMatch(/a\.txt\s+skipped$/m);
       expect((await stat(join(root, "pubmy-epub/a.txt.epub"))).mtimeMs).toBe(before);
     },

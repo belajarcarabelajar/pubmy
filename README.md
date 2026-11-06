@@ -26,7 +26,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 Requires [Bun](https://bun.sh) 1.4 or newer (`bun --version`).
 
-Copy the `skills/pubmy` folder of this repository into your harness's skills folder:
+Copy the `skills/pubmy` folder of this repository into your harness's skills folder. The folder is self-contained (about 25 MB, most of it the OCR engine in `scripts/`) and needs no `bun install`.
 
 | Harness | Skills folder |
 |---|---|
