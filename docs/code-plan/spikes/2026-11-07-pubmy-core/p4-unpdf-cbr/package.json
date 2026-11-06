@@ -1,0 +1,9 @@
+{
+  "name": "p4-unpdf-cbr",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "libarchive.js": "^2.0.2",
+    "unpdf": "^2.1.0"
+  }
+}

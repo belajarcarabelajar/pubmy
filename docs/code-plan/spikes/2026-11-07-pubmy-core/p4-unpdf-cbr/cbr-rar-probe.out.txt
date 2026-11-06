@@ -1,0 +1,7 @@
+node build exports: [ "Archive", "ArchiveCompression", "ArchiveFormat" ]
+fixtures-dl/rar/test.cbr: 2 entries -> test.txt(20), testdir/test.txt(20)
+  extracted test.txt: 20 bytes, magic 74657374
+fixtures-dl/rar/test.cbr: FAILED f.arrayBuffer is not a function. (In 'f.arrayBuffer()', 'f.arrayBuffer' is undefined)
+node build exports: [ "Archive", "ArchiveCompression", "ArchiveFormat" ]
+fixtures-dl/rar/test5.cbr: 1 entries -> test.bin(1200)
+  extracted test.bin: 1200 bytes, magic 00000000

@@ -1,0 +1,24 @@
+Bab 3: Dari Teks ke Buku Elektronik
+
+Teks hasil pengenalan belum langsung menjadi buku yang rapi. Nomor halaman, judul
+berjalan di bagian atas, dan pemenggalan kata di ujung baris harus dibuang lebih dulu.
+Paragraf yang terpotong oleh batas halaman perlu disambung kembali agar kalimat
+tetap utuh. Judul bab dikenali dari ukuran huruf atau dari pola seperti kata Bab yang
+diikuti angka.
+
+Setelah struktur terbentuk, konverter menyusun berkas EPUB yang berisi bab, daftar
+isi, dan metadata seperti judul serta nama penulis. Berkas ini dapat dikirim ke Kindle
+melalui surel atau kabel, lalu dibaca dengan ukuran huruf pilihan pembaca. Gambar
+asli tetap dapat disertakan sebagai lampiran bila pembaca ingin membandingkan
+hasilnya.
+
+Keeping the Process Private
+
+Many students prefer that their notes never leave the device. Running recognition
+inside the browser keeps every page on the local computer, with no upload to a remote
+server. The trade off is speed: a browser worker shares the processor with everything
+else on the screen, and a long book may take several minutes.
+
+A clear progress bar, the option to cancel, and a sensible default of one or two workers
+make that wait acceptable. Users can keep reading the first chapters while the rest of
+the book is still being processed in the background.

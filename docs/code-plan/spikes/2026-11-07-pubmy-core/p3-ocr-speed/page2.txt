@@ -1,0 +1,11 @@
+Bab 2: Menyiapkan Halaman Pindaian
+
+Kualitas gambar sangat menentukan hasil pengenalan huruf. Halaman sebaiknya dipindai dengan resolusi sekitar dua ratus titik per inci, dalam posisi lurus, dan dengan pencahayaan yang merata. Bayangan jari, lipatan kertas, serta noda tinta dapat dibaca sebagai huruf palsu oleh mesin. Karena itu langkah pertama selalu membersihkan gambar: memotong tepi yang gelap, meluruskan kemiringan, dan mengubah warna menjadi hitam putih.
+
+Setelah gambar bersih, mesin pengenal membaca halaman baris demi baris. Mesin memerlukan data bahasa agar dapat menebak kata yang wajar. Data bahasa Indonesia membantu mengenali imbuhan seperti meng, peng, dan akhiran kan atau nya, sedangkan data bahasa Inggris berguna untuk istilah teknis yang sering muncul dalam buku pelajaran.
+
+Choosing Languages for Recognition
+
+Loading two language models at once costs more memory and time, yet it often improves the result on bilingual material. The engine compares each word against both vocabularies and keeps the most likely spelling. On a slow laptop or an older phone, the extra cost can be noticeable, so the application should load the data only when it detects that a file truly needs recognition.
+
+A practical converter therefore checks the document first. When a PDF already contains a text layer, the converter skips recognition entirely and reads the existing characters. Only image pages without text go through the slower path.

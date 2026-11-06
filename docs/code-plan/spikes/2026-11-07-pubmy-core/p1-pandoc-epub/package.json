@@ -1,0 +1,19 @@
+{
+  "name": "p1-pandoc-epub",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "bun check"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "@likecoin/epubcheck-ts": "0.7.0",
+    "pandoc-wasm": "^1.1.0"
+  }
+}

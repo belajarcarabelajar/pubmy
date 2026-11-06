@@ -1,0 +1,8 @@
+{
+  "name": "pubmy-spike-p3-ocr-speed",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  }
+}

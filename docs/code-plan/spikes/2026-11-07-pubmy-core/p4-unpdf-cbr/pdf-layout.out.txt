@@ -1,0 +1,66 @@
+  rotated items dropped:  | arXiv:2302.13971v1 [cs.CL] 27 Feb 2023
+page 1: width=595.276 items=154 dirs=ltr
+  family@size -> chars: sans-serif@10.91=2986, sans-serif@9.96=508, sans-serif@11.96=249, monospace@8.97=54, sans-serif@14.35=52, monospace@8.28=41, serif@20.00=38, sans-serif@8.97=36
+  sample item: {"str":"LLaMA: Open and Efficient Foundation Language Models","x":117.272,"y":756.294,"width":360.73519899999985,"height":14.3462,"fontSize":14.3462,"fontFamily":"sans-serif","dir":"ltr","hasEOL":false,"rotated":false}
+  rotated items dropped: none
+page 2: width=595.276 items=250 dirs=ltr
+  family@size -> chars: sans-serif@10.91=3905, sans-serif@9.96=268, monospace@10.91=40, sans-serif@11.96=10
+  sample item: {"str":"Our training approach is similar to the methods","x":70.866,"y":738.833,"width":218.27276371200003,"height":10.9091,"fontSize":10.9091,"fontFamily":"sans-serif","dir":"ltr","hasEOL":true,"rotated":false}
+
+body font size (char-weighted median): 10.9091
+
+--- first 40 reconstructed lines ---
+ 1 [f 14.3] LLaMA: Open and Efficient Foundation Language Models
+ 2 [f 12.0] Hugo Touvron∗, Thibaut Lavril∗, Gautier Izacard∗, Xavier Martinet
+ 3 [f 12.0] Marie-Anne Lachaux, Timothee Lacroix, Baptiste Rozière, Naman Goyal
+ 4 [f 12.0] Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin
+ 5 [f 12.0] Edouard Grave∗, Guillaume Lample∗
+ 6 [f 12.0] Meta AI
+ 7 [l 12.0] Abstract
+ 8 [l 10.0] We introduce LLaMA, a collection of founda-
+ 9 [l 10.0] tion language models ranging from 7B to 65B
+10 [l 10.0] parameters. We train our models on trillions
+11 [l 10.0] of tokens, and show that it is possible to train
+12 [l 10.0] state-of-the-art models using publicly avail-
+13 [l 10.0] able datasets exclusively, without resorting
+14 [l 10.0] to proprietary and inaccessible datasets. In
+15 [l 10.0] particular, LLaMA-13B outperforms GPT-3
+16 [l 10.0] (175B) on most benchmarks, and LLaMA-
+17 [l 10.0] 65B is competitive with the best models,
+18 [l 10.0] Chinchilla-70B and PaLM-540B. We release
+19 [l 10.0] all our models to the research community1.
+20 [l 12.0] 1 Introduction
+21 [l 10.9] Large Languages Models (LLMs) trained on mas-
+22 [l 10.9] sive corpora of texts have shown their ability to per-
+23 [l 10.9] form new tasks from textual instructions or from a
+24 [l 10.9] few examples (Brown et al., 2020). These few-shot
+25 [l 10.9] properties first appeared when scaling models to a
+26 [l 10.9] sufficient size (Kaplan et al., 2020), resulting in a
+27 [l 10.9] line of work that focuses on further scaling these
+28 [l 10.9] models (Chowdhery et al., 2022; Rae et al., 2021).
+29 [l 10.9] These efforts are based on the assumption that
+30 [l 10.9] more parameters will lead to better performance.
+31 [l 10.9] However, recent work from Hoffmann et al. (2022)
+32 [l 10.9] shows that, for a given compute budget, the best
+33 [l 10.9] performances are not achieved by the largest mod-
+34 [l 10.9] els, but by smaller models trained on more data.
+35 [l 10.9] The objective of the scaling laws from Hoff-
+36 [l 10.9] mann et al. (2022) is to determine how to best
+37 [l 10.9] scale the dataset and model sizes for a particular
+38 [l 10.9] training compute budget. However, this objective
+39 [l 10.9] disregards the inference budget, which becomes
+40 [l 10.9] critical when serving a language model at scale.
+
+--- headings (size > median*1.2) ---
+[14.3] LLaMA: Open and Efficient Foundation Language Models
+
+--- lines at size 11.5-14 (candidates the 1.2 rule may miss) ---
+[12.0] Edouard Grave∗, Guillaume Lample∗
+[12.0] Meta AI
+[12.0] Abstract
+[12.0] 1 Introduction
+[12.0] 2 Approach
+
+inspectPages born-digital: totalPages=27 first pages=[{"textLength":3422,"invisibleTextLength":0,"imageCount":0,"imageCoverage":0},{"textLength":3617,"invisibleTextLength":0,"imageCount":0,"imageCoverage":0}]
+
+inspectPages scanned: totalPages=1 first pages=[{"textLength":0,"invisibleTextLength":0,"imageCount":1,"imageCoverage":1}]

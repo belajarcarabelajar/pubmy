@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.DS_Store
+# spike artefacts: regenerate with the commands in each probe (downloads are untrusted, outputs are rebuildable)
+docs/code-plan/spikes/**/out/
+docs/code-plan/spikes/**/cache/
+docs/code-plan/spikes/**/fixtures/
+docs/code-plan/spikes/**/fixtures-dl/
+docs/code-plan/spikes/**/fixtures-made/
+docs/code-plan/spikes/**/*.png
+docs/code-plan/spikes/**/*.epub

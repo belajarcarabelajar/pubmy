@@ -1,0 +1,24 @@
+Bab 1: Membaca di Layar Kecil
+
+Kebiasaan membaca buku digital terus tumbuh di Indonesia. Banyak pelajar
+menyimpan modul kuliah, catatan, dan novel di perangkat Kindle karena layarnya
+nyaman untuk mata dan baterainya awet berhari-hari. Namun tidak semua berkas siap
+dibaca di perangkat tersebut. Dokumen hasil pindaian, misalnya, hanya berisi gambar
+halaman tanpa teks yang bisa dipilih, sehingga ukuran huruf tidak dapat diubah dan
+pencarian kata tidak berjalan.
+
+Masalah ini sering muncul pada arsip lama milik perpustakaan sekolah, fotokopi
+materi pelatihan, dan buku catatan yang dipotret dengan ponsel. Pembaca harus
+memperbesar halaman, menggeser ke kiri dan ke kanan, lalu kehilangan alur bacaan.
+Pengalaman seperti itu membuat orang cepat lelah dan akhirnya berhenti membaca.
+Why Optical Character Recognition Matters
+
+Optical character recognition turns a picture of a page into real text. Once the words
+exist as characters, a converter can reflow them into chapters, apply a readable font,
+and build a table of contents. The reader can then search for a term, highlight a
+sentence, and look up a definition without leaving the book.
+
+Accuracy still decides whether the result is pleasant. A few wrong letters per paragraph
+are tolerable, but broken words in every line guickly ruin the reading flow. For that
+reason this experiment measures both speed and the error rate on a mixed Indonesian
+and English page.

@@ -1,0 +1,4 @@
+node build exports: [ "Archive", "ArchiveCompression", "ArchiveFormat" ]
+/home/belajarcarabelajar/Proyek/pubmy/docs/code-plan/spikes/2026-11-07-pubmy-core/p4-unpdf-cbr/fixtures-made/sample.cbz: 2 entries -> 001.png(357980), 002.png(216189)
+  extracted 001.png: 357980 bytes, magic 89504e47
+  extracted 002.png: 216189 bytes, magic 89504e47
