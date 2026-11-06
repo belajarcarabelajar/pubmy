@@ -26,7 +26,14 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 Requires [Bun](https://bun.sh) 1.4 or newer (`bun --version`).
 
-Copy the `skills/pubmy` folder of this repository into your harness's skills folder. The folder is self-contained (about 25 MB, most of it the OCR engine in `scripts/`) and needs no `bun install`.
+First get the repository (needs [Git](https://git-scm.com); without Git, use **Code > Download ZIP** on GitHub and unzip it):
+
+```bash
+git clone https://github.com/belajarcarabelajar/pubmy.git
+cd pubmy
+```
+
+Then copy the `skills/pubmy` folder into your harness's skills folder. The folder is self-contained (about 25 MB, most of it the OCR engine in `scripts/`) and needs no `bun install`.
 
 | Harness | Skills folder |
 |---|---|
@@ -57,6 +64,29 @@ New-Item -ItemType Directory -Force "$HOME\.agents\skills" | Out-Null; Copy-Item
 # Antigravity
 New-Item -ItemType Directory -Force "$HOME\.gemini\config\skills" | Out-Null; Copy-Item -Recurse -Force skills\pubmy "$HOME\.gemini\config\skills\"
 ```
+
+### Per-project install
+
+To load the skill only inside one project, copy it into that project's folder instead of your home folder. The project paths come from each vendor's documentation (read 2026-11-07); only the home-folder install above was tested.
+
+| Harness | Project skills folder |
+|---|---|
+| Claude Code | `<project>/.claude/skills` |
+| Codex, Cursor, OpenCode, Antigravity | `<project>/.agents/skills` |
+
+```bash
+# run from the pubmy repository root; replace /path/to/project
+mkdir -p /path/to/project/.claude/skills && cp -R skills/pubmy /path/to/project/.claude/skills/
+mkdir -p /path/to/project/.agents/skills && cp -R skills/pubmy /path/to/project/.agents/skills/
+```
+
+```powershell
+# run from the pubmy repository root; replace C:\path\to\project
+New-Item -ItemType Directory -Force "C:\path\to\project\.claude\skills" | Out-Null; Copy-Item -Recurse -Force skills\pubmy "C:\path\to\project\.claude\skills\"
+New-Item -ItemType Directory -Force "C:\path\to\project\.agents\skills" | Out-Null; Copy-Item -Recurse -Force skills\pubmy "C:\path\to\project\.agents\skills\"
+```
+
+Copy only the line for the harness you use: OpenCode reads both folders and would list the skill twice. If the project is a Git repository, add the copied folder to its `.gitignore` so the 25 MB bundle is not committed.
 
 To update, copy the folder again. Then ask your agent, for example: "convert the folder ~/Books to EPUB for my Kindle" or "ubah semua file di folder ini ke EPUB".
 
