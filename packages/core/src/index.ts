@@ -17,6 +17,7 @@ export { domFor } from "./dom.ts";
 export { pack } from "./packager.ts";
 export { validate } from "./validate.ts";
 export { PubmyError } from "./errors.ts";
+export { createComicsAdapter } from "./adapters/comics.ts";
 
 const adapters: Adapter[] = [comicsAdapter, docxAdapter, mobiAdapter, odtAdapter, pdfAdapter, rtfAdapter, textAdapter];
 

@@ -14,7 +14,7 @@ export interface Io {
   convert?: ConvertFn;
 }
 
-const USAGE = "usage: pubmy <folder> [--force]\n";
+const USAGE = "usage: pubmy <folder> [--force] [--rtl]\n";
 
 async function coreConvert(): Promise<ConvertFn> {
   // Loaded lazily so tests with an injected convert never pull in the DOM and EPUB stack.
@@ -23,10 +23,20 @@ async function coreConvert(): Promise<ConvertFn> {
   return (f) =>
     core.convert(f, {
       dom,
-      loadOcr: () => Promise.reject(new Error("OCR is not available in the CLI")),
+      // The scan code terminates each engine it gets, so every call loads a fresh one.
+      loadOcr: async () => (await import("@pubmy/core/ocr")).loadOcrBun(),
       progress: () => {},
       signal: new AbortController().signal,
     });
+}
+
+/** Swaps in the right-to-left comics adapter; the returned function puts the default back. */
+async function useRtlComics(): Promise<() => void> {
+  const { registerAdapter } = await import("@pubmy/core");
+  const { createComicsAdapter } = await import("@pubmy/core");
+  registerAdapter(createComicsAdapter({ direction: "rtl" }));
+  // Same id, so this replaces the rtl adapter in place instead of leaving no comics adapter.
+  return () => void registerAdapter(createComicsAdapter());
 }
 
 async function mtimeMs(path: string): Promise<number | undefined> {
@@ -57,7 +67,7 @@ async function convertOne(root: string, rel: string, force: boolean, convert: Co
   } catch {
     return { rel, status: "failed", code: "WRITE_FAILED" };
   }
-  return { rel, status: "converted" };
+  return result.notes ? { rel, status: "converted", notes: result.notes } : { rel, status: "converted" };
 }
 
 /** Converts every file under the folder into `<folder>/pubmy-epub/`; resolves to the exit code. */
@@ -65,9 +75,11 @@ export async function run(argv: string[], io: Io): Promise<number> {
   const now = io.now ?? Date.now;
   const started = now();
   let force = false;
+  let rtl = false;
   const positional: string[] = [];
   for (const a of argv) {
     if (a === "--force") force = true;
+    else if (a === "--rtl") rtl = true;
     else if (a.startsWith("-")) {
       io.stderr(`unknown flag: ${a}\n${USAGE}`);
       return 2;
@@ -85,9 +97,14 @@ export async function run(argv: string[], io: Io): Promise<number> {
   }
 
   const convert = io.convert ?? (await coreConvert());
+  const restore = rtl ? await useRtlComics() : () => {};
   const rows: Row[] = [];
-  for (const rel of await walk(root)) {
-    rows.push(await convertOne(root, rel, force, convert));
+  try {
+    for (const rel of await walk(root)) {
+      rows.push(await convertOne(root, rel, force, convert));
+    }
+  } finally {
+    restore();
   }
   io.stdout(formatReport(rows));
   io.stderr(`${rows.length} file(s) in ${Math.round(now() - started)} ms\n`);

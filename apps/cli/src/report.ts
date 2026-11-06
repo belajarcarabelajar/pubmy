@@ -1,11 +1,24 @@
-import type { FailureCode } from "@pubmy/core";
+import type { BookNotes, FailureCode } from "@pubmy/core";
 
 export type Row =
-  | { rel: string; status: "converted" | "skipped" | "unsupported" }
+  | { rel: string; status: "converted"; notes?: BookNotes }
+  | { rel: string; status: "skipped" | "unsupported" }
   | { rel: string; status: "failed"; code: FailureCode | "WRITE_FAILED" };
 
+function notesText(n: BookNotes | undefined): string {
+  const parts: string[] = [];
+  if (n?.ocr) {
+    const conf = Number.isFinite(n.ocr.meanConfidence) ? `, ${Math.round(n.ocr.meanConfidence)}%` : "";
+    parts.push(`OCR ${n.ocr.pages} pages${conf}`);
+  }
+  for (const w of n?.warnings ?? []) parts.push(`warning: ${w}`);
+  return parts.length ? ` (${parts.join("; ")})` : "";
+}
+
 function statusText(r: Row): string {
-  return r.status === "failed" ? `failed ${r.code}` : r.status;
+  if (r.status === "failed") return `failed ${r.code}`;
+  if (r.status === "converted") return `converted${notesText(r.notes)}`;
+  return r.status;
 }
 
 /** A two-column table, one line per file. */

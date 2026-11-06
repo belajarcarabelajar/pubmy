@@ -3,6 +3,8 @@ import { mkdir, mkdtemp, readFile, rm, stat, symlink, utimes, writeFile } from "
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { InputFile, Result } from "@pubmy/core";
+import { strFromU8, unzipSync } from "fflate";
+import { makeCbz } from "../../../fixtures/make-cbz.ts";
 import { run, type ConvertFn } from "../src/main.ts";
 import { exitCode, formatReport, type Row } from "../src/report.ts";
 import { outputPath, walk } from "../src/walk.ts";
@@ -102,6 +104,21 @@ describe("report", () => {
     expect(lines.some((l) => /b\.txt\s+skipped$/.test(l))).toBe(true);
     expect(lines.some((l) => /c\.bad\s+failed DRM$/.test(l))).toBe(true);
     expect(lines.some((l) => /d\.bin\s+unsupported$/.test(l))).toBe(true);
+  });
+
+  test("an OCR row shows its page count and rounded mean confidence", () => {
+    const out = formatReport([{ rel: "scan.pdf", status: "converted", notes: { ocr: { pages: 12, meanConfidence: 93.6 } } }]);
+    expect(out).toMatch(/scan\.pdf\s+converted \(OCR 12 pages, 94%\)\n/);
+  });
+
+  test("an OCR row without a confidence shows only the page count", () => {
+    const out = formatReport([{ rel: "scan.pdf", status: "converted", notes: { ocr: { pages: 3, meanConfidence: Number.NaN } } }]);
+    expect(out).toMatch(/scan\.pdf\s+converted \(OCR 3 pages\)\n/);
+  });
+
+  test("a row with warnings lists each warning", () => {
+    const out = formatReport([{ rel: "b.mobi", status: "converted", notes: { warnings: ["kf8-part-failed"] } }]);
+    expect(out).toMatch(/b\.mobi\s+converted \(warning: kf8-part-failed\)\n/);
   });
 
   test("exit code is 1 when any row failed", () => {
@@ -221,4 +238,41 @@ describe("run", () => {
   test("exits 2 on an unknown flag", async () => {
     expect(await run([root, "--nope"], { ...capture().io, convert: fakeConvert() })).toBe(2);
   });
+
+  test("exits 2 on an unknown flag next to --rtl", async () => {
+    expect(await run([root, "--rtl", "--nope"], { ...capture().io, convert: fakeConvert() })).toBe(2);
+  });
+
+  test("notes from the converter reach the report row", async () => {
+    await put("scan.pdf");
+    const c = capture();
+    const withNotes: ConvertFn = async () => ({
+      ok: true,
+      epub: new Uint8Array([1]),
+      check: { errors: 0, warnings: 0 },
+      notes: { ocr: { pages: 2, meanConfidence: 88 } },
+    });
+    await run([root], { ...c.io, convert: withNotes });
+    expect(c.out()).toMatch(/scan\.pdf\s+converted \(OCR 2 pages, 88%\)/);
+  });
+
+  async function opfOf(epubPath: string): Promise<string> {
+    const files = unzipSync(new Uint8Array(await readFile(epubPath)));
+    const opf = Object.keys(files).find((k) => k.endsWith(".opf"));
+    if (!opf) throw new Error("no OPF in EPUB");
+    return strFromU8(files[opf]!);
+  }
+
+  test("--rtl makes a comic read right-to-left", async () => {
+    await writeFile(join(root, "comic.cbz"), makeCbz());
+    expect(await run([root, "--rtl"], capture().io)).toBe(0);
+    expect(await opfOf(join(root, "pubmy-epub/comic.cbz.epub"))).toContain(`page-progression-direction="rtl"`);
+  }, 30_000);
+
+  test("without --rtl a comic stays left-to-right, also after an --rtl run", async () => {
+    await writeFile(join(root, "comic.cbz"), makeCbz());
+    await run([root, "--rtl"], capture().io);
+    expect(await run([root, "--force"], capture().io)).toBe(0);
+    expect(await opfOf(join(root, "pubmy-epub/comic.cbz.epub"))).not.toContain("rtl");
+  }, 30_000);
 });
