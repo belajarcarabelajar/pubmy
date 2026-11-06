@@ -1,6 +1,8 @@
 node_modules/
 *.log
 .DS_Store
+# downloaded and generated test fixtures (fixtures/fetch.ts); never committed
+fixtures/out/
 # spike artefacts: regenerate with the commands in each probe (downloads are untrusted, outputs are rebuildable)
 docs/code-plan/spikes/**/out/
 docs/code-plan/spikes/**/cache/
@@ -9,3 +11,4 @@ docs/code-plan/spikes/**/fixtures-dl/
 docs/code-plan/spikes/**/fixtures-made/
 docs/code-plan/spikes/**/*.png
 docs/code-plan/spikes/**/*.epub
+apps/web/dist/

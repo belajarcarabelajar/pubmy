@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pubmy</title>
+<meta name="description" content="Ubah TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR jadi EPUB 3 langsung di browser.">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:#1b1b1f;background:#f7f7f8}
+body{margin:0;min-width:320px}
+main{max-width:40rem;margin:0 auto;padding:1rem}
+header{display:flex;gap:.75rem;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+h1{font-size:1.4rem;margin:.25rem 0}
+p{margin:.25rem 0 .75rem}
+.muted{color:#55555c;font-size:.9rem}
+button,.btn{font:inherit;font-size:1rem;min-height:44px;padding:.5rem 1rem;border-radius:.5rem;border:1px solid #2f4fd6;background:#2f4fd6;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+button.ghost{background:transparent;color:#2f4fd6}
+button:focus-visible,.btn:focus-visible{outline:3px solid #f2b600;outline-offset:2px}
+.drop{border:2px dashed #9aa3c7;border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:#fff}
+.drop.over{border-color:#2f4fd6;background:#eef1ff}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+#queue,#refusals{list-style:none;padding:0;margin:1rem 0 0}
+#queue li{background:#fff;border:1px solid #dcdce3;border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
+.name{font-weight:600;overflow-wrap:anywhere}
+.status{font-size:.9rem;color:#55555c}
+.row-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;grid-column:1/-1}
+.clock{font-variant-numeric:tabular-nums}
+.btn[aria-disabled="true"]{background:#c9c9d1;border-color:#c9c9d1;color:#55555c;pointer-events:none}
+.failed .status,#refusals li{color:#a1251b}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 data-i18n="title">pubmy: ubah file jadi EPUB</h1>
+      <p class="muted" data-i18n="tagline"></p>
+    </div>
+    <button type="button" id="lang" class="ghost"></button>
+  </header>
+  <p data-i18n="privacy"></p>
+
+  <section id="drop" class="drop" aria-labelledby="drop-hint">
+    <p id="drop-hint" data-i18n="drop-hint"></p>
+    <button type="button" id="choose" data-i18n="choose-files"></button>
+    <input type="file" id="file" class="sr-only" tabindex="-1" aria-hidden="true" multiple
+      accept=".txt,.md,.markdown,.html,.htm,.docx,.odt,.rtf,.pdf,.mobi,.azw3,.azw,.cbz,.cbr,.zip,.rar,.epub">
+  </section>
+
+  <ul id="refusals" aria-live="polite"></ul>
+  <ul id="queue" data-i18n-label="queue-label"></ul>
+  <p id="live" class="sr-only" role="status" aria-live="polite"></p>
+</main>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
