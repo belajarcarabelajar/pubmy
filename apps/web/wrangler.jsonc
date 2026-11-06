@@ -1,0 +1,10 @@
+// Static-assets-only Worker for pubmy (no server code: conversion runs in the visitor's browser).
+// Deploy: bun run --cwd apps/web build && bunx wrangler deploy --dry-run, then bunx wrangler deploy (from apps/web).
+// Why wrangler and not cf: cf 1.0.0-beta.5 has no field for the assets directory (see commit 21d984f notes).
+{
+  "name": "pubmy",
+  "compatibility_date": "2026-11-07",
+  "assets": { "directory": "./dist", "not_found_handling": "none" },
+  "workers_dev": false,
+  "routes": [{ "pattern": "pubmy.belajarcarabelajar.com", "custom_domain": true }]
+}
