@@ -20,9 +20,28 @@ function wrap(worker: Worker, toInput: (png: Uint8Array) => ImageInput): Ocr {
   };
 }
 
-async function start(options: Record<string, string>): Promise<Worker> {
+type Tesseract = typeof import("tesseract.js");
+
+/**
+ * tesseract.js picks browser or node once, when it is first loaded, from `typeof document`. The linkedom
+ * document that installDomGlobals leaves for mobi.js would send it down the browser path, which reads
+ * `window.location`, so under Bun the global is hidden while the module loads.
+ */
+async function importForNode(): Promise<Tesseract> {
+  const g = globalThis as { document?: unknown };
+  const doc = g.document;
+  if (doc === undefined) return import("tesseract.js");
+  delete g.document;
   try {
-    const { createWorker } = await import("tesseract.js");
+    return await import("tesseract.js");
+  } finally {
+    g.document = doc;
+  }
+}
+
+async function start(options: Record<string, string>, load: () => Promise<Tesseract> = () => import("tesseract.js")): Promise<Worker> {
+  try {
+    const { createWorker } = await load();
     return await createWorker(LANGS, 1, options);
   } catch {
     throw new PubmyError("READ_FAILED", "ocr-unavailable");
@@ -41,7 +60,7 @@ export async function loadOcrBun(opts: { cachePath?: string } = {}): Promise<Ocr
   // tesseract.js silently re-downloads the language data when this folder is missing (spike P3).
   const { mkdir } = await import("node:fs/promises");
   await mkdir(cachePath, { recursive: true });
-  const worker = await start({ cachePath });
+  const worker = await start({ cachePath }, importForNode);
   return wrap(worker, (png) => Buffer.from(png));
 }
 
