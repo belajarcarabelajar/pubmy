@@ -12,6 +12,8 @@
 | L6 | The live CSP was replaced by a zone rule (`csp-fallback`) that nobody looked at before deploying. | live header test exit 1, zone ruleset read | one shared-zone edit after deploy |
 | L7 | epubcheck-ts accepted RSC-005 errors that Java EPUBCheck rejects. | T13 run 5, fixed in `0e47746` | caught by the planned cross-check |
 | L8 | linkedom DOM globals leaked into later conversions and broke OCR. | bundle test, fixed in `e17a5fe` | one debugger round |
+| L9 | The v1 PDF gates used synthetic PDFs and one arXiv paper with no running headers, so the owner's first real paper (an NIH author manuscript) exposed five defects: header/footer leaks, cut paragraphs, split headings, dropped figures, a lost sideways table. | owner report 2026-11-07, `nihms496502.pdf` measured against its EPUB | a follow-up session |
+| L10 | The first plan for sideways tables (SVG with `<text>`) was picked before reading Amazon's Kindle Publishing Guidelines, which say `<svg>` with `<text>` is not supported (11.4.11). | research report, owner re-asked | one extra owner question; caught before code |
 
 ## Candidate rules (both gates: minimum signal, 30-day horizon)
 
@@ -24,6 +26,8 @@
 | M5 zone header rules override Worker headers | pass / pass | judgement, cross-repo | `MEMORY.md` M5; promotion to `~/AGENTS.md` 4.x asked separately |
 | L3 merge with the full SHA and record `merged` only after `gh pr view` says MERGED | pass / pass | mechanical, cross-repo | follow-up for vivera `pr-registry.mjs` (other repository: backlog) |
 | L4, L5 | existing rules (A43; sucp phase router) were already right; the miss was execution | no-op | none |
+| L9 measure each adapter on at least one real-world file with counted defects (header leaks, fragment chapters, missing assets), not only synthetic fixtures | pass / pass | judgement | `MEMORY.md` M6 |
+| L10 check Amazon's Kindle Publishing Guidelines before choosing an EPUB construct for Kindle | pass / pass | judgement | `MEMORY.md` M7 |
 
 ## Environment improvements
 

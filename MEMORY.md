@@ -11,3 +11,10 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 | M3 | WHEN judging whether an EPUB is valid for Kindle → DO keep the Java EPUBCheck cross-check (`bun scripts/epubcheck-java.ts`, on Colab), NOT trust epubcheck-ts alone (it passed 17 RSC-005 errors in Gutenberg #28885 MOBI6 output that Java rejected). |
 | M4 | WHEN a library decides browser vs Node by sniffing `typeof document` → DO load it before any linkedom DOM globals exist or hide `document` while importing it, NOT assume a Bun process stays global-free (a MOBI conversion made tesseract.js take the browser path and every later scan failed with "window is not defined"). |
 | M5 | WHEN checking the live headers of pubmy.belajarcarabelajar.com → DO remember the zone transform rules run after the Worker (`csp-fallback` replaces CSP for hosts not on its list; `security-headers-baseline` sets Referrer-Policy), NOT read `apps/web/public/_headers` as what clients get. pubmy was added to the csp-fallback list on 2026-11-07; backup in `~/cloudflare/backups/zone-ae649c02-response-headers-20261107-pubmy.json`. |
+
+## Task Group: preview and PDF precision (plan 2026-11-07-pubmy-preview)
+
+| # | Rule |
+|---|---|
+| M6 | WHEN declaring an adapter's output good → DO convert at least one real-world file of that format and count its defects (running-header leaks, fragment chapter titles, missing figures or tables against the source), NOT rely on synthetic fixtures alone (v1 passed every gate, and the owner's first NIH manuscript showed 22 header leaks, split headings, dropped figures and a lost sideways table). |
+| M7 | WHEN choosing an EPUB construct for Kindle (SVG, tables, images, fonts) → DO check Amazon's Kindle Publishing Guidelines first (https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf), NOT pick what EPUB 3 allows (11.4.11: `<svg>` with `<text>` is not supported; 11.4: transparency is flattened to white; 11.5.1 prefers HTML tables over table images). |

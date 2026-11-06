@@ -2,7 +2,7 @@
 
 pubmy turns your documents, ebooks, and comics into EPUB files that Kindle accepts. It comes in two forms:
 
-- **Website** at [pubmy.belajarcarabelajar.com](https://pubmy.belajarcarabelajar.com): drop up to 10 files (50 MB each) and download one EPUB per file.
+- **Website** at [pubmy.belajarcarabelajar.com](https://pubmy.belajarcarabelajar.com): drop up to 10 files (50 MB each), preview each EPUB in the page, and download one EPUB per file.
 - **Agent skill and CLI**: give your coding agent (Claude Code, Codex, Cursor, OpenCode, Antigravity) a folder, and it converts every supported file in it, keeping the folder layout.
 
 Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB validator before it is written.
@@ -11,7 +11,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 | Input | Extensions | Notes |
 |---|---|---|
-| PDF with text | `.pdf` | Columns and headings are detected from the text layout |
+| PDF with text | `.pdf` | Columns and headings are detected from the text layout. Running headers, footers and page numbers are removed. Figures are kept as images, and a table printed sideways is rebuilt as a table |
 | Scanned PDF | `.pdf` | Read with OCR in Indonesian and English (`ind+eng`) |
 | Word processor and text documents | `.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.md`, `.txt` | Headings become chapters |
 | Kindle ebooks without DRM | `.mobi`, `.azw3` | Files with DRM are refused (see DRM policy) |
@@ -19,7 +19,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 ## Privacy
 
-- **Website:** conversion runs inside your own browser. Your files are not uploaded to any server. Each EPUB stays in the browser tab's memory and is wiped 3 minutes after it is ready; a countdown shows the time left.
+- **Website:** conversion runs inside your own browser. Your files are not uploaded to any server. Each EPUB stays in the browser tab's memory and is wiped 3 minutes after it is ready; a countdown shows the time left. An open preview closes at the same moment.
 - **CLI:** it writes only to `<folder>/pubmy-epub/` and to the OCR cache in `~/.cache/pubmy`. It never changes, moves, or deletes your source files, and never uploads them. The first scanned PDF downloads the OCR language data (about 7 MB) into that cache; no file content is sent with it.
 
 ## Install the skill
@@ -150,7 +150,7 @@ pubmy bundles or loads these components:
 | @likecoin/epubcheck-ts | EPUB validation | BSD-3-Clause |
 | libarchive.js | CBR (RAR) reading | MIT |
 | libarchive (inside libarchive.js) | Archive decoding | BSD-2-Clause |
-| foliate-js | MOBI/AZW3 reading | MIT |
+| foliate-js | MOBI/AZW3 reading; EPUB preview on the website | MIT |
 
 Each component keeps its own copyright and licence text, published with its package.
 
