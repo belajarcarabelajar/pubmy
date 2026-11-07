@@ -74,6 +74,12 @@ describe("_headers", () => {
   test("sets no-referrer", () => {
     expect(siteHeaders().get("referrer-policy")).toBe("no-referrer");
   });
+
+  // Chunk names carry a content hash (build-output.test.ts), so a browser never needs to ask again.
+  test("caches chunks/* for a year as immutable", () => {
+    const rules = parseHeadersFile(readFileSync(HEADERS_FILE, "utf8"));
+    expect(rules.get("/chunks/*")?.get("cache-control")).toBe("public, max-age=31536000, immutable");
+  });
 });
 
 describe("live", () => {

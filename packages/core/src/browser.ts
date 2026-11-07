@@ -1,11 +1,6 @@
 // Browser entry ("@pubmy/core/browser"). It registers no comics adapter, because that one needs a libarchive
 // loader the caller supplies; index.ts (Bun/Node) builds on this file and adds the Node loader.
-import { docxAdapter } from "./adapters/docx.ts";
-import { mobiAdapter } from "./adapters/mobi/index.ts";
-import { odtAdapter } from "./adapters/odt.ts";
-import { pdfAdapter } from "./adapters/pdf.ts";
-import { rtfAdapter } from "./adapters/rtf.ts";
-import { textAdapter } from "./adapters/text.ts";
+import { builtinAdapters } from "./adapters/builtin.ts";
 import { detect } from "./detect.ts";
 import { PubmyError } from "./errors.ts";
 import { pack } from "./packager.ts";
@@ -20,7 +15,8 @@ export { validate } from "./validate.ts";
 export { PubmyError } from "./errors.ts";
 export { createComicsAdapter, type ComicsOptions, type LibarchiveLoader } from "./adapters/comics.ts";
 
-const adapters: Adapter[] = [docxAdapter, mobiAdapter, odtAdapter, pdfAdapter, rtfAdapter, textAdapter];
+// Each built-in adapter loads its code on its first file (adapters/builtin.ts).
+const adapters: Adapter[] = [...builtinAdapters];
 
 /**
  * Adds an adapter ahead of the ones already registered (newest first, the built-in text adapter last),
