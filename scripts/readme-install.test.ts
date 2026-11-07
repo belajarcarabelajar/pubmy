@@ -6,8 +6,10 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { packSkill } from "./pack-skill.ts";
 
 const repo = join(import.meta.dir, "..");
+const RELEASE_ZIP_URL = "https://github.com/belajarcarabelajar/pubmy/releases/latest/download/pubmy-skill.zip";
 const windows = process.platform === "win32";
 const lang = windows ? "powershell" : "bash";
 // Home folders each harness reads (README "Install the skill" table).
@@ -118,4 +120,38 @@ describe("readme install blocks", () => {
     expect(r.code, r.out).toBe(0);
     for (const dir of HARNESS_DIRS) expect(existsSync(join(home, dir, "pubmy")), dir).toBe(false);
   });
+});
+
+describe("readme ZIP download block", () => {
+  test(
+    "downloads the release ZIP, served locally, and leaves a complete skill in the Claude Code folder",
+    async () => {
+      const blocks = blocksUnder(readme, "### Download the ZIP", lang);
+      expect(blocks.length).toBe(1);
+      expect(blocks[0]).toContain(RELEASE_ZIP_URL);
+
+      const zipHome = await mkdtemp(join(tmpdir(), "pubmy-zip-home-"));
+      const zipFile = join(zipHome, "served", "pubmy-skill.zip");
+      await packSkill(zipFile);
+      // The block downloads from the release URL; the test serves the same file from this machine instead.
+      const server = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: () => new Response(Bun.file(zipFile)) });
+      try {
+        const script = blocks[0]!.replaceAll(RELEASE_ZIP_URL, `http://127.0.0.1:${server.port}/pubmy-skill.zip`);
+        // Async spawn: a blocking spawn would stop this process from answering the download.
+        const env = { ...process.env, HOME: zipHome, USERPROFILE: zipHome };
+        const cmd = windows ? ["pwsh", "-NoProfile", "-NonInteractive", "-Command", script] : ["bash", "-e", "-c", script];
+        const proc = Bun.spawn(cmd, { cwd: repo, env, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+        const code = await proc.exited;
+        const out = `${await new Response(proc.stdout).text()}${await new Response(proc.stderr).text()}`;
+        expect(code, out).toBe(0);
+        for (const f of ["SKILL.md", "scripts/pubmy.js"]) {
+          expect(existsSync(join(zipHome, ".claude/skills/pubmy", f)), f).toBe(true);
+        }
+      } finally {
+        server.stop(true);
+        await rm(zipHome, { recursive: true, force: true });
+      }
+    },
+    120_000,
+  );
 });
