@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-07-pubmy-release-hardening
-status: Approved
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -155,7 +155,7 @@ flowchart TD
 
 **Definition of Done:** AC-1..AC-5 with evidence, typecheck exit 0, CI green, plan Complete after owner gate, issue #13 closed after merge.
 
-**Plan Status & Version:** Approved, v1.
+**Plan Status & Version:** Complete, v1.
 
 **Reproducibility:** Bun 1.4.4; rsvg-convert only for the one-time icon render (the PNG is committed).
 
@@ -190,7 +190,7 @@ flowchart TD
 - [x] Parent diff audit + independent review: round 1 not correct (5 findings), round 2 correct; fresh Colab tests exit 0 (30 pass, 0 fail), typecheck exit 0, local plugin-manifest exit 0 (6 pass), readme tests exit 0 (11 pass)
 - [x] PR #16 opened; `gh pr checks 16 --watch` exit 0 (install ubuntu, macos, windows incl. the per-project blocks, and dev-setup with the new release tests); release simulation on PR head e6217dc (local, Colab slots held by another session): `bun scripts/release-check.ts v0.1.0 dist/pubmy-skill.zip` exit 0, `... v0.1.1 ...` exit 1 naming both versions
 - [ ] PR merged (owner), issue #13 closed by plan-sync
-- [ ] Debt sweep (ledger `docs/code-plan/2026-11-07-pubmy-release-hardening-learning-ledger.md`, MEMORY.md M12 M13)
+- [x] Debt sweep: owner chose F1 (install deps in the main checkout): `bun install --frozen-lockfile` in `~/Proyek/pubmy` exit 0; readiness of the install-methods plan on main without `--cwd` now runs T1-T5 as DONE (were OPEN on failed imports). plan-cost gap reported, not fixed (vivera tool). Ledger `docs/code-plan/2026-11-07-pubmy-release-hardening-learning-ledger.md`, MEMORY.md M12 M13)
 
 ## Task T1: release smoke test and tag/version check
 
@@ -199,39 +199,39 @@ flowchart TD
 **Behavior & Acceptance:** AC-1, AC-2.
 **Test Data:** zips built with `packSkill` into temp dirs; broken zip = packSkill over a temp skill folder whose `scripts/pubmy.js` exits 1; plugin.json copy in a temp dir for the mismatch case.
 
-- [ ] Step 1: Write failing tests
-- [ ] Step 2: Run: `bun test scripts/release-check.test.ts` | expect exit 1 | retry 0
-- [ ] Step 3: Implement script; add workflow step after `bun scripts/pack-skill.ts`; extend release test for the order
-- [ ] Step 4: Run: `bun test scripts/release-check.test.ts scripts/workflows.test.ts` | expect exit 0 | retry 1
-- [ ] Step 5: Run: `bun run typecheck` | expect exit 0 | retry 0
+- [x] Step 1: Write failing tests
+- [x] Step 2: Run: `bun test scripts/release-check.test.ts` | expect exit 1 | retry 0
+- [x] Step 3: Implement script; add workflow step after `bun scripts/pack-skill.ts`; extend release test for the order
+- [x] Step 4: Run: `bun test scripts/release-check.test.ts scripts/workflows.test.ts` | expect exit 0 | retry 1
+- [x] Step 5: Run: `bun run typecheck` | expect exit 0 | retry 0
 
 ## Task T2: per-project install test
 
 **Files:** Modify `scripts/readme-install.test.ts` (new `describe("per-project install", ...)`), `README.md` (per-project paragraph only).
 **Behavior & Acceptance:** AC-3. Placeholders `/path/to/project` (bash) and `C:\path\to\project` (PowerShell) replaced by a temp folder; assert `<tmp>/.claude/skills/pubmy/SKILL.md` and `<tmp>/.agents/skills/pubmy/SKILL.md`.
 
-- [ ] Step 1: Write failing test
-- [ ] Step 2: Run: `bun test scripts/readme-install.test.ts -t per-project` | expect exit 1 | retry 0
-- [ ] Step 3: Update README sentence
-- [ ] Step 4: Run: `bun test scripts/readme-install.test.ts` | expect exit 0 | retry 1
+- [x] Step 1: Write failing test
+- [x] Step 2: Run: `bun test scripts/readme-install.test.ts -t per-project` | expect exit 1 | retry 0
+- [x] Step 3: Update README sentence
+- [x] Step 4: Run: `bun test scripts/readme-install.test.ts` | expect exit 0 | retry 1
 
 ## Task T3: plugin icon
 
 **Files:** Create `assets/icon.svg`, `assets/icon.png` (512x512, `rsvg-convert -w 512 -h 512`); Modify `.claude-plugin/plugin.json` (`"icon": "./assets/icon.png"`), `scripts/plugin-manifest.test.ts`.
 **Behavior & Acceptance:** AC-4. Test reads the PNG header (signature and IHDR width/height 512).
 
-- [ ] Step 1: Write failing test `-t icon`
-- [ ] Step 2: Run: `bun test scripts/plugin-manifest.test.ts -t icon` | expect exit 1 | retry 0
-- [ ] Step 3: Draw SVG, render PNG, show the owner, set `icon`
-- [ ] Step 4: Run: `bun test scripts/plugin-manifest.test.ts` | expect exit 0 | retry 1
-- [ ] Step 5: Run: `claude plugin validate .` | expect exit 0, no icon warning | retry 0
+- [x] Step 1: Write failing test `-t icon`
+- [x] Step 2: Run: `bun test scripts/plugin-manifest.test.ts -t icon` | expect exit 1 | retry 0
+- [x] Step 3: Draw SVG, render PNG, show the owner, set `icon`
+- [x] Step 4: Run: `bun test scripts/plugin-manifest.test.ts` | expect exit 0 | retry 1
+- [x] Step 5: Run: `claude plugin validate .` | expect exit 0, no icon warning | retry 0
 
 ## Task T4: close the install-methods plan
 
 **Files:** Modify `docs/code-plan/plans/2026-11-07-pubmy-install-methods.md`, `README.md` (developer setup: bump `plugin.json` `version` before tagging).
 **Behavior & Acceptance:** AC-5. Runner log from a detached NVMe worktree; `plan-mark-done --from`; hand ticks with evidence (PR #14 merged `9a8c994`, release run 42374289117, AC-2, AC-7); readiness READY; `Close plan` gate; `status: Complete`; record readiness and `plan-cost`.
 
-- [ ] Step 1: Run: `bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md` | expect exit 0 | retry 0
+- [x] Step 1: Run: `bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md` | expect exit 0 | retry 0
 
 ## Batch manifest
 
@@ -259,4 +259,9 @@ flowchart TD
 
 ## Follow-ups
 
-- None yet.
+- `plan-cost.mjs` counts no transcript for a claim behind an env prefix (install-methods plan reads n/a). defer: vivera tooling, outside this repo, upgrade when a vivera session touches `scripts/plan-cost.mjs`.
+- The release guard has run only in simulation (v0.1.0 exit 0, v0.1.1 exit 1). defer: next release, upgrade trigger the owner asks for `v0.1.1`.
+
+## Closeout status
+
+- Closed 2026-11-07: `bun ~/vivera/scripts/plan-closeout.mjs --readiness <plan> --cwd <NVMe worktree at the PR head>` READY (exit 0), re-run READY right before the status change; owner answered `Close plan` with Mark Complete. `bun ~/vivera/scripts/plan-cost.mjs --plan 2026-11-07-pubmy-release-hardening`: 1 main transcript, 6 subagent runs, usd 26.89 (estimate; the tool's caveats apply). Left for after merge: tick `PR merged` and AC-5 are proven by `plan-sync` closing issues #13 and #15.
