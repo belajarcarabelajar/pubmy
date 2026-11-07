@@ -67,13 +67,13 @@ tasks:
         retry: 0
   - id: T4
     depends_on: [T1]
-    impacts: ["install-methods plan status and issue #13 - bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md", "README developer setup names the version rule - bun test scripts/readme-install.test.ts"]
+    impacts: ["install-methods plan status and issue #13 - bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md --cwd .", "README developer setup names the version rule - bun test scripts/readme-install.test.ts"]
     files: { create: [], modify: [README.md, docs/code-plan/plans/2026-11-07-pubmy-install-methods.md], test: [] }
     idempotency_key: "T4:close-install-methods-plan"
-    skip_if: "bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md"
+    skip_if: "bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md --cwd ."
     verify_exit: 0
     run:
-      - cmd: "bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md"
+      - cmd: "bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-07-pubmy-install-methods.md --cwd ."
         expect_exit: 0
         retry: 0
 ---
