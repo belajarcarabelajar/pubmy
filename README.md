@@ -49,7 +49,7 @@ It asks which harnesses to install for. To skip the question, name them with `-a
 | `claude-code` | `~/.claude/skills/pubmy` |
 | `codex`, `cursor`, `opencode`, `antigravity` | `~/.agents/skills/pubmy` |
 
-Antigravity's own folder is `~/.gemini/config/skills`; for Antigravity, use the ZIP or the copy method below.
+Antigravity CLI (`agy`) does not read `~/.agents/skills` (checked on 2026-11-07: a skill placed there was missing from its skill list, while one in `~/.gemini/config/skills` was listed). For Antigravity, use the ZIP or the copy method below.
 
 **Claude Code, as a plugin** (Claude Code 2.1.275 or newer), inside a session:
 
@@ -151,8 +151,8 @@ Checked on 2026-11-07 (Arch Linux) by copying `skills/pubmy` into the folder nam
 | Claude Code | verified (`~/.claude/skills`) |
 | OpenCode | verified (reads `~/.claude/skills`; `opencode run`) |
 | Antigravity CLI (`agy`) | verified (`~/.gemini/config/skills`; `agy -p`) |
-| Codex | not verified (CLI 0.167.0 installed, no signed-in account on the test machine) |
-| Cursor | not verified (CLI `agent` 2026.11.05 installed, no signed-in account on the test machine) |
+| Codex | not verified (no signed-in account on the test machine) |
+| Cursor | not verified (no signed-in account on the test machine) |
 
 OpenCode reads both `~/.claude/skills` and `~/.agents/skills`; copy the skill into only one of them to avoid a duplicate entry.
 
