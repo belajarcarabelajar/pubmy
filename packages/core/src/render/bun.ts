@@ -119,7 +119,7 @@ function bunRenderer(): PdfRenderer {
       let doc: Doc;
       try {
         // pdf.js transfers the buffer it is given to its worker, so it gets a copy.
-        doc = await getDocumentProxy(pdf.slice());
+        doc = await getDocumentProxy(pdf.slice(), { verbosity: 0 });
       } catch {
         return boxes.map(() => null);
       }

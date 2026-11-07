@@ -29,7 +29,8 @@ export interface ScanResult {
 /** OCRs the given 1-based pages, one chapter per page, in the order given; the worker is terminated afterwards. */
 export async function ocrScan(pdf: Uint8Array, pageNumbers: number[], ctx: Ctx): Promise<ScanResult> {
   if (pageNumbers.length === 0) return { chapters: [], pages: 0, meanConfidence: Number.NaN };
-  const doc = await getDocumentProxy(copy(pdf));
+  // verbosity 0: pdf.js warnings stay out of the CLI output
+  const doc = await getDocumentProxy(copy(pdf), { verbosity: 0 });
   const ocr: Ocr = await ctx.loadOcr();
   const chapters: Chapter[] = [];
   const confidences: number[] = [];

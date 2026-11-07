@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { PDFDocument } from "pdf-lib";
+import { getDocumentProxy } from "unpdf";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { strFromU8, unzipSync } from "fflate";
@@ -40,6 +42,34 @@ beforeAll(() => {
 afterAll(() => unregister());
 
 const run = async (name: string, bytes: Uint8Array) => convert({ name, bytes }, ctx);
+
+/** Opens a document at pdf.js's default warning level: the level is process-wide, so a test must not inherit it. */
+async function defaultPdfjsWarnings(): Promise<void> {
+  const blank = await PDFDocument.create();
+  blank.addPage([10, 10]);
+  await (await getDocumentProxy(await blank.save(), { verbosity: 1 })).loadingTask.destroy();
+}
+
+/** Lines written to console.log and console.warn while `run` runs. */
+async function consoleOf(run: () => Promise<unknown>): Promise<string[]> {
+  const lines: string[] = [];
+  const [log, warn] = [console.log, console.warn];
+  console.log = console.warn = (...a: unknown[]) => void lines.push(a.map(String).join(" "));
+  try {
+    await run();
+  } finally {
+    [console.log, console.warn] = [log, warn];
+  }
+  return lines;
+}
+
+test("pdf adapter: pdf.js warnings about fonts stay out of the console", async () => {
+  // the math fixture uses the standard 14 fonts unembedded, which makes pdf.js ask for standardFontDataUrl
+  const pdf = await makeMathPdf();
+  await defaultPdfjsWarnings();
+  const lines = await consoleOf(() => run("math.pdf", pdf));
+  expect(lines.filter((l) => l.startsWith("Warning:"))).toEqual([]);
+});
 
 describe("pdf adapter: generated two-column page", () => {
   let r: Ok;

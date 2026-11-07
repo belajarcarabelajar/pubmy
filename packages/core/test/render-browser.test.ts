@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { getDocumentProxy } from "unpdf";
 import { DOMMatrix, ImageData, Path2D, createCanvas, loadImage, type Canvas } from "@napi-rs/canvas";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { loadRendererBrowser } from "../src/render/browser.ts";
@@ -84,7 +85,35 @@ async function renderer() {
   return r;
 }
 
+/** Opens a document at pdf.js's default warning level: the level is process-wide, so a test must not inherit it. */
+async function defaultPdfjsWarnings(): Promise<void> {
+  const blank = await PDFDocument.create();
+  blank.addPage([10, 10]);
+  await (await getDocumentProxy(await blank.save(), { verbosity: 1 })).loadingTask.destroy();
+}
+
+/** Lines written to console.log and console.warn while `run` runs. */
+async function consoleOf(run: () => Promise<unknown>): Promise<string[]> {
+  const lines: string[] = [];
+  const [log, warn] = [console.log, console.warn];
+  console.log = console.warn = (...a: unknown[]) => void lines.push(a.map(String).join(" "));
+  try {
+    await run();
+  } finally {
+    [console.log, console.warn] = [log, warn];
+  }
+  return lines;
+}
+
 describe("loadRendererBrowser", () => {
+  test("rendering a page with unembedded fonts writes no pdf.js warning to the console", async () => {
+    const r = await renderer();
+    const pdf = await fractionPdf();
+    await defaultPdfjsWarnings();
+    const lines = await consoleOf(() => r.renderBoxes(pdf, [LETTER_A], 72));
+    expect(lines.filter((l) => l.startsWith("Warning:"))).toEqual([]);
+  });
+
   test("is null when the runtime has no OffscreenCanvas", async () => {
     delete g.OffscreenCanvas;
     expect(await loadRendererBrowser()).toBeNull();
