@@ -121,7 +121,7 @@ To update, `git pull` and copy the folder again. Then ask your agent, for exampl
 
 ### Per-project install
 
-To load the skill only inside one project, copy it into that project's folder instead of your home folder. The project paths come from each vendor's documentation (read 2026-11-07); only the home-folder install above was tested.
+To load the skill only inside one project, copy it into that project's folder instead of your home folder. The project paths come from each vendor's documentation (read 2026-11-07). The blocks below are run by `scripts/readme-install.test.ts` on Linux, macOS and Windows (CI `install-check`).
 
 | Harness | Project skills folder |
 |---|---|
@@ -160,11 +160,11 @@ Each install method is also checked on its own:
 
 | Method | How it is checked |
 |---|---|
-| Copy and uninstall blocks (bash, PowerShell) | `scripts/readme-install.test.ts` runs the blocks above in a temporary home folder and converts a file with the installed copy; CI runs it on Ubuntu, macOS and Windows for every pull request (`install-check` workflow, green on 2026-11-07) |
+| Copy, per-project and uninstall blocks (bash, PowerShell) | `scripts/readme-install.test.ts` runs the blocks above in a temporary home or project folder, checks that `SKILL.md` landed in each folder, and converts a file with the home-folder copy; CI runs it on Ubuntu, macOS and Windows for every pull request (`install-check` workflow, green on 2026-11-07) |
 | skills CLI | CI installs with `npx skills add` and removes with `npx skills remove` on all three systems |
 | Claude Code plugin | `claude plugin validate .` and `scripts/plugin-manifest.test.ts`, which installs the plugin into a temporary Claude Code config folder (Arch Linux, 2026-11-07) |
-| Release ZIP | `scripts/pack-skill.test.ts` unzips the packed file and converts a file with it |
-| Developer setup | CI runs `bun install`, `bun run typecheck` and the CLI tests |
+| Release ZIP | `scripts/pack-skill.test.ts` unzips the packed file and converts a file with it; every release runs `scripts/release-check.ts` on the ZIP before publishing, and the README download block runs in `scripts/readme-install.test.ts` against a locally served copy |
+| Developer setup | CI runs `bun install`, `bun run typecheck`, the CLI tests, and the release-check, workflow, packing and plugin manifest tests |
 
 ## Uninstall
 
@@ -264,6 +264,7 @@ bun test apps/cli/test/cli.test.ts
 - Run one test file at a time, for example `bun test packages/core/test/docx.test.ts`; the scanned-PDF tests take minutes.
 - `bun scripts/epubcheck-java.ts` cross-checks the EPUBs in `fixtures/out/epub/` with the Java EPUBCheck (needs Java).
 - `bun scripts/pack-skill.ts` writes `dist/pubmy-skill.zip`, the file attached to each release. Pushing a tag `v*` builds and publishes it (`.github/workflows/release-skill.yml`).
+- To release, first set `version` in `.claude-plugin/plugin.json` to the new number in a pull request, then push the tag `v<version>` on `main`. The release job runs `bun scripts/release-check.ts <tag> dist/pubmy-skill.zip` and stops when the tag does not match that version (plugin users stay on the old version until it changes) or when the packed skill cannot convert a file. If it stops after the tag is pushed, nothing is published: delete the tag (`git push origin :refs/tags/v<version>` and `git tag -d v<version>`), fix the cause in a pull request, then push the tag again.
 
 ## THIRD-PARTY-LICENSES
 
