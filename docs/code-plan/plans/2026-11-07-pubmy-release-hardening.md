@@ -119,10 +119,10 @@ flowchart TD
 **Reasoning Lenses:** intent (owner chose all four; the closeout must ride in a real PR), investigative (Claude Code docs: `version` pins users until changed; `icon` is read only by Anthropic's directory), test-first, operations (a release must fail before publishing, not after), verification.
 
 **Acceptance Criteria:**
-- [ ] AC-1: `bun scripts/release-check.ts v0.1.0 <zip>` exits 0 for a good ZIP and matching version; exits 1 naming both values when the tag differs from `plugin.json` `version`; exits 1 when the unzipped skill cannot convert a file.
-- [ ] AC-2: `release-skill.yml` runs `scripts/release-check.ts "$GITHUB_REF_NAME" dist/pubmy-skill.zip` after packing and before `gh release create`.
-- [ ] AC-3: `scripts/readme-install.test.ts` runs the README per-project bash (PowerShell on Windows) block with its placeholder replaced by a temp project folder, and both project folders hold `pubmy/SKILL.md`; the README no longer says only the home-folder install was tested.
-- [ ] AC-4: `plugin.json` `icon` points to `./assets/icon.png`, a 512x512 PNG; `claude plugin validate .` passes with no icon warning.
+- [x] AC-1: `bun scripts/release-check.ts v0.1.0 <zip>` exits 0 for a good ZIP and matching version; exits 1 naming both values when the tag differs from `plugin.json` `version`; exits 1 when the unzipped skill cannot convert a file.
+- [x] AC-2: `release-skill.yml` runs `scripts/release-check.ts "$GITHUB_REF_NAME" dist/pubmy-skill.zip` after packing and before `gh release create`.
+- [x] AC-3: `scripts/readme-install.test.ts` runs the README per-project bash (PowerShell on Windows) block with its placeholder replaced by a temp project folder, and both project folders hold `pubmy/SKILL.md`; the README no longer says only the home-folder install was tested.
+- [x] AC-4: `plugin.json` `icon` points to `./assets/icon.png`, a 512x512 PNG; `claude plugin validate .` passes with no icon warning.
 - [ ] AC-5: plan `2026-11-07-pubmy-install-methods` reaches readiness READY with T7 ticked from a runner log and is set `Complete` at the owner's `Close plan` answer; after merge `plan-sync` closes issue #13.
 
 **Traceability:**
@@ -188,9 +188,9 @@ flowchart TD
 - [x] T3 icon: owner approved the drawn icon; RED `bun test scripts/plugin-manifest.test.ts -t icon` exit 1 (icon undefined), GREEN `bun test scripts/plugin-manifest.test.ts` exit 0 (6 pass), `claude plugin validate .` exit 0 with no icon warning (local: needs `claude`)
 - [x] T4 install-methods plan: closeout runner (T1-T5, T7 SKIPPED-IDEMPOTENT; T6 exit 127 after the CLI uninstall, hook updated), `plan-mark-done` ticked T7, readiness READY exit 0 (re-run READY), owner answered Close plan = Mark Complete; README release rule written
 - [x] Parent diff audit + independent review: round 1 not correct (5 findings), round 2 correct; fresh Colab tests exit 0 (30 pass, 0 fail), typecheck exit 0, local plugin-manifest exit 0 (6 pass), readme tests exit 0 (11 pass)
-- [ ] PR opened, CI green on 3 OS
+- [x] PR #16 opened; `gh pr checks 16 --watch` exit 0 (install ubuntu, macos, windows incl. the per-project blocks, and dev-setup with the new release tests); release simulation on PR head e6217dc (local, Colab slots held by another session): `bun scripts/release-check.ts v0.1.0 dist/pubmy-skill.zip` exit 0, `... v0.1.1 ...` exit 1 naming both versions
 - [ ] PR merged (owner), issue #13 closed by plan-sync
-- [ ] Debt sweep
+- [ ] Debt sweep (ledger `docs/code-plan/2026-11-07-pubmy-release-hardening-learning-ledger.md`, MEMORY.md M12 M13)
 
 ## Task T1: release smoke test and tag/version check
 
