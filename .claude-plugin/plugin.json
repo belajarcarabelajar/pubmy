@@ -1,0 +1,17 @@
+{
+  "name": "pubmy",
+  "description": "Convert a folder or files (PDF, scanned PDF, DOCX, ODT, RTF, HTML, Markdown, TXT, MOBI, AZW3, CBZ, CBR) to EPUB for Kindle, offline. Use for \"convert to EPUB\", \"make this Kindle-ready\", \"ubah ke EPUB\", \"konversi ke EPUB\", \"jadikan EPUB untuk Kindle\".",
+  "version": "0.1.0",
+  "author": {
+    "name": "Iwan Kurniawan"
+  },
+  "homepage": "https://pubmy.belajarcarabelajar.com/",
+  "repository": "https://github.com/belajarcarabelajar/pubmy",
+  "license": "MIT",
+  "keywords": [
+    "epub",
+    "kindle",
+    "ebook",
+    "ocr"
+  ]
+}

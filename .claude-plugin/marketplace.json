@@ -1,0 +1,14 @@
+{
+  "name": "pubmy",
+  "description": "Convert a folder or files (PDF, scanned PDF, DOCX, ODT, RTF, HTML, Markdown, TXT, MOBI, AZW3, CBZ, CBR) to EPUB for Kindle, offline. Use for \"convert to EPUB\", \"make this Kindle-ready\", \"ubah ke EPUB\", \"konversi ke EPUB\", \"jadikan EPUB untuk Kindle\".",
+  "owner": {
+    "name": "Iwan Kurniawan"
+  },
+  "plugins": [
+    {
+      "name": "pubmy",
+      "source": "./",
+      "description": "Convert a folder or files (PDF, scanned PDF, DOCX, ODT, RTF, HTML, Markdown, TXT, MOBI, AZW3, CBZ, CBR) to EPUB for Kindle, offline. Use for \"convert to EPUB\", \"make this Kindle-ready\", \"ubah ke EPUB\", \"konversi ke EPUB\", \"jadikan EPUB untuk Kindle\"."
+    }
+  ]
+}
