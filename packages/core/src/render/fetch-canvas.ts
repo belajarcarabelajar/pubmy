@@ -96,11 +96,23 @@ export function untar(tar: Uint8Array, keep: RegExp): Map<string, Uint8Array> {
   return out;
 }
 
-async function fetchVerified(fetchFn: typeof fetch, pkg: string, pin: string): Promise<Uint8Array<ArrayBuffer> | null> {
+/** Total time for both tarballs; past it the download counts as offline. */
+export const DOWNLOAD_TIMEOUT_MS = 180_000;
+
+/** Settles like `p`, or rejects once `signal` aborts, so a fetch that ignores the signal cannot hold the caller. */
+function bounded<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    p.then(resolve, reject);
+  });
+}
+
+async function fetchVerified(fetchFn: typeof fetch, pkg: string, pin: string, signal: AbortSignal): Promise<Uint8Array<ArrayBuffer> | null> {
   try {
-    const res = await fetchFn(tarballUrl(pkg));
+    const res = await bounded(fetchFn(tarballUrl(pkg), { signal }), signal);
     if (!res.ok) return null;
-    const gz = new Uint8Array(await res.arrayBuffer());
+    const gz = new Uint8Array(await bounded(res.arrayBuffer(), signal));
     const got = `sha512-${new Bun.CryptoHasher("sha512").update(gz).digest("base64")}`;
     return got === pin ? gz : null;
   } catch {
@@ -121,6 +133,8 @@ export interface EnsureCanvasOptions {
   fetch?: typeof fetch;
   /** Overrides CANVAS_PINS (tests). */
   pins?: Readonly<Record<string, string>>;
+  /** Time allowed for both tarballs together; default DOWNLOAD_TIMEOUT_MS. */
+  downloadTimeoutMs?: number;
   /** Called once, after a fresh download is verified and in place. */
   onDownload?: (info: { bytes: number; dest: string }) => void;
 }
@@ -132,11 +146,16 @@ export interface EnsureCanvasOptions {
  */
 export async function ensureCanvas(o: EnsureCanvasOptions): Promise<CanvasFiles | null> {
   const files: CanvasFiles = { mainDir: join(o.cacheDir, "main"), nodeFile: join(o.cacheDir, `skia.${o.key}.node`) };
-  if (existsSync(join(files.mainDir, "index.js")) && existsSync(files.nodeFile)) return files;
+  const complete = () => existsSync(join(files.mainDir, "index.js")) && existsSync(files.nodeFile);
+  if (complete()) return files;
   const pins = o.pins ?? CANVAS_PINS;
   const fetchFn = o.fetch ?? fetch;
   const nativePkg = `canvas-${o.key}`;
-  const [main, native] = await Promise.all([fetchVerified(fetchFn, "canvas", pins.canvas ?? ""), fetchVerified(fetchFn, nativePkg, pins[nativePkg] ?? "")]);
+  const signal = AbortSignal.timeout(o.downloadTimeoutMs ?? DOWNLOAD_TIMEOUT_MS);
+  const [main, native] = await Promise.all([
+    fetchVerified(fetchFn, "canvas", pins.canvas ?? "", signal),
+    fetchVerified(fetchFn, nativePkg, pins[nativePkg] ?? "", signal),
+  ]);
   if (!main || !native) return null;
   const tmp = `${o.cacheDir}.tmp-${process.pid}-${Math.random().toString(36).slice(2)}`;
   try {
@@ -153,8 +172,13 @@ export async function ensureCanvas(o: EnsureCanvasOptions): Promise<CanvasFiles 
     try {
       await rename(tmp, o.cacheDir);
     } catch {
-      // Another process may have finished the same download first; its copy is as good as ours.
-      if (!(existsSync(join(files.mainDir, "index.js")) && existsSync(files.nodeFile))) return null;
+      // Another process may have finished the same download first; its copy is as good as ours. A folder
+      // left incomplete by a crash or a manual delete would block the rename for good, so it is replaced once.
+      if (!complete()) {
+        await rm(o.cacheDir, { recursive: true, force: true });
+        await rename(tmp, o.cacheDir).catch(() => {});
+        if (!complete()) return null;
+      }
     }
     o.onDownload?.({ bytes: main.length + native.length, dest: o.cacheDir });
     return files;

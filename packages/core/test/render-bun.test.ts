@@ -1,9 +1,10 @@
-import { describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { describe, expect, spyOn, test } from "bun:test";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { unzlibSync } from "fflate";
 import { PDFDocument, rgb } from "pdf-lib";
+import { getDocumentProxy } from "unpdf";
 import { hostCanvasPlatform, loadRendererBun } from "../src/render/bun.ts";
 import { CANVAS_PINS, canvasPlatform, ensureCanvas } from "../src/render/fetch-canvas.ts";
 
@@ -121,6 +122,19 @@ describe("ensureCanvas", () => {
     expect({ got, left: readdirSync(parent) }).toEqual({ got: null, left: [] });
   });
 
+  test("a partial cache folder is replaced by a fresh download", async () => {
+    const cacheDir = join(scratch(), "linux-x64-gnu");
+    mkdirSync(join(cacheDir, "main"), { recursive: true });
+    writeFileSync(join(cacheDir, "main/index.js"), "left behind by a crash");
+    const { fetch } = fakeRegistry({ canvas: MAIN, "canvas-linux-x64-gnu": NATIVE });
+    const got = await ensureCanvas({ key: "linux-x64-gnu", cacheDir, fetch, pins, onDownload: quiet });
+    const node = join(cacheDir, "skia.linux-x64-gnu.node");
+    expect({ got, index: existsSync(node) ? await Bun.file(join(cacheDir, "main/index.js")).text() : null }).toEqual({
+      got: { mainDir: join(cacheDir, "main"), nodeFile: node },
+      index: "module.exports = 1;",
+    });
+  });
+
   test("reports the downloaded size and destination once", async () => {
     const cacheDir = join(scratch(), "linux-x64-gnu");
     const seen: { bytes: number; dest: string }[] = [];
@@ -143,6 +157,23 @@ describe("loadRendererBun", () => {
     const reg = fakeRegistry({ canvas: MAIN, "canvas-linux-x64-gnu": NATIVE });
     expect(await loadRendererBun({ cacheDir: join(parent, "c"), fetch: reg.fetch, platform: "linux-x64-gnu" })).toBeNull();
     expect(readdirSync(parent)).toEqual([]);
+  });
+
+  test("a download that stalls gives up after the time budget", async () => {
+    const fetch = (() => new Promise<Response>(() => {})) as unknown as typeof globalThis.fetch;
+    const load = loadRendererBun({ cacheDir: scratch(), fetch, platform: "linux-x64-gnu", downloadTimeoutMs: 20, onDownload: quiet });
+    expect(await Promise.race([load, Bun.sleep(1000).then(() => "stalled")])).toBeNull();
+  });
+
+  test("a fresh download that will not load is not fetched again on the next run", async () => {
+    // Throwing on require is how the real wrapper fails where its native library cannot run (old glibc).
+    const broken = tgz({ "index.js": 'throw new Error("this platform cannot load the library");' });
+    const reg = { canvas: broken, "canvas-linux-x64-gnu": NATIVE };
+    const opts = { cacheDir: scratch(), platform: "linux-x64-gnu", pins: { canvas: sri(broken), "canvas-linux-x64-gnu": sri(NATIVE) }, onDownload: quiet };
+    expect(await loadRendererBun({ ...opts, fetch: fakeRegistry(reg).fetch })).toBeNull();
+    const next = fakeRegistry(reg);
+    const got = await loadRendererBun({ ...opts, fetch: next.fetch });
+    expect({ got, calls: next.calls.length }).toEqual({ got: null, calls: 0 });
   });
 });
 
@@ -218,6 +249,26 @@ describe.skipIf(process.env.PUBMY_OFFLINE === "1")("loadRendererBun with the rea
     const out = await renderer!.renderBoxes(await boxPdf(), [{ page: 9, x0: 0, y0: 0, x1: 10, y1: 10 }, { page: 1, x0: 0, y0: 0, x1: 10, y1: 10 }], 72);
     expect(out.map((p) => (p ? "png" : null))).toEqual([null, "png"]);
     await renderer!.close();
+  });
+
+  test("a document that fails to close still returns its crops", async () => {
+    const r = await loadRendererBun({ cacheDir, onDownload: quiet });
+    expect(r).not.toBeNull();
+    const probe = await getDocumentProxy(await boxPdf());
+    const proto = Object.getPrototypeOf(probe.loadingTask) as { destroy(): Promise<void> };
+    await probe.loadingTask.destroy();
+    const original = proto.destroy;
+    const spy = spyOn(proto, "destroy").mockImplementation(async function (this: unknown) {
+      await original.call(this);
+      throw new Error("destroy failed");
+    });
+    try {
+      const out = await r!.renderBoxes(await boxPdf(), [{ page: 1, x0: 0, y0: 0, x1: 10, y1: 10 }], 72).catch((e) => String(e));
+      expect(Array.isArray(out) ? out.map((p) => (p ? "png" : null)) : out).toEqual(["png"]);
+    } finally {
+      spy.mockRestore();
+      await r?.close();
+    }
   });
 
   test(

@@ -1,7 +1,7 @@
 // PdfRenderer for Bun: pdf.js (through unpdf) drawing on @napi-rs/canvas, which is fetched into the
 // cache on first use instead of being bundled (render/fetch-canvas.ts).
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { getDocumentProxy, renderPageAsImage } from "unpdf";
@@ -22,6 +22,10 @@ export interface LoadRendererOptions {
   platform?: string;
   /** Called after the first download; default prints one line on stderr. */
   onDownload?: (info: { bytes: number; dest: string }) => void;
+  /** Time allowed for the first download; default 180 s. Past it the renderer is null, as when offline. */
+  downloadTimeoutMs?: number;
+  /** Overrides the pinned tarball hashes (tests). */
+  pins?: Readonly<Record<string, string>>;
 }
 
 export function hostCanvasPlatform(): CanvasPlatform | null {
@@ -56,18 +60,36 @@ export async function loadRendererBun(opts: LoadRendererOptions = {}): Promise<P
   const key = opts.platform ?? hostCanvasPlatform();
   if (!key || !isCanvasPlatform(key)) return null;
   const cacheDir = join(opts.cacheDir ?? (await defaultCanvasCache()), key);
-  const get = () => ensureCanvas({ key, cacheDir, fetch: opts.fetch, onDownload: opts.onDownload ?? printDownload });
-  const cached = existsSync(cacheDir);
-  const files = await get();
+  // Written when a fresh, verified download will not load on this machine (for example a glibc older than
+  // the library needs): a second download would not fix that, so later runs skip the 15 MB fetch. The user
+  // clears it by deleting the cache folder (~/.cache/pubmy/canvas/1.1.0/<platform> by default).
+  const marker = join(cacheDir, UNLOADABLE);
+  if (existsSync(marker)) return null;
+  const report = opts.onDownload ?? printDownload;
+  let fresh = false;
+  const get = () => {
+    fresh = false;
+    const onDownload = (info: { bytes: number; dest: string }) => {
+      fresh = true;
+      report(info);
+    };
+    return ensureCanvas({ key, cacheDir, fetch: opts.fetch, pins: opts.pins, downloadTimeoutMs: opts.downloadTimeoutMs, onDownload });
+  };
+  let files = await get();
   if (!files) return null;
   if (await loads(files)) return bunRenderer();
-  // A cached copy that will not load (truncated, damaged on disk) is fetched once more; a fresh
-  // download that will not load is a platform problem a second download would not fix.
-  if (!cached) return null;
-  await rm(cacheDir, { recursive: true, force: true });
-  const again = await get();
-  return again && (await loads(again)) ? bunRenderer() : null;
+  if (!fresh) {
+    // A cached copy that will not load (truncated, damaged on disk) is fetched once more.
+    await rm(cacheDir, { recursive: true, force: true });
+    files = await get();
+    if (!files) return null;
+    if (await loads(files)) return bunRenderer();
+  }
+  await writeFile(marker, "This canvas library will not load here. Delete this folder to try a download again.\n").catch(() => {});
+  return null;
 }
+
+const UNLOADABLE = "unloadable";
 
 async function loads(files: CanvasFiles): Promise<boolean> {
   try {
@@ -111,7 +133,7 @@ function bunRenderer(): PdfRenderer {
         return out;
       } finally {
         open.delete(doc);
-        await doc.loadingTask.destroy();
+        await doc.loadingTask.destroy().catch(() => {});
       }
     },
     async close() {
