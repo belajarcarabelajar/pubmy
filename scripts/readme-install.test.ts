@@ -122,6 +122,39 @@ describe("readme install blocks", () => {
   });
 });
 
+const PROJECT_PLACEHOLDERS: Record<string, string> = { bash: "/path/to/project", powershell: "C:\\path\\to\\project" };
+
+describe("per-project install", () => {
+  test("README has bash and PowerShell per-project blocks with their placeholders, whatever system runs the test", () => {
+    for (const language of ["bash", "powershell"]) {
+      const blocks = blocksUnder(readme, "### Per-project install", language);
+      expect(blocks.length, language).toBe(1);
+      expect(blocks[0], language).toContain(PROJECT_PLACEHOLDERS[language]!);
+    }
+  });
+
+  test("README per-project paragraph no longer says the per-project install is untested", () => {
+    expect(readme.includes("only the home-folder install above was tested")).toBe(false);
+  });
+
+  test("per-project block puts the skill in the project's Claude Code and .agents folders", async () => {
+    const blocks = blocksUnder(readme, "### Per-project install", lang);
+    expect(blocks.length).toBe(1);
+    expect(blocks[0]).toContain(PROJECT_PLACEHOLDERS[lang]!);
+
+    const project = await mkdtemp(join(tmpdir(), "pubmy-project-"));
+    try {
+      const r = runBlock(blocks[0]!.replaceAll(PROJECT_PLACEHOLDERS[lang]!, project), home);
+      expect(r.code, r.out).toBe(0);
+      for (const dir of [".claude/skills", ".agents/skills"]) {
+        expect(existsSync(join(project, dir, "pubmy/SKILL.md")), dir).toBe(true);
+      }
+    } finally {
+      await rm(project, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("readme ZIP download block", () => {
   test(
     "downloads the release ZIP, served locally, and leaves a complete skill in the Claude Code folder",
