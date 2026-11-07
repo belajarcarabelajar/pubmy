@@ -155,6 +155,16 @@ test("a hyphen before a function word at the line end is kept", () => {
   expect(texts([it("effects within-", 50, 700), it("and between-group effects.", 50, 688)])).toEqual(["effects within- and between-group effects."]);
 });
 
+test("a compound hyphenated before a capital at the line end keeps its hyphen without a space", () => {
+  // arXiv 2302.13971: "GPT-" / "Neo", "CrowS-" / "Pairs", "Megatron-" / "LM" came out as "GPT- Neo"
+  const items = [it("Models such as GPT-", 50, 700), it("Neo are trained on the Pile.", 50, 688)];
+  expect(texts(items)).toEqual(["Models such as GPT-Neo are trained on the Pile."]);
+});
+
+test("a compound hyphenated before a capital across a page break keeps its hyphen without a space", () => {
+  expect(twoPages("models such as CrowS-", "Pairs measure social bias in text.")[0]).toContain("CrowS-Pairs measure");
+});
+
 test("a hyphen before a capitalised word across a page break is kept", () => {
   // arXiv 2302.13971 references also hold "mod- Joel", where the line order broke; gluing those would invent words
   expect(twoPages("in the references of Self-", "Consistency improves chain of thought.")[0]).toContain("Self-");
