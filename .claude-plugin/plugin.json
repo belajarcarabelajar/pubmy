@@ -13,5 +13,6 @@
     "kindle",
     "ebook",
     "ocr"
-  ]
+  ],
+  "icon": "./assets/icon.png"
 }

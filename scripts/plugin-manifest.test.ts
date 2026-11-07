@@ -37,6 +37,16 @@ describe("claude plugin manifest", () => {
     expect(p.license).toBe("MIT");
     expect(p.repository).toBe("https://github.com/belajarcarabelajar/pubmy");
   });
+
+  test("plugin.json icon points to a 512x512 PNG inside the plugin", async () => {
+    const p = await readJson(".claude-plugin/plugin.json");
+    expect(p.icon).toBe("./assets/icon.png");
+    const png = new Uint8Array(await readFile(join(repo, p.icon)));
+    // PNG signature, then the IHDR chunk: width and height are big-endian at bytes 16 and 20.
+    expect([...png.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const view = new DataView(png.buffer, png.byteOffset);
+    expect([view.getUint32(16), view.getUint32(20)]).toEqual([512, 512]);
+  });
 });
 
 const claude = Bun.which("claude");

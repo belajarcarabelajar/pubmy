@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-07-pubmy-install-methods
-status: Approved
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -97,18 +97,12 @@ tasks:
         retry: 1
   - id: T6
     depends_on: [T4, T5]
-    impacts: ["README Verified on table - bun test scripts/readme-install.test.ts", "local tool installs outside the repo (codex, cursor-agent) - codex --version"]
+    impacts: ["README Verified on table - bun test scripts/readme-install.test.ts", "none: the Codex and Cursor CLIs were uninstalled 2026-11-07 at the owner's debt-sweep choice - command -v codex agent"]
     files: { create: [], modify: [README.md], test: [] }
     idempotency_key: "T6:verify-codex-cursor"
-    skip_if: "false"
+    skip_if: "bun test scripts/readme-install.test.ts"
     verify_exit: 0
     run:
-      - cmd: "codex --version"
-        expect_exit: 0
-        retry: 0
-      - cmd: "agent --version"
-        expect_exit: 0
-        retry: 0
       - cmd: "bun test scripts/readme-install.test.ts"
         expect_exit: 0
         retry: 0
@@ -173,12 +167,12 @@ flowchart TD
 
 **Acceptance Criteria:**
 - [x] AC-1: `bun scripts/pack-skill.ts` writes `dist/pubmy-skill.zip` whose entries all start with `pubmy/` and include `pubmy/SKILL.md` and `pubmy/scripts/pubmy.js`; unzipping it into a skills folder gives a working skill. (evidence: `bun test scripts/pack-skill.test.ts` exit 0, 5 pass, unzip-and-convert case)
-- [ ] AC-2: pushing a tag `v*` runs a workflow that builds the ZIP and attaches it to a GitHub Release with that tag name.
+- [x] AC-2: pushing a tag `v*` runs a workflow that builds the ZIP and attaches it to a GitHub Release with that tag name. (evidence: tag v0.1.0 ran `release-skill.yml` run 42374289117, conclusion success; `gh release view v0.1.0` exit 0 lists `pubmy-skill.zip`)
 - [x] AC-3: `claude plugin validate .` passes and `claude plugin marketplace add` + `claude plugin install pubmy@pubmy` from the repo directory installs a plugin whose skills list includes `pubmy`. (evidence: `claude plugin validate .` exit 0; `bun test scripts/plugin-manifest.test.ts` exit 0, 5 pass)
 - [x] AC-4: README documents `npx skills add belajarcarabelajar/pubmy`, the Claude plugin commands, the ZIP download, uninstall for every install method (bash and PowerShell), and developer setup; every bash install and uninstall block runs green in a temp HOME on Linux. (evidence: `bun test scripts/readme-install.test.ts` exit 0, 6 pass)
 - [x] AC-5: CI runs the README install test on ubuntu-latest, macos-latest and windows-latest (PowerShell blocks on Windows), plus a developer-setup job, on every PR. (evidence: `gh pr checks 14 --watch` exit 0 on run 42373221748)
 - [ ] AC-6 (not met, owner chose no sign-in 2026-11-07): Codex and Cursor each quote the pubmy skill description when asked; README Verified table lists them and the three CI systems as verified, with the date.
-- [ ] AC-7: release v0.1.0 exists with asset `pubmy-skill.zip`, and `https://github.com/belajarcarabelajar/pubmy/releases/latest/download/pubmy-skill.zip` returns 200.
+- [x] AC-7: release v0.1.0 exists with asset `pubmy-skill.zip`, and `https://github.com/belajarcarabelajar/pubmy/releases/latest/download/pubmy-skill.zip` returns 200. (evidence: `gh release view v0.1.0` exit 0, asset `pubmy-skill.zip`; latest/download URL HTTP 200 on 2026-11-07; the downloaded ZIP converted a file, exit 0)
 
 **Traceability:**
 
@@ -214,7 +208,7 @@ flowchart TD
 
 **Definition of Done:** AC-1..AC-7 checked with evidence, typecheck exit 0, targeted tests exit 0, PR checks green, debt sweep run.
 
-**Plan Status & Version:** Approved, v1.
+**Plan Status & Version:** Complete, v1.
 
 **Reproducibility:** Bun 1.4.4, Node 22.20+ for `npx skills`, Claude Code CLI for T3, ZIP entries fixed mtime.
 
@@ -251,8 +245,8 @@ flowchart TD
 - [x] Parent diff audit + independent review: parent re-runs `colab-test -- bun test scripts/pack-skill.test.ts scripts/workflows.test.ts scripts/readme-install.test.ts apps/cli/test/cli.test.ts` exit 0 (53 pass, 0 fail), `colab-test -- bun run typecheck` exit 0; staid verdict `correct`, no blocking findings (risks: Windows leg unproven until CI, ZIP link 404 until T7, ZIP blocks not executed by a test); reviewer integrity: status + HEAD unchanged, only this plan file differed (parent edit)
 - [x] PR #14 opened; first CI run: windows-latest failed (README parser read a `# comment` inside the bash block as a heading, so no PowerShell block was found); RED regression `bun test scripts/readme-install.test.ts -t 'readme block extraction'` exit 1 (2 fail), fix in `scripts/readme-install.test.ts` (track every fence), GREEN exit 0 (6 pass); commit 2dac7cc; `gh pr checks 14 --watch` exit 0 (install ubuntu, macos, windows and dev-setup pass)
 - [x] T6: Codex 0.167.0 and Cursor `agent` 2026.11.05 installed (`--version` exit 0); owner chose not to sign in, so both stay `not verified` with that reason; README gains the per-method check table; `colab-test -- bun test scripts/readme-install.test.ts apps/cli/test/bundle.test.ts -t readme` exit 0 (10 pass)
-- [ ] PR merged (owner)
-- [ ] T7 release v0.1.0 after Release gate
+- [x] PR merged (owner): PR #14 MERGED as `9a8c994` (`gh pr view 14` 2026-11-07)
+- [x] T7 release v0.1.0 after Release gate: owner answered the Release gate with Push tag v0.1.0; run 42374289117 success; release asset listed (`gh release view v0.1.0` exit 0)
 - [x] Debt sweep (4 follow-ups selected and closed, see Follow-ups; ledger `docs/code-plan/2026-11-07-pubmy-install-methods-learning-ledger.md`, MEMORY.md M10 M11; runner log: T1-T5 SKIPPED-IDEMPOTENT, T6 PASSED, T7 FAILED-ISOLATED release not found; readiness NOT-READY exit 1)
 
 ## Task T1: pack-skill ZIP script
@@ -333,7 +327,7 @@ flowchart TD
 **Preconditions:** PR merged to `main`; Release gate answered (safe option first).
 **Behavior & Acceptance:** AC-7. `git tag v0.1.0 <merge sha>` and `git push origin v0.1.0`; workflow attaches the ZIP.
 
-- [ ] Step 1: Run: `gh release view v0.1.0 -R belajarcarabelajar/pubmy --json assets --jq '.assets[].name'` | expect exit 0 | retry 2
+- [x] Step 1: Run: `gh release view v0.1.0 -R belajarcarabelajar/pubmy --json assets --jq '.assets[].name'` | expect exit 0 | retry 2
 
 ## Batch manifest
 
@@ -360,6 +354,10 @@ flowchart TD
   - [x] Codex and Cursor CLIs removed (`bun remove -g @openai/codex`; `agent`, `cursor-agent` symlinks and `~/.local/share/cursor-agent` deleted); `which codex agent cursor-agent` exit 1 for all; README rows no longer claim the CLIs are installed.
 
 ## Closeout status
+
+- Closed 2026-11-07: `bun ~/vivera/scripts/plan-closeout.mjs --readiness <plan> --cwd <detached main worktree with node_modules>` READY (exit 0), T1-T7 DONE, 0 open step boxes; re-run right before the status change, READY again. Owner answered `Close plan` with Mark Complete, knowing AC-6 is not met (Codex and Cursor sign-in declined). `bun ~/vivera/scripts/plan-cost.mjs --plan 2026-11-07-pubmy-install-methods`: 0 transcripts, usd n/a (the claim ran behind an env prefix, which the tool does not count). Shipped in the PR of plan `2026-11-07-pubmy-release-hardening`; issue #13 closes when `plan-sync` runs after that merge.
+
+- 2026-11-07, in PR of plan `2026-11-07-pubmy-release-hardening`: the owner had both CLIs uninstalled in this plan's debt sweep on 2026-11-07 (after the T6 run recorded as PASSED). T6's `codex --version` and `agent --version` steps were removed from `run[]` because the owner had both CLIs uninstalled in the debt sweep (exit 127 in the closeout runner); T6 now proves what it still delivers, the README check table, with `bun test scripts/readme-install.test.ts`. AC-6 stays open: the owner declined Codex and Cursor sign-in.
 
 - Readiness 2026-11-07: `bun scripts/plan-closeout.mjs --readiness` NOT-READY (exit 1). Open: T7 (release v0.1.0, needs the merge), AC-2 and AC-7 (proven only by the first release), AC-6 (owner declined Codex and Cursor sign-in).
 - Reopen trigger: after PR #14 merges and the `v0.1.0` tag runs `release-skill.yml`; then run T7's check and close the plan in that session.

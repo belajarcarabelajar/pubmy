@@ -49,3 +49,5 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun test apps/cli/test/cli.test.ts
+      # release guard, workflow shape, ZIP packing and plugin manifest (the plugin install case skips without the claude CLI)
+      - run: bun test scripts/release-check.test.ts scripts/workflows.test.ts scripts/pack-skill.test.ts scripts/plugin-manifest.test.ts

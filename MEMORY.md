@@ -32,3 +32,10 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 |---|---|
 | M10 | WHEN a test extracts per-OS blocks (bash, PowerShell) from Markdown → DO track every code fence and assert the blocks of every language on every OS, NOT only the language the current OS runs (a `# comment` in the bash block ended the section, and only the Windows CI leg saw it). |
 | M11 | WHEN documenting where a third-party installer writes files → DO install once per target with a temporary HOME and read the result, NOT copy the vendor's docs table (the skills CLI docs listed `~/.codex/skills`, `~/.cursor/skills`; the CLI wrote `~/.agents/skills`). |
+
+## Task Group: release hardening (plan 2026-11-07-pubmy-release-hardening)
+
+| # | Rule |
+|---|---|
+| M12 | WHEN running `plan-closeout.mjs --readiness` (or briefing a reviewer to) for a pubmy plan → DO pass `--cwd` to a worktree that has `node_modules` (a detached NVMe worktree after `bun install --frozen-lockfile`), NOT the session worktree on the external disk (its `skip_if` tests fail on imports and tasks read OPEN; a reviewer reported a false blocker from it). |
+| M13 | WHEN a plan task's `run[]` proves a tool installed only for a verification → DO prove the lasting deliverable (the README row or test it produced), NOT `<tool> --version` (the owner later removed Codex and Cursor and the closeout runner failed T6 with exit 127). |
