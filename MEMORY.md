@@ -18,3 +18,10 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 |---|---|
 | M6 | WHEN declaring an adapter's output good → DO convert at least one real-world file of that format and count its defects (running-header leaks, fragment chapter titles, missing figures or tables against the source), NOT rely on synthetic fixtures alone (v1 passed every gate, and the owner's first NIH manuscript showed 22 header leaks, split headings, dropped figures and a lost sideways table). |
 | M7 | WHEN choosing an EPUB construct for Kindle (SVG, tables, images, fonts) → DO check Amazon's Kindle Publishing Guidelines first (https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf), NOT pick what EPUB 3 allows (11.4.11: `<svg>` with `<text>` is not supported; 11.4: transparency is flattened to white; 11.5.1 prefers HTML tables over table images). |
+
+## Task Group: formulas and diagrams as crops (session 2026-11-07-pubmy-formulas)
+
+| # | Rule |
+|---|---|
+| M8 | WHEN measuring rendered output (formula crops, figures, previews) → DO open a sample of the PNGs from each real file, NOT trust counts, sizes and EPUBCheck alone (107 OpenStax crops and EPUBCheck 0/0 looked done; viewing them showed inline crops with tall fences and sums cutting into the lines above and below). |
+| M9 | WHEN a throwaway harness feeds a file to pdf.js → DO pass `new Uint8Array(readFileSync(p))` as the CLI does, NOT the Buffer `readFileSync` returns (pdf.js refuses a Buffer, and pdfAdapter reports READ_FAILED, which looked like a regression on arXiv and the NIH sample). |

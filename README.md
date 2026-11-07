@@ -11,7 +11,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 | Input | Extensions | Notes |
 |---|---|---|
-| PDF with text | `.pdf` | Columns and headings are detected from the text layout. Running headers, footers and page numbers are removed. Figures are kept as images, and a table printed sideways is rebuilt as a table |
+| PDF with text | `.pdf` | Columns and headings are detected from the text layout. Running headers, footers and page numbers are removed. Figures are kept as images, and a table printed sideways is rebuilt as a table. Formulas and line diagrams are kept as pictures of their area of the page, so they look exactly as printed |
 | Scanned PDF | `.pdf` | Read with OCR in Indonesian and English (`ind+eng`) |
 | Word processor and text documents | `.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.md`, `.txt` | Headings become chapters |
 | Kindle ebooks without DRM | `.mobi`, `.azw3` | Files with DRM are refused (see DRM policy) |
@@ -20,7 +20,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 ## Privacy
 
 - **Website:** conversion runs inside your own browser. Your files are not uploaded to any server. Each EPUB stays in the browser tab's memory and is wiped 3 minutes after it is ready; a countdown shows the time left. An open preview closes at the same moment.
-- **CLI:** it writes only to `<folder>/pubmy-epub/` and to the OCR cache in `~/.cache/pubmy`. It never changes, moves, or deletes your source files, and never uploads them. The first scanned PDF downloads the OCR language data (about 7 MB) into that cache; no file content is sent with it.
+- **CLI:** it writes only to `<folder>/pubmy-epub/` and to the OCR cache in `~/.cache/pubmy`. It never changes, moves, or deletes your source files, and never uploads them. The first scanned PDF downloads the OCR language data (about 7 MB) into that cache, and the first PDF with formulas or line diagrams downloads a drawing library (about 15 MB, checked against a fixed checksum); no file content is sent with either. Without it (offline), formulas stay as text and the report says so.
 
 ## Install the skill
 
@@ -151,6 +151,7 @@ pubmy bundles or loads these components:
 | libarchive.js | CBR (RAR) reading | MIT |
 | libarchive (inside libarchive.js) | Archive decoding | BSD-2-Clause |
 | foliate-js | MOBI/AZW3 reading; EPUB preview on the website | MIT |
+| @napi-rs/canvas (Skia) | CLI only: drawing formula and diagram areas, downloaded on first use | MIT |
 
 Each component keeps its own copyright and licence text, published with its package.
 
