@@ -156,6 +156,16 @@ Checked on 2026-11-07 (Arch Linux) by copying `skills/pubmy` into the folder nam
 
 OpenCode reads both `~/.claude/skills` and `~/.agents/skills`; copy the skill into only one of them to avoid a duplicate entry.
 
+Each install method is also checked on its own:
+
+| Method | How it is checked |
+|---|---|
+| Copy and uninstall blocks (bash, PowerShell) | `scripts/readme-install.test.ts` runs the blocks above in a temporary home folder and converts a file with the installed copy; CI runs it on Ubuntu, macOS and Windows for every pull request (`install-check` workflow, green on 2026-11-07) |
+| skills CLI | CI installs with `npx skills add` and removes with `npx skills remove` on all three systems |
+| Claude Code plugin | `claude plugin validate .` and `scripts/plugin-manifest.test.ts`, which installs the plugin into a temporary Claude Code config folder (Arch Linux, 2026-11-07) |
+| Release ZIP | `scripts/pack-skill.test.ts` unzips the packed file and converts a file with it |
+| Developer setup | CI runs `bun install`, `bun run typecheck` and the CLI tests |
+
 ## Uninstall
 
 Remove the skill the same way you installed it. Your converted EPUBs and source files are not touched. The OCR cache in `~/.cache/pubmy` can be deleted too.
