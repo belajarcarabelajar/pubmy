@@ -170,6 +170,53 @@ test("a body size passed in for the whole document marks a page of larger text a
   expect(blocks).toEqual([{ kind: "heading", level: 2, text: "Chapter Two" }]);
 });
 
+// OpenStax University Physics Vol 1 pages 46-61: body 9.5 pt, problems and math letters 10 pt serif,
+// section headings 10 pt sans ("1.1 The Scope and Scale of Physics"), integral signs 14 pt, fences 25 pt.
+const kinds = (items: TextItem[], bodySize: number) => layoutPage(items, { ...page, bodySize }).map((b) => b.kind);
+
+test("a body line holding one large integral sign stays body text", () => {
+  const items = [it("dimensions of (c)", 50, 700, 10, 80), it("∫", 131, 700, 14.09, 6), it("vdt, (d) and (e) da/dt?", 138, 700, 10)];
+  expect(kinds(items, 10)).toEqual(["para"]);
+});
+
+test("a line a little above body size that reads as running text is a paragraph", () => {
+  expect(kinds([it("(c) 17 ns; (d) 577 μs.", 50, 700, 10)], 9.5)).toEqual(["para"]);
+});
+
+test("a line a little above body size that starts in lower case is a paragraph", () => {
+  expect(kinds([it("the an are dimensionless constants for all", 50, 700, 10)], 9.5)).toEqual(["para"]);
+});
+
+test("a figure caption a little above body size is a paragraph", () => {
+  expect(kinds([it("Figure 2.4 A displacement D of magnitude 6 km is drawn", 50, 700, 10)], 9.5)).toEqual(["para"]);
+});
+
+test("a vector arrow before a figure caption does not make it a heading", () => {
+  expect(kinds([it("→", 40, 700, 10, 5), it("Figure 2.4 A displacement D of magnitude 6 km is drawn", 50, 700, 10)], 9.5)).toEqual(["para"]);
+});
+
+test("a line of only vector arrows and an equation number is never a heading", () => {
+  expect(kinds([it("→ → → → (2.4)", 50, 700, 12)], 10)).toEqual(["para"]);
+});
+
+test("an equation line is never a heading", () => {
+  expect(kinds([it("B = α A (2.1)", 50, 700, 12)], 10)).toEqual(["para"]);
+});
+
+test("a question heading a little above body size stays a heading", () => {
+  // sentence case and a question mark, as in "1.1 What is physics?": a heading, not a problem line
+  expect(kinds([it("What is a tensor?", 50, 700, 10)], 9.5)).toEqual(["heading"]);
+  expect(kinds([it("1.1 What is physics?", 50, 700, 10)], 9.5)).toEqual(["heading"]);
+});
+
+test("a lettered problem that ends in a question a little above body size is a paragraph", () => {
+  expect(kinds([it("(b) What is the area of the square?", 50, 700, 10)], 9.5)).toEqual(["para"]);
+});
+
+test("a section heading a little above body size stays a heading", () => {
+  expect(kinds([it("1.1 The Scope and Scale of Physics", 50, 700, 10)], 9.5)).toEqual(["heading"]);
+});
+
 // A page of the whole document for layoutPages; figures sit at `top` points down from the top edge.
 const pageText = (items: TextItem[], figures: { top: number; html: string }[] = []) => ({ ...page, items, figures });
 const doc = { bodySize: 10, titleSize: Infinity };
