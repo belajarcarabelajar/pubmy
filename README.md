@@ -24,16 +24,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 ## Install the skill
 
-Requires [Bun](https://bun.sh) 1.4 or newer (`bun --version`).
-
-First get the repository (needs [Git](https://git-scm.com); without Git, use **Code > Download ZIP** on GitHub and unzip it):
-
-```bash
-git clone https://github.com/belajarcarabelajar/pubmy.git
-cd pubmy
-```
-
-Then copy the `skills/pubmy` folder into your harness's skills folder. The folder is self-contained (about 25 MB, most of it the OCR engine in `scripts/`) and needs no `bun install`.
+Requires [Bun](https://bun.sh) 1.4 or newer (`bun --version`). The skill folder is self-contained (about 25 MB, most of it the OCR engine in `scripts/`) and needs no `bun install`. Pick one method below; installing the same skill twice makes some harnesses list it twice.
 
 | Harness | Skills folder |
 |---|---|
@@ -42,6 +33,67 @@ Then copy the `skills/pubmy` folder into your harness's skills folder. The folde
 | Cursor | `~/.agents/skills` |
 | OpenCode | `~/.agents/skills` |
 | Antigravity | `~/.gemini/config/skills` |
+
+### One command
+
+**Any harness, with the [skills CLI](https://github.com/vercel-labs/skills)** (needs [Node.js](https://nodejs.org) 22.20 or newer):
+
+```bash
+npx skills add belajarcarabelajar/pubmy --skill pubmy -g
+```
+
+It asks which harnesses to install for. To skip the question, name them with `-a`, for example `-a claude-code -a codex`. Measured on 2026-11-07, `-g` installs to these folders:
+
+| `-a` value | Folder |
+|---|---|
+| `claude-code` | `~/.claude/skills/pubmy` |
+| `codex`, `cursor`, `opencode`, `antigravity` | `~/.agents/skills/pubmy` |
+
+Antigravity's own folder is `~/.gemini/config/skills`; for Antigravity, use the ZIP or the copy method below.
+
+**Claude Code, as a plugin** (Claude Code 2.1.275 or newer), inside a session:
+
+```text
+/plugin install pubmy --marketplace belajarcarabelajar/pubmy
+```
+
+Or from a shell:
+
+```bash
+claude plugin marketplace add belajarcarabelajar/pubmy
+claude plugin install pubmy@pubmy
+```
+
+As a plugin the skill is named `pubmy:pubmy`. Update it with `claude plugin update pubmy@pubmy`.
+
+### Download the ZIP
+
+No Git or Node.js needed. Download [pubmy-skill.zip](https://github.com/belajarcarabelajar/pubmy/releases/latest/download/pubmy-skill.zip) from the latest release and unzip it into your harness's skills folder; it holds one folder, `pubmy`. The commands below use the Claude Code folder; swap in the folder from the table above for another harness.
+
+Linux or macOS:
+
+```bash
+curl -fsSLo /tmp/pubmy-skill.zip https://github.com/belajarcarabelajar/pubmy/releases/latest/download/pubmy-skill.zip
+mkdir -p ~/.claude/skills && unzip -oq /tmp/pubmy-skill.zip -d ~/.claude/skills
+```
+
+Windows (PowerShell):
+
+```powershell
+Invoke-WebRequest https://github.com/belajarcarabelajar/pubmy/releases/latest/download/pubmy-skill.zip -OutFile "$env:TEMP\pubmy-skill.zip"
+New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null; Expand-Archive -Force "$env:TEMP\pubmy-skill.zip" "$HOME\.claude\skills"
+```
+
+### From a clone
+
+Get the repository (needs [Git](https://git-scm.com)):
+
+```bash
+git clone https://github.com/belajarcarabelajar/pubmy.git
+cd pubmy
+```
+
+Then copy the `skills/pubmy` folder into your harness's skills folder. Copy only the line for the harness you use.
 
 Linux or macOS (bash), run from the repository root:
 
@@ -64,6 +116,8 @@ New-Item -ItemType Directory -Force "$HOME\.agents\skills" | Out-Null; Copy-Item
 # Antigravity
 New-Item -ItemType Directory -Force "$HOME\.gemini\config\skills" | Out-Null; Copy-Item -Recurse -Force skills\pubmy "$HOME\.gemini\config\skills\"
 ```
+
+To update, `git pull` and copy the folder again. Then ask your agent, for example: "convert the folder ~/Books to EPUB for my Kindle" or "ubah semua file di folder ini ke EPUB".
 
 ### Per-project install
 
@@ -88,8 +142,6 @@ New-Item -ItemType Directory -Force "C:\path\to\project\.agents\skills" | Out-Nu
 
 Copy only the line for the harness you use: OpenCode reads both folders and would list the skill twice. If the project is a Git repository, add the copied folder to its `.gitignore` so the 25 MB bundle is not committed.
 
-To update, copy the folder again. Then ask your agent, for example: "convert the folder ~/Books to EPUB for my Kindle" or "ubah semua file di folder ini ke EPUB".
-
 ### Verified on
 
 Checked on 2026-11-07 (Arch Linux) by copying `skills/pubmy` into the folder named above and asking each tool whether the skill is available. A harness counts as verified only when it quoted the skill's own description.
@@ -99,10 +151,55 @@ Checked on 2026-11-07 (Arch Linux) by copying `skills/pubmy` into the folder nam
 | Claude Code | verified (`~/.claude/skills`) |
 | OpenCode | verified (reads `~/.claude/skills`; `opencode run`) |
 | Antigravity CLI (`agy`) | verified (`~/.gemini/config/skills`; `agy -p`) |
-| Codex | not verified (not installed on the test machine) |
-| Cursor | not verified (not installed on the test machine) |
+| Codex | not verified (CLI 0.167.0 installed, no signed-in account on the test machine) |
+| Cursor | not verified (CLI `agent` 2026.11.05 installed, no signed-in account on the test machine) |
 
 OpenCode reads both `~/.claude/skills` and `~/.agents/skills`; copy the skill into only one of them to avoid a duplicate entry.
+
+## Uninstall
+
+Remove the skill the same way you installed it. Your converted EPUBs and source files are not touched. The OCR cache in `~/.cache/pubmy` can be deleted too.
+
+### Installed with the skills CLI
+
+```bash
+npx skills remove pubmy -g
+```
+
+### Installed as a Claude Code plugin
+
+```bash
+claude plugin uninstall pubmy@pubmy
+claude plugin marketplace remove pubmy
+```
+
+### Remove a copied skill
+
+For the ZIP and copy methods. Each line removes the folder for one harness; a folder that does not exist is skipped.
+
+Linux or macOS (bash):
+
+```bash
+# Claude Code
+rm -rf ~/.claude/skills/pubmy
+# Codex, Cursor, OpenCode
+rm -rf ~/.agents/skills/pubmy
+# Antigravity
+rm -rf ~/.gemini/config/skills/pubmy
+```
+
+Windows (PowerShell):
+
+```powershell
+# Claude Code
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$HOME\.claude\skills\pubmy"
+# Codex, Cursor, OpenCode
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$HOME\.agents\skills\pubmy"
+# Antigravity
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$HOME\.gemini\config\skills\pubmy"
+```
+
+For a per-project install, delete `<project>/.claude/skills/pubmy` or `<project>/.agents/skills/pubmy`.
 
 ## CLI usage
 
@@ -133,6 +230,30 @@ pubmy does not send anything to Amazon. Move the EPUBs to your Kindle library yo
 ## DRM policy
 
 pubmy converts only files you are free to convert. A MOBI or AZW3 file with DRM is refused with the code `DRM` and is never decrypted. pubmy does not include, call, or recommend any DRM removal tool, and the agent skill is told never to retry or work around a DRM refusal.
+
+## Developer setup
+
+For changing pubmy itself. Requires Bun 1.4.4 (the version pinned in `package.json`) and Git.
+
+```bash
+git clone https://github.com/belajarcarabelajar/pubmy.git
+cd pubmy
+bun install
+bun run typecheck
+bun test apps/cli/test/cli.test.ts
+```
+
+| Folder | What it is |
+|---|---|
+| `packages/core` | Format detection, the readers for each format, and the EPUB writer, shared by the CLI and the website |
+| `apps/cli` | The CLI; `bun run --cwd apps/cli build` rebuilds the skill bundle in `skills/pubmy/scripts/` |
+| `apps/web` | The website; `bun run --cwd apps/web build` writes `apps/web/dist`, `bun run --cwd apps/web check:assets` checks it |
+| `skills/pubmy` | The agent skill; `scripts/` is generated, never edit it by hand |
+| `fixtures` | Generators for test files; downloaded fixtures go to `fixtures/out/` (not committed) |
+
+- Run one test file at a time, for example `bun test packages/core/test/docx.test.ts`; the scanned-PDF tests take minutes.
+- `bun scripts/epubcheck-java.ts` cross-checks the EPUBs in `fixtures/out/epub/` with the Java EPUBCheck (needs Java).
+- `bun scripts/pack-skill.ts` writes `dist/pubmy-skill.zip`, the file attached to each release. Pushing a tag `v*` builds and publishes it (`.github/workflows/release-skill.yml`).
 
 ## THIRD-PARTY-LICENSES
 
