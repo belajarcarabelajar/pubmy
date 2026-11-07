@@ -39,7 +39,7 @@ describe("release", () => {
     expect(wf.permissions).toEqual({ contents: "write" });
   });
 
-  test("installs with the pinned Bun, packs the skill, then attaches the zip to a release", async () => {
+  test("sets up the pinned Bun, packs the skill, then attaches the zip to a release", async () => {
     const wf = await loadWorkflow("release-skill.yml");
     const jobs = Object.values(wf.jobs);
     expect(jobs).toHaveLength(1);
