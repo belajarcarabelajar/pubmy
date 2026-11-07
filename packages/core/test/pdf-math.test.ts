@@ -133,11 +133,11 @@ test("a radical's area does not reach into the prose of the line above", () => {
   expect(area?.itemIndexes).not.toContain(one(n, "v"));
 });
 
-test("a page of 20,000 separate strokes (a scatter plot or a map) is read in seconds, not minutes", async () => {
+/** Time findMathAreas takes on a page of `rows` x 200 short diagonal ticks, 2.8 pt apart so none touch. */
+async function strokesTime(rows: number): Promise<number> {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([612, 792]);
-  // 200 x 100 grid of short diagonal ticks, 2.8 pt apart so none touch: worst case for pairwise grouping
-  for (let r = 0; r < 100; r++)
+  for (let r = 0; r < rows; r++)
     for (let c = 0; c < 200; c++) page.drawLine({ start: { x: 20 + c * 2.8, y: 100 + r * 5.6 }, end: { x: 20.6 + c * 2.8, y: 100.6 + r * 5.6 }, thickness: 0.2 });
   const { OPS } = await getResolvedPDFJS();
   const doc = await getDocumentProxy(await pdf.save(), { fontExtraProperties: true } as Parameters<typeof getDocumentProxy>[1]);
@@ -145,5 +145,14 @@ test("a page of 20,000 separate strokes (a scatter plot or a map) is read in sec
   const ops = await p1.getOperatorList();
   const t0 = performance.now();
   findMathAreas({ page: 1, view: p1.view, items: [], fonts: {}, ops, OPS: OPS as Record<string, number> });
-  expect(performance.now() - t0).toBeLessThan(3000);
-}, 120_000);
+  return performance.now() - t0;
+}
+
+test("a page of 20,000 separate strokes (a scatter plot or a map) costs about 4 times a page of 5,000, not 16", async () => {
+  // a ratio, not a time limit, so a busy test machine does not fail it; pairing every stroke with
+  // every other one costs 16 times as much for 4 times the strokes
+  await strokesTime(25);
+  const small = await strokesTime(25);
+  const big = await strokesTime(100);
+  expect(big / small).toBeLessThan(9);
+}, 180_000);
