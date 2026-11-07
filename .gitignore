@@ -12,3 +12,5 @@ docs/code-plan/spikes/**/fixtures-made/
 docs/code-plan/spikes/**/*.png
 docs/code-plan/spikes/**/*.epub
 apps/web/dist/
+# release zip from scripts/pack-skill.ts
+dist/
