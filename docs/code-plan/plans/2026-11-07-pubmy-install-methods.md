@@ -253,7 +253,7 @@ flowchart TD
 - [x] T6: Codex 0.167.0 and Cursor `agent` 2026.11.05 installed (`--version` exit 0); owner chose not to sign in, so both stay `not verified` with that reason; README gains the per-method check table; `colab-test -- bun test scripts/readme-install.test.ts apps/cli/test/bundle.test.ts -t readme` exit 0 (10 pass)
 - [ ] PR merged (owner)
 - [ ] T7 release v0.1.0 after Release gate
-- [ ] Debt sweep (ledger `docs/code-plan/2026-11-07-pubmy-install-methods-learning-ledger.md`, MEMORY.md M10 M11; runner log: T1-T5 SKIPPED-IDEMPOTENT, T6 PASSED, T7 FAILED-ISOLATED release not found; readiness NOT-READY exit 1)
+- [x] Debt sweep (4 follow-ups selected and closed, see Follow-ups; ledger `docs/code-plan/2026-11-07-pubmy-install-methods-learning-ledger.md`, MEMORY.md M10 M11; runner log: T1-T5 SKIPPED-IDEMPOTENT, T6 PASSED, T7 FAILED-ISOLATED release not found; readiness NOT-READY exit 1)
 
 ## Task T1: pack-skill ZIP script
 
@@ -353,7 +353,11 @@ flowchart TD
 ## Follow-ups
 
 - Done 2026-11-07: pubmy registered for plan publishing (owner approved).
-- ZIP download blocks in README are checked by reading only (staid finding 3); a test that serves the packed ZIP locally and runs the curl/unzip and Invoke-WebRequest/Expand-Archive blocks would close it.
+- Debt sweep 2026-11-07, owner selected all four; done inline by the parent (single-file changes; A16 after the earlier 429):
+  - [x] ZIP download blocks tested: `scripts/readme-install.test.ts` serves the packed ZIP on 127.0.0.1 and runs the README block; RED by mutating the unzip target in README (diff shown, run exit 1, `Expected: true Received: false`), README restored (`cmp` equal), GREEN exit 0.
+  - [x] Antigravity: `agy -p` did not list a probe skill placed in `~/.agents/skills` (found only through the owner's custom GEMINI.md rule), while `pubmy` in `~/.gemini/config/skills` was listed; README now says so. Probe removed.
+  - [x] Release test renamed (`sets up the pinned Bun, ...`), so `bun test scripts/workflows.test.ts -t install` selects only the 4 install tests (exit 0).
+  - [x] Codex and Cursor CLIs removed (`bun remove -g @openai/codex`; `agent`, `cursor-agent` symlinks and `~/.local/share/cursor-agent` deleted); `which codex agent cursor-agent` exit 1 for all; README rows no longer claim the CLIs are installed.
 
 ## Closeout status
 
