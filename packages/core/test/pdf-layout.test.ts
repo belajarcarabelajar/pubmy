@@ -1,4 +1,8 @@
-import { expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
+import { strFromU8, unzipSync } from "fflate";
+import { CALLOUT, HEADING, JOINED, makeLayoutPdf } from "../../../fixtures/make-pdf-layout.ts";
+import { pdfAdapter } from "../src/adapters/pdf.ts";
+import { convert, domFor, registerAdapter, type Ctx } from "../src/index.ts";
 import { layoutPage, layoutPages, type TextItem } from "../src/pdf/layout.ts";
 
 // Hand-built pdf.js-like items on a 600 x 800 page. PDF y grows upward.
@@ -98,6 +102,64 @@ test("a heading wrapped onto a second line 1.67 times its size below stays one h
   });
 });
 
+test("three lines of a callout set above body size that read as prose stay one paragraph", () => {
+  // OpenStax University Physics Vol 1 "Check" callout, mentee's physics book: 10.5 pt on 10 pt body
+  const items = [
+    it("CHECK Make sure that when you convert numbers smaller than", 50, 700, 10.5),
+    it("one into scientific notation, the exponent is negative and", 50, 687, 10.5),
+    it("that it counts the places the point moved to the right.", 50, 674, 10.5),
+  ];
+  expect(layoutPage(items, { ...page, bodySize: 10 })).toEqual([
+    {
+      kind: "para",
+      text: "CHECK Make sure that when you convert numbers smaller than one into scientific notation, the exponent is negative and that it counts the places the point moved to the right.",
+    },
+  ]);
+});
+
+test("a callout line over twelve words does not cut the callout paragraph", () => {
+  const items = [
+    it("TAKING IT FURTHER During a calculation, avoid entering", 50, 700, 10.5),
+    it("intermediate results by hand, because rounding them early adds an error that grows", 50, 687, 10.5),
+    it("with every later step of the work.", 50, 674, 10.5),
+  ];
+  expect(layoutPage(items, { ...page, bodySize: 10 }).map((b) => b.kind)).toEqual(["para"]);
+});
+
+test("a title wrapped onto three lines in title case stays one heading", () => {
+  const items = [
+    it("Parental Harsh Verbal Discipline and", 90, 315.6, 12),
+    it("Youth Conduct Problems and", 90, 295.6, 12),
+    it("Depressive Symptoms", 90, 275.6, 12),
+    it("Parental harsh verbal discipline has been linked with conduct problems in children and", 150, 255.6, 10, 347.2),
+  ];
+  expect(layoutPage(items, { ...page, bodySize: 10 })[0]).toEqual({
+    kind: "heading",
+    level: 2,
+    text: "Parental Harsh Verbal Discipline and Youth Conduct Problems and Depressive Symptoms",
+  });
+});
+
+test("a title wrapped onto three lines in sentence case at 18 pt stays one heading", () => {
+  // the callout rule is for text a little above body size, not for titles
+  const items = [
+    it("Deep learning for the physical sciences, a review of", 60, 700, 18),
+    it("methods, data and the questions that remain open in", 60, 678, 18),
+    it("the study of matter", 60, 656, 18),
+    it("Machine learning has changed how data from experiments are read and how models are built.", 60, 620, 10, 420),
+  ];
+  expect(layoutPage(items, { ...page, bodySize: 10 })[0]?.kind).toBe("heading");
+});
+
+test("a hyphen before a function word at the line end is kept", () => {
+  expect(texts([it("effects within-", 50, 700), it("and between-group effects.", 50, 688)])).toEqual(["effects within- and between-group effects."]);
+});
+
+test("a hyphen before a capitalised word across a page break is kept", () => {
+  // arXiv 2302.13971 references also hold "mod- Joel", where the line order broke; gluing those would invent words
+  expect(twoPages("in the references of Self-", "Consistency improves chain of thought.")[0]).toContain("Self-");
+});
+
 test("two headings of one size more than two lines apart stay apart", () => {
   const items = [it("Method", 50, 700, 12), it("Participants", 50, 670, 12), it("Body text line.", 50, 650)];
   expect(layoutPage(items, { ...page, bodySize: 10 }).map((b) => b.text)).toEqual(["Method", "Participants", "Body text line."]);
@@ -188,4 +250,54 @@ test("a table header row after a cut sentence ending in a comma stays apart", ()
     "Most notably, on SIQA, we observe a lot of variance in performance,",
     "Humanities STEM Social Sciences Other Average",
   ]);
+});
+
+describe("pdf adapter: generated callout box and page-break hyphen", () => {
+  let book = "";
+  beforeAll(async () => {
+    const unregister = registerAdapter(pdfAdapter);
+    const ctx: Ctx = { dom: domFor("bun"), loadOcr: () => Promise.reject(new Error("no OCR")), progress: () => {}, signal: new AbortController().signal };
+    const r = await convert({ name: "layout.pdf", bytes: await makeLayoutPdf() }, ctx);
+    unregister();
+    if (!r.ok) throw new Error(`${r.code}: ${r.message}`);
+    const files = unzipSync(r.epub);
+    book = Object.entries(files)
+      .filter(([p]) => p.endsWith(".xhtml") && !p.endsWith("nav.xhtml"))
+      .map(([, b]) => strFromU8(b))
+      .join("\n");
+  });
+
+  test("the callout box is one paragraph of body text", () => {
+    expect(book).toContain(`<p>${CALLOUT}</p>`);
+  });
+
+  test("the section heading above the callout stays a heading", () => {
+    expect(book).toMatch(new RegExp(`<h[12]>${HEADING}</h[12]>`));
+  });
+
+  test("a word hyphenated across the page break is joined", () => {
+    expect(book).toContain(JOINED);
+  });
+});
+
+test("a word hyphenated across a page break is joined without the hyphen", () => {
+  // arXiv 2302.13971: "Car-" ends a page, "bonell" opens the next
+  expect(twoPages("the founding work of Car-", "bonell and others.")).toEqual(["the founding work of Carbonell and others."]);
+});
+
+test("a word hyphenated where the left column hands over to the right is joined", () => {
+  const items = [it("Results agree with the earlier work by Gold-", 50, 700, 10, 230), it("ing and others in every case.", 320, 736, 10, 230)];
+  expect(texts(items)).toEqual(["Results agree with the earlier work by Golding and others in every case."]);
+});
+
+test("a name hyphenated before the letters of a function word is still joined", () => {
+  // arXiv 2302.13971 references: "Con-" then "nor Leahy"
+  expect(texts([it("Sid Black, Con-", 50, 700), it("nor Leahy, and others.", 50, 688)])).toEqual(["Sid Black, Connor Leahy, and others."]);
+});
+
+test("a formula marker word at a line break is never hyphen-joined", () => {
+  // inline crops arrive as one private-use marker word, its id holding a hyphen (pdf/crops.ts)
+  const marker = "p3-m1";
+  expect(texts([it("the value of x-", 50, 700), it(`${marker} is small.`, 50, 688)])).toEqual([`the value of x- ${marker} is small.`]);
+  expect(twoPages(`so the speed is ${marker}`, "and it stays so.")).toEqual([`so the speed is ${marker} and it stays so.`]);
 });

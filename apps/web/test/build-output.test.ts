@@ -23,6 +23,13 @@ describe("web build output", () => {
     expect(hits).toEqual([]);
   });
 
+  // Markers of the CLI renderer (render/bun.ts): its Skia download and native-library override.
+  test("no built file carries the CLI's Skia canvas loader", () => {
+    const markers = ["registry.npmjs.org/@napi-rs", "NAPI_RS_NATIVE_LIBRARY_PATH", "render-bun"];
+    const hits = files.filter((f) => markers.some((m) => readFileSync(join(out, f)).includes(m)));
+    expect(hits).toEqual([]);
+  });
+
   test("libarchive.js, its worker and its wasm ship side by side under libarchive/", () => {
     for (const f of ["libarchive.js", "worker-bundle.js", "libarchive.wasm"]) expect(files).toContain(`libarchive/${f}`);
   });

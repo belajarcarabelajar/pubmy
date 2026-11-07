@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Result } from "@pubmy/core/browser";
+import type { Ctx, Result } from "@pubmy/core/browser";
 import { createJobRunner, type FromWorker, type ToWorker } from "../src/job.ts";
 
 type Core = typeof import("@pubmy/core/browser");
@@ -39,6 +39,17 @@ describe("createJobRunner", () => {
     expect(posted).toEqual([{ type: "result", id: 1, result: FAILED }]);
     await run(msg(2));
     expect(posted[1]).toEqual({ type: "result", id: 2, result: OK });
+  });
+
+  test("the convert context offers the browser renderer, which is null without OffscreenCanvas", async () => {
+    let seen: Ctx | undefined;
+    const { core } = fakeCore(async () => OK);
+    (core as unknown as { convert: (f: unknown, c: Ctx) => Promise<Result> }).convert = async (_f, c) => ((seen = c), OK);
+    const run = createJobRunner({ base: BASE, post: () => {}, importCore: async () => core });
+    await run(msg(4));
+    expect(typeof seen?.loadRenderer).toBe("function");
+    expect("OffscreenCanvas" in globalThis).toBe(false);
+    expect(await seen!.loadRenderer!()).toBeNull();
   });
 
   test("a converter that throws posts READ_FAILED", async () => {

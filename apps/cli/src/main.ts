@@ -26,6 +26,7 @@ async function coreConvert(): Promise<ConvertFn> {
       dom,
       // The scan code terminates each engine it gets, so every call loads a fresh one.
       loadOcr: async () => (await import("@pubmy/core/ocr")).loadOcrBun(),
+      loadRenderer: async () => (await import("@pubmy/core/render-bun")).loadRendererBun(),
       progress: () => {},
       signal: new AbortController().signal,
     });

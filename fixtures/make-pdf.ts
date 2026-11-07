@@ -26,6 +26,8 @@ const RIGHT_RESULTS = [
 export interface TwoColumnOptions {
   /** Top-level PDF outline (bookmark) titles, all pointing at page 1. */
   outline?: string[];
+  /** Prints the NIH author-manuscript banner "NIH Public Access" at 22 pt above the 18 pt title. */
+  masthead?: boolean;
 }
 
 /** One 600 x 800 page: full-width title, "1 Introduction" and "2 Method" left, "3 Results" right, rotated stamp. */
@@ -37,6 +39,7 @@ export async function makeTwoColumnPdf(opts: TwoColumnOptions = {}): Promise<Uin
   const page = pdf.addPage([600, 800]);
   const title = "A Generated Two Column Paper";
   page.drawText(title, { x: (600 - bold.widthOfTextAtSize(title, 18)) / 2, y: 750, size: 18, font: bold });
+  if (opts.masthead) page.drawText("NIH Public Access", { x: 50, y: 774, size: 22, font: bold });
   const column = (x: number, top: number, parts: (string | string[])[]) => {
     let y = top;
     for (const p of parts) {

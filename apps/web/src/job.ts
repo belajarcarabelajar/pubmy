@@ -42,6 +42,7 @@ export function createJobRunner(d: JobDeps): (msg: ToWorker) => Promise<void> {
         dom: c.domFor(typeof DOMParser === "function" ? "browser" : "bun"),
         // A fresh engine per call; the CSP allows only same-origin fetches, so every OCR file comes from dist.
         loadOcr: async () => (await import("@pubmy/core/ocr")).loadOcrBrowser(ocrPaths(d.base)),
+        loadRenderer: async () => (await import("@pubmy/core/render-browser")).loadRendererBrowser(),
         progress: (p) => d.post({ type: "progress", id, p }),
         // Cancelling terminates this worker from the page, so the signal never needs to fire here.
         signal: new AbortController().signal,
