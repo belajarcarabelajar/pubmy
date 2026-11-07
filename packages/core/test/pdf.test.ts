@@ -5,6 +5,9 @@ import { strFromU8, unzipSync } from "fflate";
 import { fetchFixtures } from "../../../fixtures/fetch.ts";
 import { makeEncryptedPdf, makeImageOnlyPdf, makeRunningHeadPdf, makeTwoColumnPdf } from "../../../fixtures/make-pdf.ts";
 import { CAPTION, makeFiguresPdf, STAMP } from "../../../fixtures/make-pdf-figures.ts";
+import { makeMathPdf } from "../../../fixtures/make-pdf-math.ts";
+import { opaquePng } from "../src/render/bun.ts";
+import type { PageBox, PdfRenderer } from "../src/types.ts";
 import { pdfAdapter } from "../src/adapters/pdf.ts";
 import { convert, domFor, registerAdapter, type Ctx, type Result } from "../src/index.ts";
 
@@ -122,6 +125,75 @@ describe("pdf adapter: generated figure and sideways table", () => {
 
   test("keeps the side stamp out of the book", () => {
     expect(bookText(r)).not.toContain(STAMP);
+  });
+});
+
+describe("pdf adapter: formulas and diagrams with a renderer", () => {
+  let r: Ok;
+  const calls: { boxes: PageBox[]; dpi: number }[] = [];
+  const png = opaquePng(1, 1, new Uint8Array([0, 0, 0, 255]));
+  const renderer: PdfRenderer = {
+    renderBoxes: async (_pdf, boxes, dpi) => {
+      calls.push({ boxes, dpi });
+      return boxes.map(() => png);
+    },
+    close: async () => {},
+  };
+  beforeAll(async () => {
+    r = expectOk(await convert({ name: "math.pdf", bytes: await makeMathPdf() }, { ...ctx, loadRenderer: async () => renderer }));
+  });
+
+  test("renders every formula and diagram area in one call at 300 dpi", () => {
+    expect(calls.length).toBe(1);
+    expect(calls[0].dpi).toBe(300);
+    expect([...new Set(calls[0].boxes.map((b) => b.page))]).toEqual(expect.arrayContaining([1, 3, 4]));
+  });
+
+  test("a display equation becomes a picture in place of its text", () => {
+    const text = bookText(r);
+    expect(text).toMatch(/<figure class="math"><img src="img\/p1-m1\.png" alt="[^"]*"\/><\/figure>/);
+    // the formula's words stay only as the picture's alt text
+    expect(text.replace(/ alt="[^"]*"/g, "")).not.toContain("a + b");
+  });
+
+  test("an inline formula becomes a picture inside its sentence", () => {
+    expect(bookText(r)).toMatch(/Every point of the closed interval <img class="math" src="img\/p3-m\d+\.png" alt="[^"]*"\/> lies between/);
+  });
+
+  test("a vector diagram becomes a picture", () => {
+    expect(bookText(r)).toMatch(/<img src="img\/p4-m\d+\.png"/);
+  });
+
+  test("a superscript that stays text is marked up", () => {
+    expect(bookText(r)).toContain("grows as x<sup>2</sup> when");
+  });
+
+  test("every rendered area is a PNG in the manifest", () => {
+    const opf = strFromU8(files(r)["OEBPS/content.opf"]);
+    const crops = Object.keys(files(r)).filter((p) => /OEBPS\/img\/p\d+-m\d+\.png$/.test(p));
+    expect(crops.length).toBe(calls[0].boxes.length);
+    for (const c of crops) expect(opf).toContain(`href="${c.slice("OEBPS/".length)}" media-type="image/png"`);
+  });
+});
+
+test("pdf adapter: without a renderer formulas stay text and the report says so", async () => {
+  const r = expectOk(await run("math.pdf", await makeMathPdf()));
+  expect(bookText(r)).toContain("a + b");
+  expect(r.notes?.warnings).toContain("formulas-as-text");
+});
+
+describe("pdf adapter: page-1 masthead banner", () => {
+  let r: Ok;
+  beforeAll(async () => {
+    r = expectOk(await run("masthead.pdf", await makeTwoColumnPdf({ masthead: true })));
+  });
+
+  test("takes the article title, not the larger banner above it", () => {
+    expect(strFromU8(files(r)["OEBPS/content.opf"])).toContain("A Generated Two Column Paper</dc:title>");
+  });
+
+  test("the banner stays a line of text, not a heading", () => {
+    expect(bookText(r)).toContain("<p>NIH Public Access</p>");
   });
 });
 
