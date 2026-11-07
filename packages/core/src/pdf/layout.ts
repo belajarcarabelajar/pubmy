@@ -54,6 +54,8 @@ interface Line {
   x: number;
   y: number;
   fontSize: number;
+  /** The size most of the line's characters are set in; fontSize is the largest. */
+  textSize: number;
   region: "full" | "left" | "right";
 }
 
@@ -104,6 +106,18 @@ function rightColumnStart(items: TextItem[], pageWidth: number): number | null {
 
 const sameLine = (a: TextItem, b: TextItem) => Math.abs(a.y - b.y) < Math.max(a.fontSize, b.fontSize) * 0.5;
 
+/**
+ * The size that carries the most characters, the smaller on a tie: a 14 pt integral sign or a
+ * 25 pt fence in a 10 pt line of OpenStax University Physics does not make the line large.
+ */
+function textSizeOf(g: TextItem[]): number {
+  const chars = new Map<number, number>();
+  for (const i of g) chars.set(i.fontSize, (chars.get(i.fontSize) ?? 0) + i.str.trim().length);
+  let [best, most] = [Infinity, -1];
+  for (const [size, n] of chars) if (n > most || (n === most && size < best)) [best, most] = [size, n];
+  return best;
+}
+
 function toLines(items: TextItem[], region: Line["region"]): Line[] {
   const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
   const groups: TextItem[][] = [];
@@ -122,7 +136,8 @@ function toLines(items: TextItem[], region: Line["region"]): Line[] {
         text += i.str;
         end = Math.max(end, i.x + i.width);
       }
-      return { text: text.replace(/\s+/g, " ").trim(), x: g[0].x, y: g[0].y, fontSize: Math.max(...g.map((i) => i.fontSize)), region };
+      const fontSize = Math.max(...g.map((i) => i.fontSize));
+      return { text: text.replace(/\s+/g, " ").trim(), x: g[0].x, y: g[0].y, fontSize, textSize: textSizeOf(g), region };
     })
     .filter((l) => l.text);
 }
@@ -164,17 +179,42 @@ export function usableItems(items: TextItem[], pageHeight: number): TextItem[] {
 }
 
 const wordCount = (s: string) => s.split(" ").filter(Boolean).length;
-const isHeading = (l: Line, body: number) => l.fontSize > body * HEADING_RATIO && wordCount(l.text) <= HEADING_MAX_WORDS;
 
 /** Lines in a row above body size before they read as a callout box rather than a wrapped title. */
 const PROSE_RUN_LINES = 3;
 /** Callout text is set a little above body size (OpenStax 10.5 on 10 pt); a title well above it is never a callout. */
 const CALLOUT_MAX_RATIO = 1.15;
 
+/** Words that start with a letter; "(b)", "10−7s;" and formula markers are not counted. */
+const letterWords = (s: string) => s.split(" ").filter((w) => /^\p{L}/u.test(w));
+/** Clause or sentence punctuation, "?" included: OpenStax problems end in "da/dt?". */
+const CLAUSE = /[,;]\s|[.?!](\s|$)/;
+
 /** Running text: half its words start in lower case and it has sentence punctuation; a title-case heading has neither. */
 function readsAsSentences(s: string): boolean {
-  const words = s.split(" ").filter(Boolean);
-  return words.filter((w) => /^\p{Ll}/u.test(w)).length * 2 >= words.length && PUNCTUATED.test(s);
+  const words = letterWords(s);
+  return words.length > 0 && words.filter((w) => /^\p{Ll}/u.test(w)).length * 2 >= words.length && CLAUSE.test(s);
+}
+
+/** A section number such as "2" or "1.4." may stand alone as a heading. */
+const SECTION_NUMBER = /^\d+(\.\d+)*\.?$/;
+/** A relation sign: the line is an equation. */
+const RELATION = /[=≠≡]/;
+/** Vector arrows and hats that pdf.js puts on the line before the letters they sit above. */
+const LEADING_SYMBOLS = /^[\p{S}\s]+/u;
+
+/** An equation, or a row of arrows, fences and equation numbers without a word: never a title. */
+const isFormula = (s: string) => RELATION.test(s) || (letterWords(s).length === 0 && !SECTION_NUMBER.test(s));
+
+/** Body text that is set a little large (OpenStax problems in 10 pt on 9.5 pt): lower-case start, a caption, or sentences. */
+function readsAsRunningText(s: string): boolean {
+  const t = s.replace(LEADING_SYMBOLS, "");
+  return /^\p{Ll}/u.test(t) || CAPTION.test(t) || readsAsSentences(t);
+}
+
+function isHeading(l: Line, body: number): boolean {
+  if (l.textSize <= body * HEADING_RATIO || wordCount(l.text) > HEADING_MAX_WORDS || isFormula(l.text)) return false;
+  return l.textSize > body * CALLOUT_MAX_RATIO || !readsAsRunningText(l.text);
 }
 
 /**
