@@ -39,7 +39,7 @@ describe("release", () => {
     expect(wf.permissions).toEqual({ contents: "write" });
   });
 
-  test("sets up the pinned Bun, packs the skill, then attaches the zip to a release", async () => {
+  test("sets up the pinned Bun, packs the skill, checks the version and smoke-tests the zip, then attaches it to a release", async () => {
     const wf = await loadWorkflow("release-skill.yml");
     const jobs = Object.values(wf.jobs);
     expect(jobs).toHaveLength(1);
@@ -51,11 +51,13 @@ describe("release", () => {
     const setupBun = index((s) => s.uses?.startsWith("oven-sh/setup-bun@") ?? false);
     const install = index((s) => s.run?.includes("bun install --frozen-lockfile") ?? false);
     const pack = index((s) => s.run?.includes("bun scripts/pack-skill.ts") ?? false);
+    const check = index((s) => s.run?.includes('bun scripts/release-check.ts "$GITHUB_REF_NAME" dist/pubmy-skill.zip') ?? false);
     const release = index((s) => s.run?.includes("gh release create") ?? false);
 
     expect(steps[setupBun]?.with?.["bun-version"]).toBe("1.4.4");
-    expect([checkout, setupBun, install, pack, release].every((i) => i >= 0)).toBe(true);
-    expect(checkout < setupBun && setupBun < install && install < pack && pack < release).toBe(true);
+    expect([checkout, setupBun, install, pack, check, release].every((i) => i >= 0)).toBe(true);
+    expect(checkout < setupBun && setupBun < install && install < pack && pack < check && check < release).toBe(true);
+    expect(steps[check]!.name).toBe("Check version and smoke-test the zip");
 
     const releaseStep = steps[release]!;
     expect(releaseStep.run).toContain('gh release create "$GITHUB_REF_NAME" dist/pubmy-skill.zip');
@@ -115,5 +117,12 @@ describe("install", () => {
     );
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  test("dev-setup job also runs the release, workflow, packing and plugin manifest tests", async () => {
+    const all = runs((await loadWorkflow("install-check.yml")).jobs["dev-setup"]!.steps);
+    for (const file of ["scripts/release-check.test.ts", "scripts/workflows.test.ts", "scripts/pack-skill.test.ts", "scripts/plugin-manifest.test.ts"]) {
+      expect(all.some((r) => r.includes("bun test") && r.includes(file)), file).toBe(true);
+    }
   });
 });
