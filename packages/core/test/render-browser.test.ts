@@ -84,7 +84,27 @@ async function renderer() {
   return r;
 }
 
+/** Lines written to console.log and console.warn while `run` runs. */
+async function consoleOf(run: () => Promise<unknown>): Promise<string[]> {
+  const lines: string[] = [];
+  const [log, warn] = [console.log, console.warn];
+  console.log = console.warn = (...a: unknown[]) => void lines.push(a.map(String).join(" "));
+  try {
+    await run();
+  } finally {
+    [console.log, console.warn] = [log, warn];
+  }
+  return lines;
+}
+
 describe("loadRendererBrowser", () => {
+  test("rendering a page with unembedded fonts writes no pdf.js warning to the console", async () => {
+    const r = await renderer();
+    const pdf = await fractionPdf();
+    const lines = await consoleOf(() => r.renderBoxes(pdf, [LETTER_A], 72));
+    expect(lines.filter((l) => l.startsWith("Warning:"))).toEqual([]);
+  });
+
   test("is null when the runtime has no OffscreenCanvas", async () => {
     delete g.OffscreenCanvas;
     expect(await loadRendererBrowser()).toBeNull();

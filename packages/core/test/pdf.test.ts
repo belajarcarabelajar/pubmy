@@ -41,6 +41,26 @@ afterAll(() => unregister());
 
 const run = async (name: string, bytes: Uint8Array) => convert({ name, bytes }, ctx);
 
+/** Lines written to console.log and console.warn while `run` runs. */
+async function consoleOf(run: () => Promise<unknown>): Promise<string[]> {
+  const lines: string[] = [];
+  const [log, warn] = [console.log, console.warn];
+  console.log = console.warn = (...a: unknown[]) => void lines.push(a.map(String).join(" "));
+  try {
+    await run();
+  } finally {
+    [console.log, console.warn] = [log, warn];
+  }
+  return lines;
+}
+
+test("pdf adapter: pdf.js warnings about fonts stay out of the console", async () => {
+  // the math fixture uses the standard 14 fonts unembedded, which makes pdf.js ask for standardFontDataUrl
+  const pdf = await makeMathPdf();
+  const lines = await consoleOf(() => run("math.pdf", pdf));
+  expect(lines.filter((l) => l.startsWith("Warning:"))).toEqual([]);
+});
+
 describe("pdf adapter: generated two-column page", () => {
   let r: Ok;
   beforeAll(async () => {

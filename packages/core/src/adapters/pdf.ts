@@ -27,8 +27,9 @@ async function open(bytes: Uint8Array): Promise<Doc> {
   try {
     // pdf.js may transfer (detach) the buffer it gets, so it gets a copy. Without the two image flags
     // a browser worker gets ImageBitmaps instead of the raw pixels extractPageImages encodes;
-    // fontExtraProperties gives findMathAreas the real font names.
-    return await getDocumentProxy(bytes.slice(), { isOffscreenCanvasSupported: false, isImageDecoderSupported: false, fontExtraProperties: true });
+    // fontExtraProperties gives findMathAreas the real font names. verbosity 0 keeps pdf.js warnings
+    // (such as "Ensure that the standardFontDataUrl API parameter is provided") out of the CLI's output.
+    return await getDocumentProxy(bytes.slice(), { isOffscreenCanvasSupported: false, isImageDecoderSupported: false, fontExtraProperties: true, verbosity: 0 });
   } catch (e) {
     if ((e as { name?: string })?.name === "PasswordException") throw new PubmyError("READ_FAILED", "encrypted-pdf");
     throw e;

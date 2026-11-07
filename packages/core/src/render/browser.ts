@@ -52,6 +52,8 @@ const OPTIONS = {
   useSystemFonts: false,
   // The site CSP has no 'unsafe-eval'.
   isEvalSupported: false,
+  // Font warnings (unembedded fonts without standardFontDataUrl) stay out of the page console.
+  verbosity: 0,
 };
 
 async function renderBox(doc: Doc, b: PageBox, dpi: number): Promise<Uint8Array> {
