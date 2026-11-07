@@ -249,8 +249,8 @@ flowchart TD
 - [x] T4 README + readme-install test: RED `colab-test -- bun test scripts/readme-install.test.ts` exit 1 (4 fail); GREEN `colab-test -- bun test scripts/readme-install.test.ts apps/cli/test/bundle.test.ts -t readme` exit 0 (8 pass, 0 fail; install, convert and uninstall blocks executed). Done inline by the parent (A16, after the C2 429).
 - [x] T5 CI install matrix (C1): RED `bun test scripts/workflows.test.ts -t install` exit 1 (4 fail), GREEN `bun test scripts/workflows.test.ts` exit 0 (6 pass); fresh `bun run typecheck` exit 0. Note: `-t install` also matches the release test "installs with the pinned Bun", so the RED run shows 1 pass.
 - [x] Parent diff audit + independent review: parent re-runs `colab-test -- bun test scripts/pack-skill.test.ts scripts/workflows.test.ts scripts/readme-install.test.ts apps/cli/test/cli.test.ts` exit 0 (53 pass, 0 fail), `colab-test -- bun run typecheck` exit 0; staid verdict `correct`, no blocking findings (risks: Windows leg unproven until CI, ZIP link 404 until T7, ZIP blocks not executed by a test); reviewer integrity: status + HEAD unchanged, only this plan file differed (parent edit)
-- [ ] PR opened, CI matrix green on 3 OS
-- [ ] T6 Codex and Cursor verified, README table updated, CI green again
+- [x] PR #14 opened; first CI run: windows-latest failed (README parser read a `# comment` inside the bash block as a heading, so no PowerShell block was found); RED regression `bun test scripts/readme-install.test.ts -t 'readme block extraction'` exit 1 (2 fail), fix in `scripts/readme-install.test.ts` (track every fence), GREEN exit 0 (6 pass); commit 2dac7cc; `gh pr checks 14 --watch` exit 0 (install ubuntu, macos, windows and dev-setup pass)
+- [x] T6: Codex 0.167.0 and Cursor `agent` 2026.11.05 installed (`--version` exit 0); owner chose not to sign in, so both stay `not verified` with that reason; README gains the per-method check table; `colab-test -- bun test scripts/readme-install.test.ts apps/cli/test/bundle.test.ts -t readme` exit 0 (10 pass)
 - [ ] PR merged (owner)
 - [ ] T7 release v0.1.0 after Release gate
 - [ ] Debt sweep
