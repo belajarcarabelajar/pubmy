@@ -151,8 +151,9 @@ async function strokesTime(rows: number): Promise<number> {
 test("a page of 20,000 separate strokes (a scatter plot or a map) costs about 4 times a page of 5,000, not 16", async () => {
   // a ratio, not a time limit, so a busy test machine does not fail it; pairing every stroke with
   // every other one costs 16 times as much for 4 times the strokes
-  await strokesTime(25);
-  const small = await strokesTime(25);
-  const big = await strokesTime(100);
+  // the fastest of three runs at each size, so one GC pause or a busy core does not decide the ratio
+  const fastest = async (rows: number) => Math.min(await strokesTime(rows), await strokesTime(rows), await strokesTime(rows));
+  const small = await fastest(25);
+  const big = await fastest(100);
   expect(big / small).toBeLessThan(9);
 }, 180_000);
