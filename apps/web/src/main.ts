@@ -1,8 +1,9 @@
-import { formatClock, startCountdown, type CountdownItem } from "./countdown.ts";
+import { formatClock, startCountdown, type Countdown, type CountdownItem } from "./countdown.ts";
 import { dropHintKey, failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
+import { renderRow, updateClock } from "./row.ts";
 import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
 
 const RETENTION_MS = 180_000;
@@ -23,7 +24,7 @@ interface Row {
   item: QueueItem<File>;
   progress: number;
   ready?: CountdownItem;
-  stop?: () => void;
+  stop?: Countdown;
 }
 const rows = new Map<number, Row>();
 let lastRefusals: Refusal[] = [];
@@ -82,7 +83,8 @@ function startRetention(row: Row, epub: Uint8Array) {
       // An open preview of this row closes and frees what it holds before the row shows Deleted.
       preview.onTick(it);
       if (it.expired) announce(`${row.item.name}: ${t("deleted", lang)}`);
-      render(row);
+      // A tick only changes the clock; rebuilding the row every second loses a screen reader's place.
+      if (it.expired || !updateClock(row.li, it.remaining, lang)) render(row);
     },
   });
 }
@@ -140,53 +142,21 @@ function statusText(row: Row): string {
 
 function render(row: Row) {
   const { li, item, ready } = row;
-  // The countdown rebuilds the row every second, so keyboard focus moves to the new copy of the focused control.
+  // Keyboard focus moves to the new copy of the focused control, or to Remove when that one is gone.
   const active = document.activeElement;
   const focused = active instanceof HTMLElement && li.contains(active) ? active.dataset.action : undefined;
-  li.className = item.status;
-  li.replaceChildren();
-  const name = document.createElement("span");
-  name.className = "name";
-  name.textContent = item.name;
-  const status = document.createElement("span");
-  status.className = "status";
-  status.textContent = statusText(row);
-  const actions = document.createElement("div");
-  actions.className = "row-actions";
-  if (ready) {
-    const a = document.createElement("a");
-    a.className = "btn";
-    a.dataset.action = "download";
-    a.textContent = t("download", lang);
-    a.download = epubName(item.name);
-    if (ready.url) a.href = ready.url;
-    else a.setAttribute("aria-disabled", "true");
-    const pv = document.createElement("button");
-    pv.type = "button";
-    pv.className = "ghost";
-    pv.dataset.action = "preview";
-    pv.textContent = t("preview", lang);
-    pv.setAttribute("aria-label", `${t("preview", lang)} ${item.name}`);
-    pv.disabled = ready.expired;
-    pv.onclick = () => void openPreview(row);
-    actions.append(a, pv);
-    if (!ready.expired) {
-      const clock = document.createElement("span");
-      clock.className = "clock";
-      clock.textContent = `${t("expires-in", lang)} ${formatClock(ready.remaining)}`;
-      actions.append(clock);
-    }
-  }
-  const rm = document.createElement("button");
-  rm.type = "button";
-  rm.className = "ghost";
-  rm.textContent = t("remove", lang);
-  rm.setAttribute("aria-label", `${t("remove", lang)} ${item.name}`);
-  rm.dataset.action = "remove";
-  rm.onclick = () => removeRow(row);
-  actions.append(rm);
-  li.append(name, status, actions);
-  if (focused) li.querySelector<HTMLElement>(`[data-action="${focused}"]`)?.focus();
+  const view = {
+    name: item.name,
+    status: item.status,
+    statusText: statusText(row),
+    ready: ready && { url: ready.url, download: epubName(item.name), expired: ready.expired, remaining: ready.remaining },
+  };
+  renderRow(li, view, lang, { preview: () => void openPreview(row), extend: () => extend(row), remove: () => removeRow(row) }, focused)?.focus();
+}
+
+function extend(row: Row) {
+  row.stop?.extend();
+  if (row.ready && !row.ready.expired) announce(`${row.item.name}: ${t("expires-in", lang)} ${formatClock(RETENTION_MS)}`);
 }
 
 function removeRow(row: Row) {

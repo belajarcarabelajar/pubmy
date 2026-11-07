@@ -101,6 +101,32 @@ describe("startCountdown", () => {
     clock.advance(300_000);
     expect(revoked).toEqual(["blob:a"]);
   });
+
+  test("extend() restarts the full window from now, so a user who needs more time keeps the file", () => {
+    const clock = fakeClock();
+    const revoked: string[] = [];
+    const a = item("blob:a");
+    const countdown = startCountdown(a, { ms: 180_000, now: clock.now, setTimer: clock.setTimer, revoke: (u) => revoked.push(u) });
+    clock.advance(170_000);
+    countdown.extend();
+    expect(a.remaining).toBe(180_000);
+    clock.advance(179_000);
+    expect(a.expired).toBe(false);
+    expect(a.url).toBe("blob:a");
+    clock.advance(1_000);
+    expect(a.expired).toBe(true);
+    expect(revoked).toEqual(["blob:a"]);
+  });
+
+  test("extend() after expiry brings nothing back", () => {
+    const clock = fakeClock();
+    const a = item("blob:a");
+    const countdown = startCountdown(a, { ms: 180_000, now: clock.now, setTimer: clock.setTimer, revoke: () => {} });
+    clock.advance(180_000);
+    countdown.extend();
+    clock.advance(1_000);
+    expect(a).toMatchObject({ expired: true, remaining: 0, url: undefined });
+  });
 });
 
 describe("formatClock", () => {

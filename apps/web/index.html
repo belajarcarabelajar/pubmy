@@ -18,7 +18,10 @@ p{margin:.25rem 0 .75rem}
 .muted{color:#55555c;font-size:.9rem}
 button,.btn{font:inherit;font-size:1rem;min-height:44px;padding:.5rem 1rem;border-radius:.5rem;border:1px solid #2f4fd6;background:#2f4fd6;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
 button.ghost{background:transparent;color:#2f4fd6}
-button:focus-visible,.btn:focus-visible{outline:3px solid #f2b600;outline-offset:2px}
+:focus-visible{outline:3px solid #1b1b1f;outline-offset:2px}
+.preview :focus-visible{outline-color:#f2b600}
+/* Tab moves focus into the book's frame, where no selector from this page reaches: the reader sets .focused */
+.pv-page.focused{outline:3px solid #f2b600;outline-offset:-3px}
 .drop{border:2px dashed #9aa3c7;border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:#fff}
 .drop.over{border-color:#2f4fd6;background:#eef1ff}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
