@@ -53,4 +53,42 @@ describe("web build output", () => {
   test("foliate-js ships with its MIT licence", () => {
     expect(files).toContain("licenses/foliate-js.txt");
   });
+
+  // _headers caches chunks/* for a year as immutable, which is only safe when a changed chunk gets a new name.
+  test("every chunk name carries a content hash", () => {
+    const chunks = files.filter((f) => f.startsWith("chunks/"));
+    expect(chunks.length).toBeGreaterThan(0);
+    expect(chunks.filter((f) => !/-[a-z0-9]{8}\.js$/.test(f))).toEqual([]);
+  });
+
+  test("the core chunks a first file loads carry none of the DOCX, MOBI, ODT or RTF code", () => {
+    const text = (f: string) => readFileSync(join(out, f), "utf8");
+    const dynamic = (f: string) => [...text(f).matchAll(/import\("\.\/([^"]+)"\)/g)].map((m) => join(f, "..", m[1]));
+    const statics = (f: string) => [...text(f).matchAll(/import(?:[^"'()]*?from)?\s*"\.\/([^"]+)"/g)].map((m) => join(f, "..", m[1]));
+    // The worker's dynamic import that holds convert() (its "already-epub" refusal) is the core.
+    const core = dynamic("worker.js").find((f) => text(f).includes("already-epub"));
+    expect(core).toBeDefined();
+    const loaded = new Set<string>();
+    const walk = (f: string) => {
+      if (loaded.has(f)) return;
+      loaded.add(f);
+      for (const g of statics(f)) walk(g);
+    };
+    walk(core!);
+    // One marker per format, each found only in that adapter's code: Word XML, MOBI huffman tables, ODT and RTF syntax.
+    const markers = ["wordprocessingml", "huffcdic", "text:tracked-changes", "fonttbl"];
+    const js = files.filter((f) => f.endsWith(".js"));
+    for (const m of markers) {
+      expect(js.filter((f) => text(f).includes(m))).not.toEqual([]);
+      expect([...loaded].filter((f) => text(f).includes(m))).toEqual([]);
+    }
+  });
+
+  // The page's text used to arrive with main.js, which moved the drop zone down once it did (CLS 0.046).
+  test("the page ships with its Indonesian text already in place", () => {
+    const html = readFileSync(join(out, "index.html"), "utf8");
+    const empty = [...html.matchAll(/<(\w+)[^>]*\sdata-i18n="([^"]+)"[^>]*><\/\1>/g)].map((m) => m[2]);
+    expect(empty).toEqual([]);
+    expect(html).toContain("Semua diproses di browser kamu. Tidak ada file yang diunggah.");
+  });
 });
