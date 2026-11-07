@@ -20,16 +20,24 @@ export function blocksUnder(markdown: string, heading: string, language: string)
   if (start < 0) return [];
   const level = heading.match(/^#+/)![0].length;
   const blocks: string[] = [];
+  // Every fence is tracked, whatever its language, so a `# comment` inside a code block is never read as a heading.
+  let inFence = false;
   let current: string[] | null = null;
   for (const line of lines.slice(start + 1)) {
-    const h = line.match(/^(#+) /);
-    if (!current && h && h[1].length <= level) break;
-    if (current) {
-      if (line.startsWith("```")) {
-        blocks.push(current.join("\n"));
+    if (line.startsWith("```")) {
+      if (inFence) {
+        if (current) blocks.push(current.join("\n"));
         current = null;
-      } else current.push(line);
-    } else if (line.trim() === "```" + language) current = [];
+      } else if (line.trim() === "```" + language) current = [];
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) {
+      current?.push(line);
+      continue;
+    }
+    const h = line.match(/^(#+) /);
+    if (h && h[1].length <= level) break;
   }
   return blocks;
 }
@@ -54,6 +62,20 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await rm(home, { recursive: true, force: true });
+});
+
+describe("readme block extraction", () => {
+  test("a `# comment` line inside another language's block does not end the section", () => {
+    const md = ["### Install", "```bash", "# Claude Code", "cp a b", "```", "```powershell", "# Claude Code", "Copy-Item a b", "```", "### Next", "```powershell", "no", "```"].join("\n");
+    expect(blocksUnder(md, "### Install", "powershell")).toEqual(["# Claude Code\nCopy-Item a b"]);
+  });
+
+  test("README has bash and PowerShell copy and remove blocks, whatever system runs the test", () => {
+    for (const language of ["bash", "powershell"]) {
+      expect(blocksUnder(readme, "### From a clone", language).filter((b) => !b.includes("git clone")).length, language).toBe(1);
+      expect(blocksUnder(readme, "### Remove a copied skill", language).length, language).toBe(1);
+    }
+  });
 });
 
 describe("readme install blocks", () => {
