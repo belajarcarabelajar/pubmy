@@ -172,12 +172,12 @@ flowchart TD
 **Reasoning Lenses:** intent (owner wants every install path complete, short replies), investigative (repo has no CI, tag or release; `npx skills` and plugin docs read 2026-11-07), analytical (README blocks executed by a test so docs and behaviour cannot drift), computational (ZIP layout `pubmy/...` deterministic), test-first, verification (CI matrix is the only Windows/macOS evidence available; no such machine here).
 
 **Acceptance Criteria:**
-- [ ] AC-1: `bun scripts/pack-skill.ts` writes `dist/pubmy-skill.zip` whose entries all start with `pubmy/` and include `pubmy/SKILL.md` and `pubmy/scripts/pubmy.js`; unzipping it into a skills folder gives a working skill.
+- [x] AC-1: `bun scripts/pack-skill.ts` writes `dist/pubmy-skill.zip` whose entries all start with `pubmy/` and include `pubmy/SKILL.md` and `pubmy/scripts/pubmy.js`; unzipping it into a skills folder gives a working skill. (evidence: `bun test scripts/pack-skill.test.ts` exit 0, 5 pass, unzip-and-convert case)
 - [ ] AC-2: pushing a tag `v*` runs a workflow that builds the ZIP and attaches it to a GitHub Release with that tag name.
-- [ ] AC-3: `claude plugin validate .` passes and `claude plugin marketplace add` + `claude plugin install pubmy@pubmy` from the repo directory installs a plugin whose skills list includes `pubmy`.
-- [ ] AC-4: README documents `npx skills add belajarcarabelajar/pubmy`, the Claude plugin commands, the ZIP download, uninstall for every install method (bash and PowerShell), and developer setup; every bash install and uninstall block runs green in a temp HOME on Linux.
-- [ ] AC-5: CI runs the README install test on ubuntu-latest, macos-latest and windows-latest (PowerShell blocks on Windows), plus a developer-setup job, on every PR.
-- [ ] AC-6: Codex and Cursor each quote the pubmy skill description when asked; README Verified table lists them and the three CI systems as verified, with the date.
+- [x] AC-3: `claude plugin validate .` passes and `claude plugin marketplace add` + `claude plugin install pubmy@pubmy` from the repo directory installs a plugin whose skills list includes `pubmy`. (evidence: `claude plugin validate .` exit 0; `bun test scripts/plugin-manifest.test.ts` exit 0, 5 pass)
+- [x] AC-4: README documents `npx skills add belajarcarabelajar/pubmy`, the Claude plugin commands, the ZIP download, uninstall for every install method (bash and PowerShell), and developer setup; every bash install and uninstall block runs green in a temp HOME on Linux. (evidence: `bun test scripts/readme-install.test.ts` exit 0, 6 pass)
+- [x] AC-5: CI runs the README install test on ubuntu-latest, macos-latest and windows-latest (PowerShell blocks on Windows), plus a developer-setup job, on every PR. (evidence: `gh pr checks 14 --watch` exit 0 on run 42373221748)
+- [ ] AC-6 (not met, owner chose no sign-in 2026-11-07): Codex and Cursor each quote the pubmy skill description when asked; README Verified table lists them and the three CI systems as verified, with the date.
 - [ ] AC-7: release v0.1.0 exists with asset `pubmy-skill.zip`, and `https://github.com/belajarcarabelajar/pubmy/releases/latest/download/pubmy-skill.zip` returns 200.
 
 **Traceability:**
@@ -253,7 +253,7 @@ flowchart TD
 - [x] T6: Codex 0.167.0 and Cursor `agent` 2026.11.05 installed (`--version` exit 0); owner chose not to sign in, so both stay `not verified` with that reason; README gains the per-method check table; `colab-test -- bun test scripts/readme-install.test.ts apps/cli/test/bundle.test.ts -t readme` exit 0 (10 pass)
 - [ ] PR merged (owner)
 - [ ] T7 release v0.1.0 after Release gate
-- [ ] Debt sweep
+- [ ] Debt sweep (ledger `docs/code-plan/2026-11-07-pubmy-install-methods-learning-ledger.md`, MEMORY.md M10 M11; runner log: T1-T5 SKIPPED-IDEMPOTENT, T6 PASSED, T7 FAILED-ISOLATED release not found; readiness NOT-READY exit 1)
 
 ## Task T1: pack-skill ZIP script
 
@@ -264,11 +264,11 @@ flowchart TD
 **Deliberate Shortcuts:** None.
 **Test Data & Determinism:** temp dir; unzip with fflate, run `bun <tmp>/pubmy/scripts/pubmy.js <tmp>/in` on a generated `.md` file, expect `.epub`.
 
-- [ ] Step 1: Write failing test (entries, unzip, convert)
-- [ ] Step 2: Run: `bun test scripts/pack-skill.test.ts` | expect exit 1 | retry 0
-- [ ] Step 3: Implement `scripts/pack-skill.ts` with fflate `zipSync`
-- [ ] Step 4: Run: `bun test scripts/pack-skill.test.ts` | expect exit 0 | retry 1
-- [ ] Step 5: Run: `bun run typecheck` | expect exit 0 | retry 0
+- [x] Step 1: Write failing test (entries, unzip, convert)
+- [x] Step 2: Run: `bun test scripts/pack-skill.test.ts` | expect exit 1 | retry 0
+- [x] Step 3: Implement `scripts/pack-skill.ts` with fflate `zipSync`
+- [x] Step 4: Run: `bun test scripts/pack-skill.test.ts` | expect exit 0 | retry 1
+- [x] Step 5: Run: `bun run typecheck` | expect exit 0 | retry 0
 
 ## Task T2: release workflow on tag
 
@@ -276,10 +276,10 @@ flowchart TD
 **Behavior & Acceptance:** AC-2. On `push: tags: ["v*"]`: checkout, setup-bun, `bun install --frozen-lockfile`, `bun scripts/pack-skill.ts`, `gh release create "$GITHUB_REF_NAME" dist/pubmy-skill.zip --generate-notes` with `GH_TOKEN: ${{ github.token }}` and `permissions: contents: write`.
 **Test:** `scripts/workflows.test.ts` parses YAML with `Bun.YAML.parse`, asserts trigger, permissions and that the steps call `scripts/pack-skill.ts` and `gh release create` with `dist/pubmy-skill.zip`.
 
-- [ ] Step 1: Write failing test `-t release`
-- [ ] Step 2: Run: `bun test scripts/workflows.test.ts -t release` | expect exit 1 | retry 0
-- [ ] Step 3: Write workflow
-- [ ] Step 4: Run: `bun test scripts/workflows.test.ts -t release` | expect exit 0 | retry 1
+- [x] Step 1: Write failing test `-t release`
+- [x] Step 2: Run: `bun test scripts/workflows.test.ts -t release` | expect exit 1 | retry 0
+- [x] Step 3: Write workflow
+- [x] Step 4: Run: `bun test scripts/workflows.test.ts -t release` | expect exit 0 | retry 1
 
 ## Task T3: Claude plugin marketplace
 
@@ -287,11 +287,11 @@ flowchart TD
 **Behavior & Acceptance:** AC-3. Entry name equals manifest name; source dir holds `skills/pubmy/SKILL.md`. Test also runs, when `claude` is on PATH, `claude plugin marketplace add <repo>` and `claude plugin install pubmy@pubmy` with `CLAUDE_CONFIG_DIR` set to a temp dir, then `claude plugin details pubmy` lists skill `pubmy`.
 **Edge Cases:** `claude` absent (CI) → that case is skipped with a visible reason; manifest checks still run.
 
-- [ ] Step 1: Write failing test
-- [ ] Step 2: Run: `bun test scripts/plugin-manifest.test.ts` | expect exit 1 | retry 0
-- [ ] Step 3: Write both JSON files
-- [ ] Step 4: Run: `bun test scripts/plugin-manifest.test.ts` | expect exit 0 | retry 1
-- [ ] Step 5: Run: `claude plugin validate .` | expect exit 0 | retry 0
+- [x] Step 1: Write failing test
+- [x] Step 2: Run: `bun test scripts/plugin-manifest.test.ts` | expect exit 1 | retry 0
+- [x] Step 3: Write both JSON files
+- [x] Step 4: Run: `bun test scripts/plugin-manifest.test.ts` | expect exit 0 | retry 1
+- [x] Step 5: Run: `claude plugin validate .` | expect exit 0 | retry 0
 
 ## Task T4: README install, uninstall, developer setup
 
@@ -300,21 +300,21 @@ flowchart TD
 **Test:** extracts the fenced `bash` blocks (Linux/macOS) or `powershell` blocks (Windows) under the install-from-clone and uninstall headings, runs them with `HOME`/`USERPROFILE` set to a temp dir and cwd = repo, asserts each harness folder has `pubmy/SKILL.md`, converts a generated `.md` with the installed `pubmy.js`, then runs the uninstall block and asserts the folders are gone.
 **Precondition check before documenting `npx skills`:** run `bunx skills add <repo> --skill pubmy -a codex -g -y` with temp HOME and confirm `scripts/pubmy.js` was copied.
 
-- [ ] Step 1: Write failing test
-- [ ] Step 2: Run: `bun test scripts/readme-install.test.ts` | expect exit 1 | retry 0
-- [ ] Step 3: Rewrite README sections
-- [ ] Step 4: Run: `bun test scripts/readme-install.test.ts` | expect exit 0 | retry 1
-- [ ] Step 5: Run: `bun test apps/cli/test/bundle.test.ts -t readme` | expect exit 0 | retry 0
+- [x] Step 1: Write failing test
+- [x] Step 2: Run: `bun test scripts/readme-install.test.ts` | expect exit 1 | retry 0
+- [x] Step 3: Rewrite README sections
+- [x] Step 4: Run: `bun test scripts/readme-install.test.ts` | expect exit 0 | retry 1
+- [x] Step 5: Run: `bun test apps/cli/test/bundle.test.ts -t readme` | expect exit 0 | retry 0
 
 ## Task T5: CI install matrix
 
 **Files:** Create `.github/workflows/install-check.yml`; Modify `scripts/workflows.test.ts`.
 **Behavior & Acceptance:** AC-5. On `pull_request` and `push` to `main`: job `install` with matrix `[ubuntu-latest, macos-latest, windows-latest]`: checkout, setup-bun, setup-node 22, `bun install --frozen-lockfile`, `bun test scripts/readme-install.test.ts`, `npx skills add ./ --skill pubmy -a codex -g -y` then check the copied `pubmy.js`. Job `dev-setup` on ubuntu: `bun install --frozen-lockfile`, `bun run typecheck`, `bun test apps/cli/test/cli.test.ts`. `permissions: contents: read`.
 
-- [ ] Step 1: Write failing test `-t install`
-- [ ] Step 2: Run: `bun test scripts/workflows.test.ts -t install` | expect exit 1 | retry 0
-- [ ] Step 3: Write workflow
-- [ ] Step 4: Run: `bun test scripts/workflows.test.ts -t install` | expect exit 0 | retry 1
+- [x] Step 1: Write failing test `-t install`
+- [x] Step 2: Run: `bun test scripts/workflows.test.ts -t install` | expect exit 1 | retry 0
+- [x] Step 3: Write workflow
+- [x] Step 4: Run: `bun test scripts/workflows.test.ts -t install` | expect exit 0 | retry 1
 
 ## Task T6: Codex and Cursor verified
 
@@ -322,11 +322,11 @@ flowchart TD
 **Preconditions:** install commands read from vendor docs; owner logs in to each CLI (agent never types credentials).
 **Behavior & Acceptance:** AC-6. Copy skill to `~/.agents/skills/pubmy`; ask each tool to list skills and quote pubmy's description; record date and command in the table. Add rows for ubuntu, macOS and Windows from the T5 CI run.
 
-- [ ] Step 1: Install Codex CLI and Cursor CLI per vendor docs
-- [ ] Step 2: Run: `codex --version` | expect exit 0 | retry 0
-- [ ] Step 3: Run: `agent --version` (Cursor CLI binary, docs read 2026-11-07) | expect exit 0 | retry 0
-- [ ] Step 4: Owner logs in; ask each tool; save transcripts to `~/.cache/tmp/pubmy-install-methods/`
-- [ ] Step 5: Update README table; Run: `bun test scripts/readme-install.test.ts` | expect exit 0 | retry 0
+- [x] Step 1: Install Codex CLI and Cursor CLI per vendor docs
+- [x] Step 2: Run: `codex --version` | expect exit 0 | retry 0
+- [x] Step 3: Run: `agent --version` (Cursor CLI binary, docs read 2026-11-07) | expect exit 0 | retry 0
+- [x] Step 4: Owner logs in; ask each tool; save transcripts to `~/.cache/tmp/pubmy-install-methods/`
+- [x] Step 5: Update README table; Run: `bun test scripts/readme-install.test.ts` | expect exit 0 | retry 0
 
 ## Task T7: first release v0.1.0
 
@@ -354,3 +354,8 @@ flowchart TD
 
 - Done 2026-11-07: pubmy registered for plan publishing (owner approved).
 - ZIP download blocks in README are checked by reading only (staid finding 3); a test that serves the packed ZIP locally and runs the curl/unzip and Invoke-WebRequest/Expand-Archive blocks would close it.
+
+## Closeout status
+
+- Readiness 2026-11-07: `bun scripts/plan-closeout.mjs --readiness` NOT-READY (exit 1). Open: T7 (release v0.1.0, needs the merge), AC-2 and AC-7 (proven only by the first release), AC-6 (owner declined Codex and Cursor sign-in).
+- Reopen trigger: after PR #14 merges and the `v0.1.0` tag runs `release-skill.yml`; then run T7's check and close the plan in that session.

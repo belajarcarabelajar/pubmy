@@ -25,3 +25,10 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 |---|---|
 | M8 | WHEN measuring rendered output (formula crops, figures, previews) → DO open a sample of the PNGs from each real file, NOT trust counts, sizes and EPUBCheck alone (107 OpenStax crops and EPUBCheck 0/0 looked done; viewing them showed inline crops with tall fences and sums cutting into the lines above and below). |
 | M9 | WHEN a throwaway harness feeds a file to pdf.js → DO pass `new Uint8Array(readFileSync(p))` as the CLI does, NOT the Buffer `readFileSync` returns (pdf.js refuses a Buffer, and pdfAdapter reports READ_FAILED, which looked like a regression on arXiv and the NIH sample). |
+
+## Task Group: install methods (plan 2026-11-07-pubmy-install-methods)
+
+| # | Rule |
+|---|---|
+| M10 | WHEN a test extracts per-OS blocks (bash, PowerShell) from Markdown → DO track every code fence and assert the blocks of every language on every OS, NOT only the language the current OS runs (a `# comment` in the bash block ended the section, and only the Windows CI leg saw it). |
+| M11 | WHEN documenting where a third-party installer writes files → DO install once per target with a temporary HOME and read the result, NOT copy the vendor's docs table (the skills CLI docs listed `~/.codex/skills`, `~/.cursor/skills`; the CLI wrote `~/.agents/skills`). |
