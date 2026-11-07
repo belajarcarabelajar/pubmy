@@ -1,5 +1,5 @@
 import { formatClock, startCountdown, type CountdownItem } from "./countdown.ts";
-import { failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
+import { dropHintKey, failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
@@ -213,6 +213,9 @@ function addFiles(list: FileList | null) {
   lastRefusals = queue.add(Array.from(list));
   renderRefusals();
 }
+
+// A phone or tablet has no mouse to drag files with.
+$("drop-hint").dataset.i18n = dropHintKey(matchMedia("(hover: none) and (pointer: coarse)").matches);
 
 function applyLang() {
   document.documentElement.lang = lang;

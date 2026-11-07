@@ -1,6 +1,7 @@
 import { EPUB, type Resolved, type TocItem } from "../vendor/foliate/epub.js";
 import type { EpubLoader } from "./epub-loader.ts";
 import type { Reader } from "./preview-session.ts";
+import { isolateTables, TABLE_HOST } from "./tables.ts";
 
 /** The parts of the preview dialog the reader fills and listens to. */
 export interface ReaderUi {
@@ -21,12 +22,16 @@ export interface ReaderUi {
 }
 
 /**
- * Styles for every section of a reflowable book: a table wider than the page (pubmy rebuilds an
- * 18-column correlation matrix from a sideways PDF table) scrolls inside the page instead of being cut off.
+ * Styles for every section of a reflowable book: each table sits in a scroll box (isolateTables)
+ * that scrolls inside the page instead of being cut off. A shadow on the left or right edge shows
+ * that more columns lie that way; it fades once the table is scrolled to that end.
  */
 const SECTION_CSS =
-  "table{display:block;max-width:100%;max-height:85vh;overflow:auto;border-collapse:collapse;font-size:.85em}" +
-  "th,td{padding:.1em .4em;vertical-align:top;white-space:nowrap}caption{text-align:start}";
+  `.${TABLE_HOST}{display:block;max-width:100%;max-height:85vh;overflow:auto;` +
+  "background:linear-gradient(to right,#fff 30%,#fff0),linear-gradient(to left,#fff 30%,#fff0) 100% 0," +
+  "radial-gradient(farthest-side at 0 50%,#0003,#0000),radial-gradient(farthest-side at 100% 50%,#0003,#0000) 100% 0;" +
+  "background-repeat:no-repeat;background-size:2.5em 100%,2.5em 100%,.9em 100%,.9em 100%;" +
+  "background-attachment:local,local,scroll,scroll}";
 
 /** The surface <foliate-paginator> and <foliate-fxl> share; only the paginator takes styles. */
 interface Renderer extends HTMLElement {
@@ -104,6 +109,8 @@ export async function mountReader(loader: EpubLoader, ui: ReaderUi): Promise<Rea
   const docs = new Set<Document>();
   const onLoad = (e: Event) => {
     const { doc } = (e as CustomEvent<{ doc: Document }>).detail;
+    // foliate fires "load" before it lays out and counts the section's pages
+    if (!fixed) isolateTables(doc);
     docs.add(doc);
     doc.addEventListener("keydown", onKey);
   };

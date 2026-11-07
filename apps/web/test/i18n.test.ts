@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { failureText, KEYS, pickLang, t, type Key } from "../src/i18n.ts";
+import { dropHintKey, failureText, KEYS, pickLang, t, type Key } from "../src/i18n.ts";
 
 // Independent copy of the core FailureCode union and the message keys the page must explain.
 const FAILURE_CODES = ["DRM", "UNSUPPORTED", "TOO_LARGE", "READ_FAILED", "INVALID_EPUB"];
@@ -23,6 +23,13 @@ const PREVIEW_KEYS = ["preview", "preview-close", "preview-prev", "preview-next"
 describe("i18n", () => {
   test("every required key is known", () => {
     for (const k of [...FAILURE_CODES, ...MESSAGE_KEYS, ...UI_KEYS]) expect(KEYS).toContain(k as Key);
+  });
+
+  test("on a touch screen the drop hint keeps the limits and does not ask to drag files", () => {
+    expect(dropHintKey(false)).toBe("drop-hint");
+    expect(t(dropHintKey(true), "id")).not.toMatch(/tarik/i);
+    expect(t(dropHintKey(true), "en")).not.toMatch(/drop|drag/i);
+    for (const lang of ["id", "en"] as const) expect(t(dropHintKey(true), lang)).toMatch(/10.*50 MB/);
   });
 
   test("every preview key is known", () => {
