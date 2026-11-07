@@ -166,8 +166,47 @@ export function usableItems(items: TextItem[], pageHeight: number): TextItem[] {
 const wordCount = (s: string) => s.split(" ").filter(Boolean).length;
 const isHeading = (l: Line, body: number) => l.fontSize > body * HEADING_RATIO && wordCount(l.text) <= HEADING_MAX_WORDS;
 
+/** Lines in a row above body size before they read as a callout box rather than a wrapped title. */
+const PROSE_RUN_LINES = 3;
+
+/** Running text: half its words start in lower case and it has sentence punctuation; a title-case heading has neither. */
+function readsAsSentences(s: string): boolean {
+  const words = s.split(" ").filter(Boolean);
+  return words.filter((w) => /^\p{Ll}/u.test(w)).length * 2 >= words.length && PUNCTUATED.test(s);
+}
+
+/**
+ * Which lines are headings. A textbook callout box (OpenStax "Check Your Understanding", set
+ * 5 percent above body size) is a run of 3+ large lines of one size, each under the next, that
+ * reads as sentences: all its lines are body text, so the box stays one paragraph.
+ */
+function headingFlags(lines: Line[], body: number): boolean[] {
+  const flags = lines.map((l) => isHeading(l, body));
+  const large = (l: Line) => l.fontSize > body * HEADING_RATIO;
+  let start = 0;
+  for (let i = 1; i <= lines.length; i++) {
+    const [a, b] = [lines[i - 1], lines[i]];
+    const gap = b ? a.y - b.y : 0;
+    if (b && large(a) && a.region === b.region && Math.abs(a.fontSize - b.fontSize) < 0.5 && gap > 0 && gap <= b.fontSize * HEADING_WRAP_GAP) continue;
+    const run = lines.slice(start, i);
+    if (run.length >= PROSE_RUN_LINES && large(run[0]) && readsAsSentences(run.map((l) => l.text).join(" "))) flags.fill(false, start, i);
+    start = i;
+  }
+  return flags;
+}
+
+/**
+ * A suspended compound ("within- and between-group"): a word of 3+ letters, its hyphen, then one
+ * of these. arXiv 2302.13971 breaks "Con- nor" and "an- and..." in names, so "nor" and 2-letter
+ * pieces are left out.
+ */
+const SUSPENDED_HEAD = /(^|\s)[A-Za-z]{3,}-$/;
+const SUSPENDED = /^(and|or|to|but)\b/;
+
+/** Two lines of one paragraph; a word hyphenated at the end of the first is joined again. */
 function join(a: string, b: string): string {
-  return /[A-Za-z]-$/.test(a) && /^[a-z]/.test(b) ? a.slice(0, -1) + b : `${a} ${b}`;
+  const suspended = SUSPENDED_HEAD.test(a) && SUSPENDED.test(b);
+  return /[A-Za-z]-$/.test(a) && /^[a-z]/.test(b) && !suspended ? a.slice(0, -1) + b : `${a} ${b}`;
 }
 
 /** Headings of these sizes count as level 1: the largest when there are two or more heading sizes. */
@@ -181,15 +220,16 @@ function build(items: TextItem[], page: PageInfo): { blocks: Block[]; sizes: num
   const real = usableItems(items, page.height);
   const body = page.bodySize ?? bodySize(real);
   const lines = readingOrder(real, page.width);
-  const heads = lines.filter((l) => isHeading(l, body));
+  const flags = headingFlags(lines, body);
+  const heads = lines.filter((_, k) => flags[k]);
   const title = page.titleSize ?? titleSizeOf(heads.map((l) => l.fontSize));
   const blocks: Block[] = [];
   const sizes: number[] = [];
   const tops: number[] = [];
   let prev: Line | undefined;
   let prevHead = false;
-  for (const l of lines) {
-    const head = isHeading(l, body);
+  for (const [k, l] of lines.entries()) {
+    const head = flags[k];
     const last = blocks.at(-1);
     const sameRegion = prev !== undefined && prev.region === l.region;
     const gap = prev === undefined ? Infinity : prev.y - l.y;
@@ -263,7 +303,7 @@ export function layoutPages(pages: PageText[], doc: { bodySize: number; titleSiz
     }
     const at = next.findIndex((n) => n.size > 0);
     const host = next[at]?.block.kind === "para" ? cutParagraph(tail, next[at]) : undefined;
-    if (host) host.block.text += ` ${next.splice(at, 1)[0].block.text}`;
+    if (host) host.block.text = join(host.block.text, next.splice(at, 1)[0].block.text);
     out.push(...next.map((n) => n.block));
     tail = host ? [host, ...next] : next;
   });
