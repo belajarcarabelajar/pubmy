@@ -203,6 +203,16 @@ test("an equation line is never a heading", () => {
   expect(kinds([it("B = α A (2.1)", 50, 700, 12)], 10)).toEqual(["para"]);
 });
 
+test("a question heading a little above body size stays a heading", () => {
+  // sentence case and a question mark, as in "1.1 What is physics?": a heading, not a problem line
+  expect(kinds([it("What is a tensor?", 50, 700, 10)], 9.5)).toEqual(["heading"]);
+  expect(kinds([it("1.1 What is physics?", 50, 700, 10)], 9.5)).toEqual(["heading"]);
+});
+
+test("a lettered problem that ends in a question a little above body size is a paragraph", () => {
+  expect(kinds([it("(b) What is the area of the square?", 50, 700, 10)], 9.5)).toEqual(["para"]);
+});
+
 test("a section heading a little above body size stays a heading", () => {
   expect(kinds([it("1.1 The Scope and Scale of Physics", 50, 700, 10)], 9.5)).toEqual(["heading"]);
 });

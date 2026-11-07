@@ -187,13 +187,16 @@ const CALLOUT_MAX_RATIO = 1.15;
 
 /** Words that start with a letter; "(b)", "10−7s;" and formula markers are not counted. */
 const letterWords = (s: string) => s.split(" ").filter((w) => /^\p{L}/u.test(w));
-/** Clause or sentence punctuation, "?" included: OpenStax problems end in "da/dt?". */
-const CLAUSE = /[,;]\s|[.?!](\s|$)/;
+/** Clause or sentence punctuation. "?" is left out: "What is physics?" is a heading. */
+const CLAUSE = /[,;]\s|[.!](\s|$)/;
+/** A lettered or numbered problem that asks a question, as OpenStax's "(b) What is da/dt?" or "45. How far…?". */
+const PROBLEM_QUESTION = /^(\(\p{L}\)|\d+\.)\s.*\?$/u;
 
 /** Running text: half its words start in lower case and it has sentence punctuation; a title-case heading has neither. */
 function readsAsSentences(s: string): boolean {
   const words = letterWords(s);
-  return words.length > 0 && words.filter((w) => /^\p{Ll}/u.test(w)).length * 2 >= words.length && CLAUSE.test(s);
+  const lower = words.filter((w) => /^\p{Ll}/u.test(w)).length * 2 >= words.length;
+  return words.length > 0 && lower && (CLAUSE.test(s) || PROBLEM_QUESTION.test(s));
 }
 
 /** A section number such as "2" or "1.4." may stand alone as a heading. */
