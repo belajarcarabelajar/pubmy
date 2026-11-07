@@ -10,7 +10,9 @@
 html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:#1b1b1f;background:#f7f7f8}
 body{margin:0;min-width:320px}
 main{max-width:40rem;margin:0 auto;padding:1rem}
-header{display:flex;gap:.75rem;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+header{display:flex;gap:.75rem;align-items:flex-start;justify-content:space-between}
+header>div{flex:1;min-width:0}
+#lang{flex:none}
 h1{font-size:1.4rem;margin:.25rem 0}
 p{margin:.25rem 0 .75rem}
 .muted{color:#55555c;font-size:.9rem}
@@ -46,7 +48,7 @@ button:disabled{border-color:#c9c9d1;color:#55555c;cursor:default}
 .pv-page{flex:1;min-width:0;background:#fff}
 .pv-page>*{display:block;width:100%;height:100%}
 .pv-arrow{flex:none;align-self:center;width:44px;padding:0;justify-content:center;background:transparent;border:0;color:#ececf1;font-size:2rem}
-@media (max-width:40rem){.pv-toc{position:absolute;inset:0 auto 0 0;width:min(85%,18rem);z-index:1;background:#17181c}.pv-arrow{width:36px}}
+@media (max-width:40rem){.pv-toc{position:absolute;inset:0 auto 0 0;width:min(85%,18rem);z-index:1;background:#17181c}header{flex-direction:column-reverse;align-items:stretch}#lang{align-self:flex-end}}
 </style>
 </head>
 <body>

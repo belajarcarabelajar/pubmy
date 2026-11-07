@@ -7,6 +7,7 @@ const id = {
   tagline: "TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR ke EPUB 3 yang lolos Send to Kindle.",
   privacy: "Semua diproses di browser kamu. Tidak ada file yang diunggah.",
   "drop-hint": "Tarik file ke sini (maksimal 10 file, masing-masing 50 MB)",
+  "drop-hint-touch": "Maksimal 10 file, masing-masing 50 MB",
   "choose-files": "Pilih file",
   "queue-label": "Antrean konversi",
   "lang-toggle": "English",
@@ -53,6 +54,7 @@ const en: Record<Key, string> = {
   tagline: "TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR to EPUB 3 that passes Send to Kindle.",
   privacy: "Everything runs in your browser. No file is uploaded.",
   "drop-hint": "Drop files here (up to 10 files, 50 MB each)",
+  "drop-hint-touch": "Up to 10 files, 50 MB each",
   "choose-files": "Choose files",
   "queue-label": "Conversion queue",
   "lang-toggle": "Bahasa Indonesia",
@@ -101,6 +103,11 @@ export function t(key: Key, lang: Lang): string {
 }
 
 const isKey = (k: string): k is Key => Object.hasOwn(id, k);
+
+/** A phone or tablet cannot drag files onto the page, so its hint only gives the limits. */
+export function dropHintKey(touch: boolean): Key {
+  return touch ? "drop-hint-touch" : "drop-hint";
+}
 
 /** The specific core message when the page knows it, otherwise the failure code's text. */
 export function failureText(code: FailureCode, message: string, lang: Lang): string {
