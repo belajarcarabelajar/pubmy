@@ -208,7 +208,10 @@ const SUSPENDED = /^(and|or|to|but)\b/;
 /** Two lines of one paragraph; a word hyphenated at the end of the first is joined again. */
 function join(a: string, b: string): string {
   const suspended = SUSPENDED_HEAD.test(a) && SUSPENDED.test(b);
-  return /[A-Za-z]-$/.test(a) && /^[a-z]/.test(b) && !suspended ? a.slice(0, -1) + b : `${a} ${b}`;
+  if (/[A-Za-z]-$/.test(a) && /^[a-z]/.test(b) && !suspended) return a.slice(0, -1) + b;
+  // before a capital the hyphen is the compound's own ("GPT-Neo", "CrowS-Pairs"): keep it, drop the space
+  if (/[A-Za-z]-$/.test(a) && /^[A-Z]/.test(b)) return a + b;
+  return `${a} ${b}`;
 }
 
 /** Headings of these sizes count as level 1: the largest when there are two or more heading sizes. */
