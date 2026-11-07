@@ -17,12 +17,19 @@ export interface CountdownOptions {
   onTick?(item: CountdownItem): void;
 }
 
+/** Calling it stops the countdown now: the URL is revoked and the bytes dropped. */
+export interface Countdown {
+  (): void;
+  /** Restarts the full window from now; does nothing once the item has expired. */
+  extend(): void;
+}
+
 /**
  * Counts down to a wall-clock deadline, so a throttled background tab still expires on time.
- * At 0, or when the returned stop() is called, the URL is revoked exactly once.
+ * At 0, or when the returned countdown is called, the URL is revoked exactly once.
  */
-export function startCountdown(item: CountdownItem, o: CountdownOptions): () => void {
-  const deadline = o.now() + o.ms;
+export function startCountdown(item: CountdownItem, o: CountdownOptions): Countdown {
+  let deadline = o.now() + o.ms;
   let cancel: (() => void) | null = null;
   let done = false;
 
@@ -49,7 +56,14 @@ export function startCountdown(item: CountdownItem, o: CountdownOptions): () => 
   };
 
   tick();
-  return expire;
+  return Object.assign(expire, {
+    extend() {
+      if (done) return;
+      deadline = o.now() + o.ms;
+      cancel?.();
+      tick();
+    },
+  });
 }
 
 /** mm:ss, rounded up so the display reaches 00:00 only at expiry. */

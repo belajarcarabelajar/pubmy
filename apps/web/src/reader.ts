@@ -113,6 +113,9 @@ export async function mountReader(loader: EpubLoader, ui: ReaderUi): Promise<Rea
     if (!fixed) isolateTables(doc);
     docs.add(doc);
     doc.addEventListener("keydown", onKey);
+    // Focus inside the book's frame is invisible to the page's CSS, so the page area shows it.
+    doc.defaultView?.addEventListener("focus", () => ui.page.classList.add("focused"));
+    doc.defaultView?.addEventListener("blur", () => ui.page.classList.remove("focused"));
   };
   renderer.addEventListener("relocate", onRelocate);
   renderer.addEventListener("load", onLoad);
@@ -134,6 +137,7 @@ export async function mountReader(loader: EpubLoader, ui: ReaderUi): Promise<Rea
         // Paginator.destroy() throws when no section was shown yet; book.destroy() below still frees the URLs.
       }
       renderer.remove();
+      ui.page.classList.remove("focused");
       book.destroy();
     },
   };
