@@ -143,6 +143,11 @@ describe("pdf adapter: formulas and diagrams with a renderer", () => {
     r = expectOk(await convert({ name: "math.pdf", bytes: await makeMathPdf() }, { ...ctx, loadRenderer: async () => renderer }));
   });
 
+  test("no private-use character of the PDF reaches the book, not even in alt text", () => {
+    // page 10 sets text in a font that extracts as U+E002 U+E000 U+E001
+    expect(bookText(r)).not.toMatch(/[\uE000-\uE005]/);
+  });
+
   test("renders every formula and diagram area in one call at 300 dpi", () => {
     expect(calls.length).toBe(1);
     expect(calls[0].dpi).toBe(300);
@@ -180,6 +185,26 @@ test("pdf adapter: without a renderer formulas stay text and the report says so"
   const r = expectOk(await run("math.pdf", await makeMathPdf()));
   expect(bookText(r)).toContain("a + b");
   expect(r.notes?.warnings).toContain("formulas-as-text");
+});
+
+test("pdf adapter: a conversion cancelled while formulas render stops instead of finishing as text", async () => {
+  const ac = new AbortController();
+  const renderer: PdfRenderer = {
+    renderBoxes: async () => {
+      ac.abort();
+      throw new DOMException("cancelled", "AbortError");
+    },
+    close: async () => {},
+  };
+  const r = await convert({ name: "math.pdf", bytes: await makeMathPdf() }, { ...ctx, signal: ac.signal, loadRenderer: async () => renderer });
+  expect(r.ok).toBe(false);
+});
+
+test("pdf adapter: private-use characters in a PDF's own text never become markup", async () => {
+  // page 10 of the math fixture: a font whose text extracts as U+E002 U+E000 U+E001, pubmy's marker characters
+  const text = bookText(expectOk(await run("math.pdf", await makeMathPdf())));
+  expect(text).toMatch(/Private use marks\s*stay out of the markup of the page\./);
+  expect(text).not.toMatch(/<sup>(?![^<]*<\/sup>)/);
 });
 
 describe("pdf adapter: page-1 masthead banner", () => {

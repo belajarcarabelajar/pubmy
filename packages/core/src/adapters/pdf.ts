@@ -5,7 +5,7 @@
 // vector diagram areas become PNG crops through ctx.loadRenderer, or stay text without one.
 import { getDocumentProxy, getResolvedPDFJS, inspectPages } from "unpdf";
 import { PubmyError } from "../errors.ts";
-import { applyCrop, cropsOf, markScript, markup, plain, type Crop } from "../pdf/crops.ts";
+import { applyCrop, cropsOf, markScript, markup, ownText, plain, type Crop } from "../pdf/crops.ts";
 import { extractPageImages, type PageImage } from "../pdf/images.ts";
 import { bodySize, layoutPages, titleSizeOf, usableItems, type Block, type PageBlock, type PageFigure, type PageText, type TextItem } from "../pdf/layout.ts";
 import { findMathAreas, realFontNames, type MathAreas, type MathTextItem } from "../pdf/math.ts";
@@ -39,7 +39,7 @@ function toItem(r: RawItem): TextItem | null {
   const t = r.transform;
   if (typeof r.str !== "string" || !t) return null;
   return {
-    str: r.str,
+    str: ownText(r.str),
     x: t[4],
     y: t[5],
     width: r.width ?? 0,
@@ -100,7 +100,7 @@ function boundaries(blocks: PageBlock[], outline: { title: string; page: number 
     for (const o of outline) {
       const onPage = blocks.findIndex((b, k) => k >= from && b.page >= o.page);
       if (onPage < 0) break;
-      const match = blocks.findIndex((b, k) => k >= onPage && b.kind === "heading" && norm(b.text) === norm(o.title));
+      const match = blocks.findIndex((b, k) => k >= onPage && b.kind === "heading" && norm(plain(b.text)) === norm(o.title));
       const at = match >= 0 ? match : onPage;
       out.push({ at, title: o.title });
       from = at + 1;
@@ -128,7 +128,9 @@ async function renderCrops(f: InputFile, ctx: Ctx, crops: Crop[]): Promise<(Uint
   if (!renderer) return crops.map(() => null);
   try {
     return await renderer.renderBoxes(f.bytes, crops.map((c) => c.area.box), 300, ctx.signal);
-  } catch {
+  } catch (e) {
+    // a cancelled conversion stops; any other render failure leaves the formulas as text
+    if (ctx.signal.aborted) throw e;
     return crops.map(() => null);
   } finally {
     await renderer.close().catch(() => {});

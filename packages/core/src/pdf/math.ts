@@ -139,7 +139,12 @@ class Sets {
   }
   groups(): number[][] {
     const m = new Map<number, number[]>();
-    this.p.forEach((_, i) => m.set(this.find(i), [...(m.get(this.find(i)) ?? []), i]));
+    this.p.forEach((_, i) => {
+      const root = this.find(i);
+      const g = m.get(root);
+      if (g) g.push(i);
+      else m.set(root, [i]);
+    });
     return [...m.values()];
   }
 }
@@ -438,12 +443,42 @@ export function findMathAreas(p: MathPage): MathAreas {
   return { display: display.sort(byTop), inline: inline.sort(byTop), diagrams: diagramsOf(p, items, paths, images, bars, cropped, pw).sort(byTop), scripts };
 }
 
+const CELL = 32;
+
+/**
+ * Calls join(a, b) for each pair of boxes within `gap` of each other. Boxes are bucketed on a grid
+ * of CELL points, so a page of 20,000 scattered strokes (a plot, a map) is not compared pair by pair.
+ */
+function touching(boxes: BB[], gap: number, join: (a: number, b: number) => void): void {
+  const cells = new Map<string, number[]>();
+  boxes.forEach((bb, i) => {
+    const [x0, y0, x1, y1] = grow(bb, gap / 2).map((v) => Math.floor(v / CELL));
+    for (let x = x0; x <= x1; x++)
+      for (let y = y0; y <= y1; y++) {
+        const key = `${x},${y}`;
+        const list = cells.get(key);
+        if (list) list.push(i);
+        else cells.set(key, [i]);
+      }
+  });
+  const seen = new Set<number>();
+  for (const list of cells.values())
+    for (let a = 0; a < list.length; a++)
+      for (let b = a + 1; b < list.length; b++) {
+        const [i, j] = list[a] < list[b] ? [list[a], list[b]] : [list[b], list[a]];
+        const key = i * boxes.length + j;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (inter(grow(boxes[i], gap), boxes[j]) > 0) join(i, j);
+      }
+}
+
 /** Vector drawings: at least 4 paths of which 2 are curved or diagonal, away from raster images. */
 function diagramsOf(p: MathPage, items: Item[], paths: Path[], images: BB[], bars: BB[], cropped: Set<number>, pw: number): MathArea[] {
   const onImage = (b: BB) => images.some((im) => inter(im, b) > 0.5 * areaOf(b));
   const cand = paths.filter((q) => !bars.includes(q.bb) && !(q.rule === "h" && q.bb[2] - q.bb[0] > pw * 0.5) && !onImage(q.bb));
   const sets = new Sets(cand.length);
-  for (let a = 0; a < cand.length; a++) for (let b = a + 1; b < cand.length; b++) if (inter(grow(cand[a].bb, 4), cand[b].bb) > 0) sets.join(a, b);
+  touching(cand.map((q) => q.bb), 4, (a, b) => sets.join(a, b));
   const out: MathArea[] = [];
   for (const g of sets.groups()) {
     const bb = g.map((i) => cand[i].bb).reduce(union);

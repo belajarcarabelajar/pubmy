@@ -140,6 +140,17 @@ test("a title wrapped onto three lines in title case stays one heading", () => {
   });
 });
 
+test("a title wrapped onto three lines in sentence case at 18 pt stays one heading", () => {
+  // the callout rule is for text a little above body size, not for titles
+  const items = [
+    it("Deep learning for the physical sciences, a review of", 60, 700, 18),
+    it("methods, data and the questions that remain open in", 60, 678, 18),
+    it("the study of matter", 60, 656, 18),
+    it("Machine learning has changed how data from experiments are read and how models are built.", 60, 620, 10, 420),
+  ];
+  expect(layoutPage(items, { ...page, bodySize: 10 })[0]?.kind).toBe("heading");
+});
+
 test("a hyphen before a function word at the line end is kept", () => {
   expect(texts([it("effects within-", 50, 700), it("and between-group effects.", 50, 688)])).toEqual(["effects within- and between-group effects."]);
 });

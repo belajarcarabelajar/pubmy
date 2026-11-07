@@ -11,6 +11,14 @@ const INLINE = /([^]+)/g;
 const SUP = ["", ""] as const;
 const SUB = ["", ""] as const;
 
+/** pubmy's marker characters; text from a PDF must never carry them (a forged marker breaks the XHTML). */
+const MARKER_CHARS = /[\uE000-\uE005]/g;
+
+/** A PDF's own text with any of pubmy's marker characters removed, before markers are added. */
+export function ownText(s: string): string {
+  return s.replace(MARKER_CHARS, "");
+}
+
 /** One area of one page waiting for its PNG. */
 export interface Crop {
   page: number;
@@ -23,7 +31,7 @@ export interface Crop {
 /** The areas of a page in render order (display, inline, diagrams), each with a stable id. */
 export function cropsOf(page: number, areas: MathAreas, raw: { str?: string }[]): Crop[] {
   return [...areas.display, ...areas.inline, ...areas.diagrams].map((area, k) => {
-    const words = area.itemIndexes.map((i) => raw[i]?.str ?? "").join(" ").replace(/\s+/g, " ").trim();
+    const words = ownText(area.itemIndexes.map((i) => raw[i]?.str ?? "").join(" ")).replace(/\s+/g, " ").trim();
     const alt = area.kind === "diagram" ? `Diagram on page ${page}` : words.slice(0, 120) || "Formula";
     return { page, id: `p${page}-m${k + 1}`, area, alt };
   });

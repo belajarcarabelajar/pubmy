@@ -8,7 +8,7 @@ import { beginText, endText, moveText, PDFDocument, type PDFFont, PDFHexString, 
 import { FIGURE_BOX, makeFiguresPdf } from "./make-pdf-figures.ts";
 
 /** 1-based page of each scenario. */
-export const MATH_PAGES = { display: 1, inline: 2, lookalike: 3, diagram: 4, imageLines: 5, prose: 6, accents: 7, tall: 8, radical: 9 } as const;
+export const MATH_PAGES = { display: 1, inline: 2, lookalike: 3, diagram: 4, imageLines: 5, prose: 6, accents: 7, tall: 8, radical: 9, privateUse: 10 } as const;
 /** Page 8: baselines of the tall inline formula's line and of the prose lines right above and below it. */
 export const TALL = { above: 663, line: 650, below: 637 } as const;
 /** Page 9: TeX hangs the radical sign from its bar, so "√" sits 9.8 pt above its operand's baseline. */
@@ -59,6 +59,25 @@ function run(page: PDFPage, pieces: Piece[], x: number, y: number): number[] {
     }
   }
   return starts;
+}
+
+/** Text set in this font extracts as U+E002, U+E000, U+E001 for "A", "B", "C" (a ToUnicode CMap). */
+export const PRIVATE_USE_TEXT = "ABC";
+
+/** A font whose ToUnicode maps A, B, C to private-use code points, as some publisher fonts do. */
+function privateUseFont(doc: PDFDocument, page: PDFPage): void {
+  const cmap = [
+    "/CIDInit /ProcSet findresource begin 12 dict begin begincmap",
+    "/CMapName /PubmyPUA def /CMapType 2 def",
+    "1 begincodespacerange <00> <FF> endcodespacerange",
+    "3 beginbfchar <41> <E002> <42> <E000> <43> <E001> endbfchar",
+    "endcmap CMapName currentdict /CMap defineresource pop end end",
+  ].join("\n");
+  const toUnicode = doc.context.register(doc.context.stream(cmap));
+  const font = doc.context.register(
+    doc.context.obj({ Type: "Font", Subtype: "Type1", BaseFont: "Helvetica", Encoding: "WinAnsiEncoding", ToUnicode: toUnicode }),
+  );
+  page.node.setFontDictionary(PDFName.of("PU1"), font);
 }
 
 /** A non-embedded symbolic Type 1 font under a math font's name, like MathematicalPi in old physics books. */
@@ -218,6 +237,15 @@ export async function makeMathPdf(): Promise<Uint8Array> {
   page.drawLine({ start: { x: r.x + signW, y: r.line + r.lift + 0.2 * BODY }, end: { x: op[1] + f.roman.widthOfTextAtSize("model", 7), y: r.line + r.lift + 0.2 * BODY }, thickness: 0.4 });
   run(page, [{ s: " and apply a softmax to the scores of the whole line.", font: f.roman }], op[1] + f.roman.widthOfTextAtSize("model", 7) + 1, r.line);
   prose(page, f, r.line - LEADING);
+
+  // 10: a font whose text extracts as the private-use characters pubmy uses for its own markers
+  page = doc.addPage(size);
+  privateUseFont(doc, page);
+  prose(page, f, 720);
+  run(page, [{ s: "Private use marks", font: f.roman }], 72, 650);
+  page.pushOperators(beginText(), setFontAndSize("PU1", BODY), moveText(160, 650), showText(PDFHexString.of("414243")), endText());
+  run(page, [{ s: "stay out of the markup of the page.", font: f.roman }], 185, 650);
+  prose(page, f, 637);
 
   return doc.save();
 }

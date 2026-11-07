@@ -168,6 +168,8 @@ const isHeading = (l: Line, body: number) => l.fontSize > body * HEADING_RATIO &
 
 /** Lines in a row above body size before they read as a callout box rather than a wrapped title. */
 const PROSE_RUN_LINES = 3;
+/** Callout text is set a little above body size (OpenStax 10.5 on 10 pt); a title well above it is never a callout. */
+const CALLOUT_MAX_RATIO = 1.15;
 
 /** Running text: half its words start in lower case and it has sentence punctuation; a title-case heading has neither. */
 function readsAsSentences(s: string): boolean {
@@ -189,7 +191,7 @@ function headingFlags(lines: Line[], body: number): boolean[] {
     const gap = b ? a.y - b.y : 0;
     if (b && large(a) && a.region === b.region && Math.abs(a.fontSize - b.fontSize) < 0.5 && gap > 0 && gap <= b.fontSize * HEADING_WRAP_GAP) continue;
     const run = lines.slice(start, i);
-    if (run.length >= PROSE_RUN_LINES && large(run[0]) && readsAsSentences(run.map((l) => l.text).join(" "))) flags.fill(false, start, i);
+    if (run.length >= PROSE_RUN_LINES && large(run[0]) && run[0].fontSize <= body * CALLOUT_MAX_RATIO && readsAsSentences(run.map((l) => l.text).join(" "))) flags.fill(false, start, i);
     start = i;
   }
   return flags;

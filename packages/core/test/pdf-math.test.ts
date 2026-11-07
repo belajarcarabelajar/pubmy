@@ -1,4 +1,5 @@
 import { beforeAll, expect, test } from "bun:test";
+import { PDFDocument } from "pdf-lib";
 import { getDocumentProxy, getResolvedPDFJS } from "unpdf";
 import { BAR, DIAGRAM, LOOKALIKE_FONT, MATH_PAGES, makeMathPdf, RADICAL, TALL } from "../../../fixtures/make-pdf-math.ts";
 import { findMathAreas, type MathAreas, type MathTextItem, realFontNames } from "../src/pdf/math.ts";
@@ -131,3 +132,18 @@ test("a radical's area does not reach into the prose of the line above", () => {
   expect(area?.box.x0).toBeGreaterThanOrEqual(RADICAL.x - 2);
   expect(area?.itemIndexes).not.toContain(one(n, "v"));
 });
+
+test("a page of 20,000 separate strokes (a scatter plot or a map) is read in seconds, not minutes", async () => {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([612, 792]);
+  // 200 x 100 grid of short diagonal ticks, 2.8 pt apart so none touch: worst case for pairwise grouping
+  for (let r = 0; r < 100; r++)
+    for (let c = 0; c < 200; c++) page.drawLine({ start: { x: 20 + c * 2.8, y: 100 + r * 5.6 }, end: { x: 20.6 + c * 2.8, y: 100.6 + r * 5.6 }, thickness: 0.2 });
+  const { OPS } = await getResolvedPDFJS();
+  const doc = await getDocumentProxy(await pdf.save(), { fontExtraProperties: true } as Parameters<typeof getDocumentProxy>[1]);
+  const p1 = await doc.getPage(1);
+  const ops = await p1.getOperatorList();
+  const t0 = performance.now();
+  findMathAreas({ page: 1, view: p1.view, items: [], fonts: {}, ops, OPS: OPS as Record<string, number> });
+  expect(performance.now() - t0).toBeLessThan(3000);
+}, 120_000);
