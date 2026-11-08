@@ -9,6 +9,7 @@ import { applyCrop, cropsOf, markScript, markup, ownText, plain, type Crop } fro
 import { extractPageImages, type PageImage } from "../pdf/images.ts";
 import { bodySize, layoutPages, titleSizeOf, usableItems, type Block, type PageBlock, type PageFigure, type PageText, type TextItem } from "../pdf/layout.ts";
 import { findMathAreas, realFontNames, type MathAreas, type MathTextItem } from "../pdf/math.ts";
+import { dropOverprints } from "../pdf/overprint.ts";
 import { rotatedTable, tableHtml } from "../pdf/rotated.ts";
 import { bookTitle } from "../pdf/title.ts";
 import { stripRunning } from "../pdf/running.ts";
@@ -209,7 +210,13 @@ async function bookOf(doc: Doc, f: InputFile, ctx: Ctx): Promise<Book> {
     for (const s of p.math?.scripts ?? []) if (p.items[s.index]) p.items[s.index] = markScript(p.items[s.index]!, s.pos);
   }
   ctx.progress(0.8);
-  const found: PageText[] = pageData.map((p) => ({ items: p.items.filter((t): t is TextItem => t !== null), width: p.width, height: p.height, figures: p.figures }));
+  // after the crop and script marking above, which address items by index
+  const found: PageText[] = pageData.map((p) => ({
+    items: dropOverprints(p.items.filter((t): t is TextItem => t !== null)),
+    width: p.width,
+    height: p.height,
+    figures: p.figures,
+  }));
   const raw = stripRunning(found);
   const all = raw.flatMap((p) => usableItems(p.items, p.height));
   const body = bodySize(all);
