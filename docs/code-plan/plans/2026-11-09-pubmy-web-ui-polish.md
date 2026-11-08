@@ -115,13 +115,13 @@ flowchart TD
 **Reasoning Lenses:** intent (owner wants a better look now, short turns), investigative (CSS, build regex and CSP read), user-centered and accessibility (touch targets, focus, live regions kept), systems (state flows main.ts to row.ts), test-first, verification.
 
 **Acceptance Criteria:**
-- [ ] AC-1: `index.html` links a favicon (`icon.svg`) and the build ships `icon.svg`; the accent is the icon's teal `#0f5c63`. (evidence: `bun test apps/web/test/build-output.test.ts` exit 0)
-- [ ] AC-2: every text and background colour pair in the authored CSS tokens is at least 4.5:1 (WCAG AA), and focus outlines at least 3:1. (evidence: `bun test apps/web/test/theme.test.ts` exit 0)
-- [ ] AC-3: the privacy line is a badge with a lock icon, and the new strings exist in id and en with parity. (evidence: `bun test apps/web/test/i18n.test.ts` exit 0)
-- [ ] AC-4: the drop zone shows an icon and format chips; the hint strings `drop-hint` and `drop-hint-touch` stay as they are (limits stay in the hint, `id="drop-hint"` stays the text-bearing element); the chip set matches the `accept` attribute (aliases and archive types excluded, listed in the test); the build still fills `data-i18n` elements without erasing the icon (the label sits in its own span). (evidence: `bun test apps/web/test/theme.test.ts apps/web/test/build-output.test.ts` exit 0)
-- [ ] AC-5: a converting row has a `<progress class="bar">` with its value, each status has a `.badge` with an `aria-hidden` glyph, and Download is the only filled control; every control keeps its file-named `aria-label` and focus restoration. (evidence: `bun test apps/web/test/row-progress.test.ts apps/web/test/row.test.ts` exit 0)
-- [ ] AC-6: `zipEpubs` resolves to a ZIP of the given EPUBs with unique entry names; `batchView` shows Download all from 2 ready rows and Clear all from 1 row. (evidence: `bun test apps/web/test/batch.test.ts` exit 0)
-- [ ] AC-7: every element id that `main.ts` reads exists in `index.html`; `main.ts` wires progress, Download all (blob URL revoked after use) and Clear all, with a live-region announcement; typecheck and the whole `apps/web/test` folder pass. (evidence: `bun test apps/web/test/wiring.test.ts` exit 0, `bun run typecheck` exit 0, `bun test apps/web/test` exit 0)
+- [x] AC-1: `index.html` links a favicon (`icon.svg`) and the build ships `icon.svg`; the accent is the icon's teal `#0f5c63`. (evidence: `bun test apps/web/test/build-output.test.ts` exit 0)
+- [x] AC-2: every text and background colour pair in the authored CSS tokens is at least 4.5:1 (WCAG AA), and focus outlines at least 3:1. (evidence: `bun test apps/web/test/theme.test.ts` exit 0)
+- [x] AC-3: the privacy line is a badge with a lock icon, and the new strings exist in id and en with parity. (evidence: `bun test apps/web/test/i18n.test.ts` exit 0)
+- [x] AC-4: the drop zone shows an icon and format chips; the hint strings `drop-hint` and `drop-hint-touch` stay as they are (limits stay in the hint, `id="drop-hint"` stays the text-bearing element); the chip set matches the `accept` attribute (aliases and archive types excluded, listed in the test); the build still fills `data-i18n` elements without erasing the icon (the label sits in its own span). (evidence: `bun test apps/web/test/theme.test.ts apps/web/test/build-output.test.ts` exit 0)
+- [x] AC-5: a converting row has a `<progress class="bar">` with its value, each status has a `.badge` with an `aria-hidden` glyph, and Download is the only filled control; every control keeps its file-named `aria-label` and focus restoration. (evidence: `bun test apps/web/test/row-progress.test.ts apps/web/test/row.test.ts` exit 0)
+- [x] AC-6: `zipEpubs` resolves to a ZIP of the given EPUBs with unique entry names; `batchView` shows Download all from 2 ready rows and Clear all from 1 row. (evidence: `bun test apps/web/test/batch.test.ts` exit 0)
+- [x] AC-7: every element id that `main.ts` reads exists in `index.html`; `main.ts` wires progress, Download all (blob URL revoked after use) and Clear all, with a live-region announcement; typecheck and the whole `apps/web/test` folder pass. (evidence: `bun test apps/web/test/wiring.test.ts` exit 0, `bun run typecheck` exit 0, `bun test apps/web/test` exit 0)
 
 **Traceability:**
 
@@ -184,12 +184,12 @@ flowchart TD
 
 ## Session checklist
 
-- [ ] Plan validated (`ultra-plan-runner.mjs` exit 0, Validation: OK) and Design approved
-- [ ] Worktree claimed via `wt-new` (external disk), branch from `pr-registry claim`
-- [ ] T1 theme, identity, drop zone, strings: RED then GREEN
-- [ ] T3 batch helpers: RED then GREEN
-- [ ] T2 row renderer: RED then GREEN
-- [ ] T4 main.ts wiring: typecheck and `bun test apps/web/test` exit 0
+- [x] Plan validated (`ultra-plan-runner.mjs` exit 0, Validation: OK) and Design approved (owner, 2026-11-09)
+- [x] Worktree claimed: `/mnt/belajarcarabelajar/pubmy-wt/pubmy-web-ui-polish`, branch `2026-11-09-pubmy-web-ui-polish/pubmy-web-ui-polish`
+- [x] T1: RED `bun test apps/web/test/theme.test.ts` exit 1 (16 fail); GREEN four test files exit 0 (56 pass, 1 skip), typecheck exit 0 (commit d28f1f1)
+- [x] T3: RED exit 1 (module missing); GREEN `bun test apps/web/test/batch.test.ts` exit 0 (7 pass); three mutations each failed one test (commit fd175f8)
+- [x] T2: RED exit 1 (10 fail, 3 pass); GREEN row-progress + row tests exit 0 (20 pass), typecheck exit 0 (commit 497ef52)
+- [x] T4: RED `bun test apps/web/test/wiring.test.ts` exit 1 (4 fail, 1 pass), `theme.test.ts` hidden-button case exit 1 (1 fail); GREEN `bun run typecheck` exit 0, `bun test apps/web/test` exit 0 (142 pass, 1 skip, 0 fail); added `button[hidden]{display:none}` because `button{display:inline-flex}` overrode `hidden`
 - [ ] Parent diff audit and independent review
 - [ ] PR opened
 - [ ] Debt sweep
