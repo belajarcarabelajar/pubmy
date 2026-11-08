@@ -5,35 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pubmy</title>
 <meta name="description" content="Ubah TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR jadi EPUB 3 langsung di browser.">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
+:root{--accent:#0f5c63;--bg:#f4f7f7;--surface:#ffffff;--text:#1b1b1f;--muted:#55555c;--border:#cfd8da;--ok:#1a6b3a;--err:#a1251b}
 *,*::before,*::after{box-sizing:border-box}
-html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:#1b1b1f;background:#f7f7f8}
+html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:var(--text);background:var(--bg)}
 body{margin:0;min-width:320px}
 main{max-width:40rem;margin:0 auto;padding:1rem}
-header{display:flex;gap:.75rem;align-items:flex-start;justify-content:space-between}
-header>div{flex:1;min-width:0}
+header{display:flex;gap:.75rem;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:.75rem;align-items:center;flex:1;min-width:0}
+.brand>div{min-width:0}
+.logo{flex:none;border-radius:.5rem}
 #lang{flex:none}
 h1{font-size:1.4rem;margin:.25rem 0}
 p{margin:.25rem 0 .75rem}
-.muted{color:#55555c;font-size:.9rem}
-button,.btn{font:inherit;font-size:1rem;min-height:44px;padding:.5rem 1rem;border-radius:.5rem;border:1px solid #2f4fd6;background:#2f4fd6;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
-button.ghost{background:transparent;color:#2f4fd6}
-:focus-visible{outline:3px solid #1b1b1f;outline-offset:2px}
+.muted{color:var(--muted);font-size:.9rem}
+.privacy-badge{display:inline-flex;align-items:center;gap:.4rem;margin:.5rem 0 1rem;padding:.25rem .75rem;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:.9rem}
+.privacy-badge svg{flex:none;width:1rem;height:1rem;color:var(--accent)}
+button,.btn{font:inherit;font-size:1rem;min-height:44px;padding:.5rem 1rem;border-radius:.5rem;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+button.ghost{background:transparent;color:var(--accent)}
+.row-actions button.ghost{border-color:transparent;padding:.25rem .6rem;text-decoration:underline;text-underline-offset:.2em}
+:focus-visible{outline:3px solid var(--text);outline-offset:2px}
 .preview :focus-visible{outline-color:#f2b600}
 /* Tab moves focus into the book's frame, where no selector from this page reaches: the reader sets .focused */
 .pv-page.focused{outline:3px solid #f2b600;outline-offset:-3px}
-.drop{border:2px dashed #9aa3c7;border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:#fff}
-.drop.over{border-color:#2f4fd6;background:#eef1ff}
+.drop{border:2px dashed var(--accent);border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:var(--surface)}
+.drop.over{background:#e3f0f1;border-style:solid}
+.drop-icon{display:block;width:2.5rem;height:2.5rem;margin:0 auto .25rem;color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center;list-style:none;padding:0;margin:.5rem 0 1rem}
+.chip{padding:.1rem .6rem;border:1px solid var(--border);border-radius:999px;background:var(--bg);color:var(--muted);font-size:.75rem;font-weight:600;letter-spacing:.03em}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.batch{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:1rem 0 0}
+.batch[hidden]{display:none}
 #queue,#refusals{list-style:none;padding:0;margin:1rem 0 0}
-#queue li{background:#fff;border:1px solid #dcdce3;border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
+.batch+#queue{margin-top:.75rem}
+#queue li{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
 .name{font-weight:600;overflow-wrap:anywhere}
-.status{font-size:.9rem;color:#55555c}
+.status{font-size:.9rem;color:var(--muted)}
+li .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.1rem .6rem;border-radius:999px;font-size:.8rem;font-weight:600;background:#eceef0;color:var(--muted)}
+.badge-icon{flex:none;font-weight:700;line-height:1}
+li.converting .badge{background:#e3f0f1;color:var(--accent)}
+li.ready .badge{background:#e4f2e8;color:var(--ok)}
+li.failed .badge{background:#fbe9e7;color:var(--err)}
+li.waiting .badge,li.deleted .badge{background:#eceef0;color:var(--muted)}
+progress.bar{grid-column:1/-1;display:block;width:100%;height:.5rem;border:0;border-radius:999px;overflow:hidden;appearance:none;-webkit-appearance:none;accent-color:var(--accent);color:var(--accent);background:#dbe6e7}
+progress.bar::-webkit-progress-bar{background:#dbe6e7;border-radius:999px}
+progress.bar::-webkit-progress-value{background:var(--accent);border-radius:999px}
+progress.bar::-moz-progress-bar{background:var(--accent);border-radius:999px}
 .row-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;grid-column:1/-1}
 .clock{font-variant-numeric:tabular-nums}
-.btn[aria-disabled="true"]{background:#c9c9d1;border-color:#c9c9d1;color:#55555c;pointer-events:none}
-.failed .status,#refusals li{color:#a1251b}
-button:disabled{border-color:#c9c9d1;color:#55555c;cursor:default}
+.btn[aria-disabled="true"]{background:#c9c9d1;border-color:#c9c9d1;color:var(--muted);pointer-events:none}
+.failed .status,#refusals li{color:var(--err)}
+button:disabled{border-color:#c9c9d1;color:var(--muted);cursor:default}
 .preview{width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#17181c;color:#ececf1}
 .preview::backdrop{background:#000c}
 .pv{display:flex;flex-direction:column;height:100%}
@@ -46,7 +69,7 @@ button:disabled{border-color:#c9c9d1;color:#55555c;cursor:default}
 .pv-toc ol{list-style:none;margin:0;padding:0}
 .pv-toc ol ol{padding-left:1rem}
 .pv-toc button{width:100%;justify-content:flex-start;text-align:left;background:transparent;border:0;color:inherit}
-.pv-toc button[aria-current="true"]{background:#2f4fd6;color:#fff}
+.pv-toc button[aria-current="true"]{background:var(--accent);color:#fff}
 .pv-stage{display:flex;flex:1;min-width:0}
 .pv-page{flex:1;min-width:0;background:#fff}
 .pv-page>*{display:block;width:100%;height:100%}
@@ -57,22 +80,46 @@ button:disabled{border-color:#c9c9d1;color:#55555c;cursor:default}
 <body>
 <main>
   <header>
-    <div>
-      <h1 data-i18n="title">pubmy: ubah file jadi EPUB</h1>
-      <p class="muted" data-i18n="tagline"></p>
+    <div class="brand">
+      <img class="logo" src="./icon.svg" alt="" width="40" height="40">
+      <div>
+        <h1 data-i18n="title">pubmy: ubah file jadi EPUB</h1>
+        <p class="muted" data-i18n="tagline"></p>
+      </div>
     </div>
     <button type="button" id="lang" class="ghost"></button>
   </header>
-  <p data-i18n="privacy"></p>
+  <p class="privacy-badge">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    <span data-i18n="privacy"></span>
+  </p>
 
   <section id="drop" class="drop" aria-labelledby="drop-hint">
+    <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
     <p id="drop-hint" data-i18n="drop-hint"></p>
+    <ul class="chips">
+      <li class="chip">TXT</li>
+      <li class="chip">MD</li>
+      <li class="chip">HTML</li>
+      <li class="chip">DOCX</li>
+      <li class="chip">ODT</li>
+      <li class="chip">RTF</li>
+      <li class="chip">PDF</li>
+      <li class="chip">MOBI</li>
+      <li class="chip">AZW3</li>
+      <li class="chip">CBZ</li>
+      <li class="chip">CBR</li>
+    </ul>
     <button type="button" id="choose" data-i18n="choose-files"></button>
     <input type="file" id="file" class="sr-only" tabindex="-1" aria-hidden="true" multiple
       accept=".txt,.md,.markdown,.html,.htm,.docx,.odt,.rtf,.pdf,.mobi,.azw3,.azw,.cbz,.cbr,.zip,.rar,.epub">
   </section>
 
   <ul id="refusals" aria-live="polite"></ul>
+  <div id="batch" class="batch" hidden>
+    <button type="button" id="download-all" data-i18n="download-all"></button>
+    <button type="button" id="clear-all" class="ghost" data-i18n="clear-all"></button>
+  </div>
   <ul id="queue" data-i18n-label="queue-label"></ul>
   <p id="live" class="sr-only" role="status" aria-live="polite"></p>
 </main>
