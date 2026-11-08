@@ -25,14 +25,17 @@ const actions = { preview: () => {}, extend: () => {}, remove: () => {} };
 const bars = (row: HTMLLIElement) => [...row.querySelectorAll("progress.bar")];
 
 describe("progress bar", () => {
-  test("a converting row with progress 0.42 shows one bar with value 0.42, max 1 and the status text as its name", () => {
+  // The badge right beside the bar already says "Converting 42%", so a labelled bar would be read twice per tick.
+  test("a converting row with progress 0.42 shows one bar with value 0.42 and max 1, hidden from screen readers", () => {
     const row = li();
     renderRow(row, converting(0.42), "en", actions);
     const found = bars(row);
     expect(found).toHaveLength(1);
     expect(found[0]!.getAttribute("value")).toBe("0.42");
     expect(found[0]!.getAttribute("max")).toBe("1");
-    expect(found[0]!.getAttribute("aria-label")).toBe("Converting 42%");
+    expect(found[0]!.getAttribute("aria-hidden")).toBe("true");
+    expect(found[0]!.hasAttribute("aria-label")).toBe(false);
+    expect(row.querySelector(".badge")!.textContent).toContain("Converting 42%");
   });
 
   test("the bar sits directly in the row, between the status and the actions", () => {
@@ -117,11 +120,14 @@ describe("status badge", () => {
     }
   });
 
-  test("an expired ready row keeps the ready class and only the glyph changes", () => {
+  // main.ts keeps the queue status "ready" at expiry; the row must still take the neutral "deleted" look, not the green one.
+  test("an expired ready row takes the deleted class and the deleted glyph", () => {
     const row = li();
     renderRow(row, ready(true), "en", actions);
-    expect(row.className).toBe("ready");
+    expect(row.className).toBe("deleted");
     expect(row.querySelector(".badge-icon")!.textContent).toBe("-");
+    renderRow(row, ready(false), "en", actions);
+    expect(row.className).toBe("ready");
   });
 });
 

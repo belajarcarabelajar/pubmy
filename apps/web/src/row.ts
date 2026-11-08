@@ -29,7 +29,8 @@ function progressBar(doc: Document, v: RowView): HTMLProgressElement {
   const bar = doc.createElement("progress");
   bar.className = "bar";
   bar.setAttribute("max", "1");
-  bar.setAttribute("aria-label", v.statusText);
+  // The badge beside the bar already reads the percentage, so the bar stays out of the accessibility tree.
+  bar.setAttribute("aria-hidden", "true");
   const p = v.progress;
   if (p !== undefined && p > 0) bar.setAttribute("value", String(Math.min(p, 1)));
   return bar;
@@ -53,13 +54,14 @@ function button(doc: Document, action: string, label: string, name: string, onCl
  */
 export function renderRow(li: HTMLLIElement, v: RowView, lang: Lang, actions: RowActions, focused?: string): HTMLElement | undefined {
   const doc = li.ownerDocument;
-  li.className = v.status;
+  // main.ts keeps status "ready" while the text says "Deleted" at expiry, so the row class and glyph follow ready.expired.
+  const shown = v.ready?.expired ? "deleted" : v.status;
+  li.className = shown;
   li.replaceChildren();
   const name = doc.createElement("span");
   name.className = "name";
   name.textContent = v.name;
-  // main.ts keeps status "ready" while the text says "Deleted" at expiry, so the glyph follows ready.expired.
-  const glyph = v.ready?.expired ? "-" : (GLYPHS[v.status] ?? "o");
+  const glyph = GLYPHS[shown] ?? "o";
   const status = doc.createElement("span");
   status.className = "status";
   const badge = doc.createElement("span");

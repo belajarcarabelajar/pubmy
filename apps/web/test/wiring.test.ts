@@ -32,9 +32,16 @@ describe("batch actions", () => {
     expect(main).toContain("pubmy-epub.zip");
   });
 
-  test("the ZIP link is revoked after the click", () => {
-    expect(main).toMatch(/revokeObjectURL/);
-    expect(main).toMatch(/pubmy-epub\.zip[\s\S]*revokeObjectURL/);
+  // startRetention also calls revokeObjectURL, so the check anchors on the click inside the Download all handler.
+  test("the ZIP link is revoked in a timer shortly after the click", () => {
+    expect(main).toMatch(/a\.click\(\);[\s\S]{0,300}setTimeout\(\(\) => URL\.revokeObjectURL\(url\)/);
+  });
+
+  // Chrome drops focus from a control that is disabled or hidden and does not give it back.
+  test("keyboard focus has a fallback when a batch button hides or the ZIP finishes", () => {
+    const body = (re: RegExp) => re.exec(main)?.[1] ?? "";
+    expect(body(/function refreshBatch\(\) \{([\s\S]*?)\n\}/)).toContain(".focus()");
+    expect(body(/downloadAllBtn\.onclick = async \(\) => \{([\s\S]*?)\n\};/)).toMatch(/finally \{[\s\S]*\.focus\(\)/);
   });
 
   test("the row view carries the conversion progress", () => {

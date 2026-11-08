@@ -165,9 +165,12 @@ function render(row: Row) {
 function refreshBatch() {
   const ready = [...rows.values()].filter((r) => r.ready && !r.ready.expired).length;
   const view = batchView(rows.size, ready);
+  const focusedBtn = [downloadAllBtn, clearAllBtn].find((b) => b === document.activeElement);
   batchEl.hidden = !view.downloadAll && !view.clearAll;
   downloadAllBtn.hidden = !view.downloadAll;
   clearAllBtn.hidden = !view.clearAll;
+  // A browser drops focus from a control that hides and does not return it, so it goes to Choose.
+  if (focusedBtn?.hidden) $<HTMLButtonElement>("choose").focus();
 }
 
 downloadAllBtn.onclick = async () => {
@@ -188,6 +191,8 @@ downloadAllBtn.onclick = async () => {
     announce(`${t("download-all", lang)}: ${t("failed", lang)}`);
   } finally {
     downloadAllBtn.disabled = false;
+    // Disabling the button made the browser drop focus from it: give it back, or to Choose if the button is gone.
+    if (document.activeElement === document.body) (downloadAllBtn.hidden ? $<HTMLButtonElement>("choose") : downloadAllBtn).focus();
   }
 };
 
