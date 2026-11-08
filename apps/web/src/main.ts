@@ -1,5 +1,6 @@
 import { formatClock, startCountdown, type Countdown, type CountdownItem } from "./countdown.ts";
 import { dropHintKey, failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
+import { batchView, zipEpubs } from "./batch.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
@@ -7,6 +8,7 @@ import { renderRow, updateClock } from "./row.ts";
 import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
 
 const RETENTION_MS = 180_000;
+const ZIP_NAME = "pubmy-epub.zip";
 // A variable keeps the bundler from trying to resolve the built worker file at build time.
 const WORKER_URL = "./worker.js";
 
@@ -16,6 +18,9 @@ const refusalsEl = $<HTMLUListElement>("refusals");
 const liveEl = $<HTMLParagraphElement>("live");
 const fileInput = $<HTMLInputElement>("file");
 const drop = $<HTMLElement>("drop");
+const batchEl = $<HTMLElement>("batch");
+const downloadAllBtn = $<HTMLButtonElement>("download-all");
+const clearAllBtn = $<HTMLButtonElement>("clear-all");
 
 let lang: Lang = pickLang(localStorage.getItem("pubmy.lang"), navigator.language);
 
@@ -149,10 +154,48 @@ function render(row: Row) {
     name: item.name,
     status: item.status,
     statusText: statusText(row),
+    progress: row.progress,
     ready: ready && { url: ready.url, download: epubName(item.name), expired: ready.expired, remaining: ready.remaining },
   };
   renderRow(li, view, lang, { preview: () => void openPreview(row), extend: () => extend(row), remove: () => removeRow(row) }, focused)?.focus();
+  refreshBatch();
 }
+
+/** Shows the batch bar and its buttons from the rows that exist now; an expired row no longer counts as ready. */
+function refreshBatch() {
+  const ready = [...rows.values()].filter((r) => r.ready && !r.ready.expired).length;
+  const view = batchView(rows.size, ready);
+  batchEl.hidden = !view.downloadAll && !view.clearAll;
+  downloadAllBtn.hidden = !view.downloadAll;
+  clearAllBtn.hidden = !view.clearAll;
+}
+
+downloadAllBtn.onclick = async () => {
+  // Taken before the await: a row that expires while the ZIP builds has already been counted or skipped.
+  const entries = [...rows.values()].flatMap((r) => (r.ready?.epub && !r.ready.expired ? [{ name: epubName(r.item.name), epub: r.ready.epub }] : []));
+  if (entries.length < 2) return;
+  downloadAllBtn.disabled = true;
+  try {
+    const url = URL.createObjectURL(new Blob([(await zipEpubs(entries)) as BlobPart], { type: "application/zip" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ZIP_NAME;
+    a.click();
+    // Revoking at once can cancel the download in some browsers, so the link lives a little longer.
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    announce(`${t("download-all", lang)}: ${entries.length}`);
+  } catch {
+    announce(`${t("download-all", lang)}: ${t("failed", lang)}`);
+  } finally {
+    downloadAllBtn.disabled = false;
+  }
+};
+
+clearAllBtn.onclick = () => {
+  for (const row of [...rows.values()]) removeRow(row);
+  announce(t("clear-all", lang));
+  $<HTMLButtonElement>("choose").focus();
+};
 
 function extend(row: Row) {
   row.stop?.extend();
@@ -164,6 +207,7 @@ function removeRow(row: Row) {
   row.stop?.();
   row.li.remove();
   rows.delete(row.item.id);
+  refreshBatch();
 }
 
 function renderRefusals() {

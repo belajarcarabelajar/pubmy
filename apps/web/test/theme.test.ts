@@ -142,4 +142,10 @@ describe("markup", () => {
       expect(css, sel).toContain(sel);
     }
   });
+
+  // `button{display:inline-flex}` beats the browser's own `[hidden]{display:none}`, so main.ts could not hide Download all.
+  test("a hidden button stays hidden", () => {
+    const css = /<style>([\s\S]*?)<\/style>/.exec(html)![1]!;
+    expect(css).toMatch(/button\[hidden\]\s*\{[^}]*display:\s*none/);
+  });
 });
