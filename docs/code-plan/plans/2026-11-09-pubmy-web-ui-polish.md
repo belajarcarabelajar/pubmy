@@ -190,7 +190,7 @@ flowchart TD
 - [x] T3: RED exit 1 (module missing); GREEN `bun test apps/web/test/batch.test.ts` exit 0 (7 pass); three mutations each failed one test (commit fd175f8)
 - [x] T2: RED exit 1 (10 fail, 3 pass); GREEN row-progress + row tests exit 0 (20 pass), typecheck exit 0 (commit 497ef52)
 - [x] T4: RED `bun test apps/web/test/wiring.test.ts` exit 1 (4 fail, 1 pass), `theme.test.ts` hidden-button case exit 1 (1 fail); GREEN `bun run typecheck` exit 0, `bun test apps/web/test` exit 0 (142 pass, 1 skip, 0 fail); added `button[hidden]{display:none}` because `button{display:inline-flex}` overrode `hidden`
-- [ ] Parent diff audit and independent review
+- [x] Parent diff audit and independent review: reviewer `staid` verdict `correct` (no P0/P1; `colab-test -- bun test apps/web/test` exit 0, 142 pass); P2 R1 (expired row painted green), P2 R2 (revoke test vacuous), P3 R3 (focus loss), P3 R4 (progress read twice) fixed test-first: RED exit 1 (3 fail; R2 proven by deleting the revoke line in a scratch copy), GREEN `bun run typecheck` exit 0, `bun test apps/web/test` exit 0 (143 pass, 1 skip, 0 fail); `check-copy-rules.mjs --diff origin/main` exit 0; `bun run --cwd apps/web build` exit 0
 - [ ] PR opened
 - [ ] Debt sweep
 
