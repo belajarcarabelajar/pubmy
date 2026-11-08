@@ -1,6 +1,7 @@
 import { formatClock, startCountdown, type Countdown, type CountdownItem } from "./countdown.ts";
 import { dropHintKey, failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
 import { applyBatchBar, zipEpubs } from "./batch.ts";
+import { placeMenu } from "./menu-position.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
@@ -208,6 +209,35 @@ function removeRow(row: Row) {
   rows.delete(row.item.id);
   refreshBatch();
 }
+
+// A row's menu opens in the top layer at the browser's default spot. It stays hidden from the moment it opens
+// until placeMenu has set its position, so no frame paints in the wrong place. toggle does not bubble: capture.
+const menuOf = (e: Event) => (e.target instanceof HTMLElement && e.target.classList.contains("menu") ? e.target : null);
+queueEl.addEventListener("beforetoggle", (e) => {
+  const menu = menuOf(e);
+  if (menu && (e as ToggleEvent).newState === "open") menu.style.visibility = "hidden";
+}, true);
+queueEl.addEventListener("toggle", (e) => {
+  const menu = menuOf(e);
+  if (!menu || (e as ToggleEvent).newState !== "open") return;
+  const trigger = queueEl.querySelector<HTMLElement>(`[popovertarget="${menu.id}"]`);
+  if (trigger) {
+    const m = menu.getBoundingClientRect();
+    const pos = placeMenu(trigger.getBoundingClientRect(), { width: m.width, height: m.height }, { width: innerWidth, height: innerHeight });
+    menu.style.left = `${pos.left}px`;
+    menu.style.top = `${pos.top}px`;
+  }
+  menu.style.visibility = "";
+}, true);
+
+// A fixed menu would stay behind while the page moves, so scrolling or resizing closes it.
+function closeMenus() {
+  for (const m of queueEl.querySelectorAll<HTMLElement>(".menu:popover-open")) {
+    if (typeof m.hidePopover === "function") m.hidePopover();
+  }
+}
+window.addEventListener("scroll", closeMenus, { passive: true });
+window.addEventListener("resize", closeMenus);
 
 function renderRefusals() {
   refusalsEl.replaceChildren(
