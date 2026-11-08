@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-09-pubmy-web-overflow-menu
-status: Draft
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -196,8 +196,8 @@ flowchart TD
 - [x] T4 main.ts wiring: RED then GREEN
 - [x] Real-browser check in light and dark (320 and 1280 px)
 - [x] Parent diff audit and independent review
-- [ ] PR opened
-- [ ] Debt sweep
+- [x] PR opened (#18)
+- [x] Debt sweep (ledger: `docs/code-plan/2026-11-09-pubmy-web-overflow-menu-learning-ledger.md`)
 
 ## Task T1: tokens, dark theme, indeterminate bar, menu CSS
 
@@ -245,3 +245,8 @@ flowchart TD
 - Real Chromium 156 (puppeteer-core, CSP from `dist/_headers`, theme via `prefers-color-scheme` emulation), harness `check-menu.mjs`, on the final build (report lines; the harness exit code was not captured, the counts are its own): light-320 6 runs of 26 pass, 0 fail; dark-320 3 runs of 26 pass, 0 fail; light-1280 28 pass, 0 fail; dark-1280 26 pass, 0 fail. Screenshots for menu open, converting stripe, expired row and empty state were read in both themes.
 - Defect found only in the browser: the menu closed right after opening in 2 of 5 light-320 runs (and once in a dark-320 run). Cause: a scroll event pending from the focus scroll arrived after open, and `toggle:open` is never fired when the menu closes in the same task, so the open position was never recorded. Fix: `openedAtY` is set in `beforetoggle`, and a scroll that did not move the page is ignored. A first attempt that recorded it in `toggle` did not work (2 of 5 still failed); the event log with `scrollY` showed why. After the fix 0 of 18 and then 0 of 9 light/dark 320 runs failed.
 - Independent review (reviewer `staid`, read-only): no blocking defect. F1 (low to medium, `:popover-open` throws and `.menu` shows as a fixed box in browsers without the Popover API) fixed: fixed positioning moved into `.menu:popover-open`, `closeMenus` wrapped in `try/catch`, both test-first. F2 (low, scroll guard checked only by identifier names) fixed: `scrolledAway` is a pure function with boundary tests. F3 (open menu does not follow layout shifts without scroll or resize) and F4 (focus lands on `body` after Remove from the menu, tab past Remove leaves the menu open) are recorded as debt-sweep candidates.
+- Follow-ups picked in the debt sweep (all five, same PR), test first: focus goes to Choose files after Remove from the menu; an open menu is re-placed when the queue height changes (`ResizeObserver`); refused files show as rows with a Refused badge and the reason (`refusalRow`); a Send to Kindle hint shows while a ready file exists; the countdown reads "Auto-deleted in" ("Dihapus otomatis dalam"). The hint and countdown texts were chosen by the agent without owner wording. Unit gate at `ea5f673`: `colab-test -- bun test apps/web/test` exit 0, 245 pass, 0 fail; `bun run typecheck` exit 0; `bun build.ts <scratch>` exit 0. Real Chromium, harness extended with the four new behaviours (31 checks, report counts, exit code not captured): light-320 5 runs, dark-320 3 runs, light-1280, dark-1280, all 31 pass, 0 fail. A first run of the new refusal check failed 9 of 9 because the harness fed a file the queue does not refuse (only over 50 MB or a full queue is refused); the harness, not the page, was fixed.
+
+## Closeout status
+
+Closed by the owner on 2026-11-09 ("Tutup saja plan ini"), after first choosing "Keep it open" at the debt-sweep question. Readiness `plan-closeout.mjs --readiness`: READY (T1 to T4 DONE, 0 open step boxes, 0 open boxes). `plan-cost.mjs --plan 2026-11-09-pubmy-web-overflow-menu`: usd 24.2512 (estimate; it also counts other work in the claiming session).
