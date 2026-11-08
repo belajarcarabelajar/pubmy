@@ -96,6 +96,8 @@ function startRetention(row: Row, epub: Uint8Array) {
 }
 
 const dialog = $<HTMLDialogElement>("preview");
+// Must equal the drawer breakpoint in the page CSS, or the list starts open on a width where it is a drawer.
+const PREVIEW_NARROW = "(max-width: 60rem)";
 const readerUi: ReaderUi = {
   stage: $("pv-stage"),
   page: $("pv-page"),
@@ -105,7 +107,7 @@ const readerUi: ReaderUi = {
   prev: $<HTMLButtonElement>("pv-prev"),
   next: $<HTMLButtonElement>("pv-next"),
   keys: dialog,
-  narrow: () => matchMedia("(max-width: 40rem)").matches,
+  narrow: () => matchMedia(PREVIEW_NARROW).matches,
   escape: () => dialog.close(),
 };
 const preview = createPreview({
@@ -118,12 +120,33 @@ const preview = createPreview({
 let previewRow: Row | null = null;
 // Esc, the close button, and expiry all end here, so the reader is always torn down.
 dialog.addEventListener("close", () => {
+  // Fullscreen belongs to the frame inside the dialog; leaving it open would keep the page covered after the reader is gone.
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   preview.close();
   const row = previewRow;
   previewRow = null;
   row?.li.querySelector<HTMLElement>('[data-action="preview"]:not(:disabled)')?.focus();
 });
 $<HTMLButtonElement>("pv-close").onclick = () => dialog.close();
+
+const fullscreenBtn = $<HTMLButtonElement>("pv-fullscreen");
+// A dialog cannot be the fullscreen element (Chromium: "Dialog elements are invalid"), so the frame inside it is.
+const frame = dialog.querySelector<HTMLElement>(".pv")!;
+// Hidden in the markup; shown only where the browser exposes the Fullscreen API on elements.
+fullscreenBtn.hidden = typeof frame.requestFullscreen !== "function";
+fullscreenBtn.addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else frame.requestFullscreen().catch(() => {});
+});
+// Esc and the close button also change fullscreen, so the state comes from the event, not from the click.
+document.addEventListener("fullscreenchange", () => {
+  fullscreenBtn.setAttribute("aria-pressed", String(document.fullscreenElement === frame));
+});
+
+// The drawer covers the page with a tap-away layer; the reader's own toggle handler keeps aria-expanded right.
+readerUi.stage.addEventListener("click", () => {
+  if (readerUi.narrow() && readerUi.toc.hidden === false) readerUi.tocToggle.click();
+});
 
 async function openPreview(row: Row) {
   if (!row.ready) return;

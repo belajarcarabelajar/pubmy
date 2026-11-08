@@ -18,7 +18,7 @@ const MESSAGE_KEYS = [
   "invalid-epub",
 ];
 const UI_KEYS = ["title", "drop-hint", "choose-files", "queue-label", "lang-toggle", "waiting", "converting", "ready", "failed", "deleted", "download", "remove", "LIMIT_10", "privacy", "download-all", "clear-all"];
-const PREVIEW_KEYS = ["preview", "preview-close", "preview-prev", "preview-next", "preview-toc", "preview-failed"];
+const PREVIEW_KEYS = ["preview", "preview-close", "preview-prev", "preview-next", "preview-toc", "preview-failed", "preview-fullscreen"];
 
 describe("i18n", () => {
   test("every required key is known", () => {
