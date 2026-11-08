@@ -17,7 +17,7 @@ const MESSAGE_KEYS = [
   "read-failed",
   "invalid-epub",
 ];
-const UI_KEYS = ["title", "drop-hint", "choose-files", "queue-label", "lang-toggle", "waiting", "converting", "ready", "failed", "deleted", "download", "remove", "LIMIT_10", "privacy"];
+const UI_KEYS = ["title", "drop-hint", "choose-files", "queue-label", "lang-toggle", "waiting", "converting", "ready", "failed", "deleted", "download", "remove", "LIMIT_10", "privacy", "download-all", "clear-all"];
 const PREVIEW_KEYS = ["preview", "preview-close", "preview-prev", "preview-next", "preview-toc", "preview-failed"];
 
 describe("i18n", () => {
@@ -50,6 +50,18 @@ describe("i18n", () => {
   test("the deleted state reads Dihapus and Deleted", () => {
     expect(t("deleted", "id")).toBe("Dihapus");
     expect(t("deleted", "en")).toBe("Deleted");
+  });
+
+  test("the batch actions read as written in both languages", () => {
+    expect(t("download-all" as Key, "id")).toBe("Unduh semua (ZIP)");
+    expect(t("download-all" as Key, "en")).toBe("Download all (ZIP)");
+    expect(t("clear-all" as Key, "id")).toBe("Hapus semua");
+    expect(t("clear-all" as Key, "en")).toBe("Clear all");
+  });
+
+  test("the privacy line keeps its text", () => {
+    expect(t("privacy", "id")).toBe("Semua diproses di browser kamu. Tidak ada file yang diunggah.");
+    expect(t("privacy", "en")).toBe("Everything runs in your browser. No file is uploaded.");
   });
 
   test("ID and EN strings differ for the failure codes", () => {

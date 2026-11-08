@@ -8,6 +8,8 @@ export interface RowView {
   /** The queue status, used as the row's class. */
   status: string;
   statusText: string;
+  /** 0 to 1, only read while converting; 0, missing or invalid shows an indeterminate bar. */
+  progress?: number;
   /** Set once the EPUB is ready: its download link and countdown. */
   ready?: { url?: string; download: string; expired: boolean; remaining: number };
 }
@@ -19,6 +21,20 @@ export interface RowActions {
 }
 
 const clockText = (remaining: number, lang: Lang) => `${t("expires-in", lang)} ${formatClock(remaining)}`;
+
+const GLYPHS: Record<string, string> = { waiting: "o", converting: "~", ready: "+", failed: "x", deleted: "-" };
+
+/** Determinate when progress is above 0; otherwise no `value`, which makes the bar indeterminate. */
+function progressBar(doc: Document, v: RowView): HTMLProgressElement {
+  const bar = doc.createElement("progress");
+  bar.className = "bar";
+  bar.setAttribute("max", "1");
+  // The badge beside the bar already reads the percentage, so the bar stays out of the accessibility tree.
+  bar.setAttribute("aria-hidden", "true");
+  const p = v.progress;
+  if (p !== undefined && p > 0) bar.setAttribute("value", String(Math.min(p, 1)));
+  return bar;
+}
 
 function button(doc: Document, action: string, label: string, name: string, onClick: () => void): HTMLButtonElement {
   const b = doc.createElement("button");
@@ -38,14 +54,24 @@ function button(doc: Document, action: string, label: string, name: string, onCl
  */
 export function renderRow(li: HTMLLIElement, v: RowView, lang: Lang, actions: RowActions, focused?: string): HTMLElement | undefined {
   const doc = li.ownerDocument;
-  li.className = v.status;
+  // main.ts keeps status "ready" while the text says "Deleted" at expiry, so the row class and glyph follow ready.expired.
+  const shown = v.ready?.expired ? "deleted" : v.status;
+  li.className = shown;
   li.replaceChildren();
   const name = doc.createElement("span");
   name.className = "name";
   name.textContent = v.name;
+  const glyph = GLYPHS[shown] ?? "o";
   const status = doc.createElement("span");
   status.className = "status";
-  status.textContent = v.statusText;
+  const badge = doc.createElement("span");
+  badge.className = "badge";
+  const icon = doc.createElement("span");
+  icon.className = "badge-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = glyph;
+  badge.append(icon, v.statusText);
+  status.append(badge);
   const row = doc.createElement("div");
   row.className = "row-actions";
   const { ready } = v;
@@ -70,7 +96,9 @@ export function renderRow(li: HTMLLIElement, v: RowView, lang: Lang, actions: Ro
   }
   const rm = button(doc, "remove", t("remove", lang), v.name, actions.remove);
   row.append(rm);
-  li.append(name, status, row);
+  li.append(name, status);
+  if (v.status === "converting") li.append(progressBar(doc, v));
+  li.append(row);
   if (!focused) return undefined;
   const again = li.querySelector<HTMLElement>(`[data-action="${focused}"]`);
   const usable = again && !(again as HTMLButtonElement).disabled && again.getAttribute("aria-disabled") !== "true";

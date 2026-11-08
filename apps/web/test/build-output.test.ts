@@ -91,4 +91,19 @@ describe("web build output", () => {
     expect(empty).toEqual([]);
     expect(html).toContain("Semua diproses di browser kamu. Tidak ada file yang diunggah.");
   });
+
+  test("the favicon ships next to the page and the page links it", () => {
+    expect(files).toContain("icon.svg");
+    expect(readFileSync(join(out, "icon.svg"), "utf8")).toContain("<svg");
+    expect(readFileSync(join(out, "index.html"), "utf8")).toContain('<link rel="icon" href="./icon.svg" type="image/svg+xml">');
+  });
+
+  test("the built page fills the batch labels and keeps the icons beside their labels", () => {
+    const html = readFileSync(join(out, "index.html"), "utf8");
+    expect(html).toContain("Unduh semua (ZIP)");
+    expect(html).toContain("Hapus semua");
+    // The lock sits right before the privacy label, as a sibling that the build must not remove.
+    expect(html).toMatch(/<svg[^>]*aria-hidden="true"[^>]*>(?:(?!<\/svg>)[\s\S])*<\/svg>\s*<span data-i18n="privacy">Semua diproses di browser kamu\. Tidak ada file yang diunggah\.<\/span>/);
+    expect(html).toContain('class="drop-icon"');
+  });
 });
