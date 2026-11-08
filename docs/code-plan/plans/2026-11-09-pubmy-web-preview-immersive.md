@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-09-pubmy-web-preview-immersive
-status: Draft
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -159,8 +159,8 @@ flowchart TD
 - [x] T2 main.ts wiring: RED then GREEN
 - [x] Real-browser check at four sizes
 - [x] Parent diff audit and independent review
-- [ ] PR opened
-- [ ] Debt sweep
+- [x] PR opened (#20)
+- [x] Debt sweep (ledger: `docs/code-plan/2026-11-09-pubmy-web-preview-immersive-learning-ledger.md`)
 
 ## Task T1: markup, CSS, i18n
 
@@ -190,8 +190,12 @@ flowchart TD
 
 ## Evidence
 
-- Unit gate at `d73826f`: `colab-test -- bun test apps/web/test` exit 0, 268 pass, 0 fail; `bun run typecheck` exit 0; `bun build.ts <scratch>` exit 0; `check-copy-rules.mjs --diff origin/main` exit 0 (run at `441b12c`).
-- Real touch Chromium 156 (puppeteer-core, `isMobile` and `hasTouch`, CSP from `dist/_headers`), harness `check.mjs`, report counts (the harness exit code was not captured): 390x844 17 pass, 0 fail; 800x1280 17 pass, 0 fail; 1280x800 14 pass, 0 fail; 1280x900 14 pass, 0 fail. Checked: list closed below 960 px and open above it; the button flips it; the drawer sits over the page and tapping beside it closes it; choosing a chapter closes it; keyboard Tab and Enter; Full screen enters and leaves fullscreen and closing the preview leaves it; bar buttons at least 44 px; no horizontal overflow; no console or CSP error. A separate rotation run (landscape to portrait and back, preview open) kept the state consistent. Screenshots read for the tablet portrait default, the drawer and fullscreen.
+- Unit gate at `85af4e5`: `colab-test -- bun test apps/web/test` exit 0, 271 pass, 0 fail; `bun run typecheck` exit 0; `bun build.ts <scratch>` exit 0; `check-copy-rules.mjs --diff origin/main` exit 0 (run at `441b12c`).
+- Real touch Chromium 156 (puppeteer-core, `isMobile` and `hasTouch`, CSP from `dist/_headers`), harness `check.mjs`, report counts (the harness exit code was not captured): 390x844 19 pass, 0 fail; 800x1280 19 pass, 0 fail; 1280x800 15 pass, 0 fail; 1280x900 15 pass, 0 fail. Checked: list closed below 960 px and open above it; the button flips it; the drawer sits over the page and tapping beside it closes it; choosing a chapter closes it; keyboard Tab and Enter; Full screen enters and leaves fullscreen and closing the preview leaves it; bar buttons at least 44 px; no horizontal overflow; no console or CSP error. A separate rotation run (landscape to portrait and back, preview open) kept the state consistent. Screenshots read for the tablet portrait default, the drawer and fullscreen.
 - Measured before designing (live page, Chromium touch): at 800 px the list opened by default and left a 456 px page; the toggle already worked. The owner's report was about the default at tablet width, discoverability and the missing full screen, not a missing toggle.
 - Defect found only in the browser: `dialog.requestFullscreen()` rejects with `TypeError: Dialog elements are invalid`. The plan, the tests and the first implementation all targeted the dialog, and the `typeof` guard hid nothing because the method exists. Fixed by requesting fullscreen on the `.pv` frame inside the dialog, with a CSS rule for `.pv:fullscreen`; the tests now assert the frame and forbid the dialog.
-- Independent review (`staid`, read-only): no blocking defect. F1 (medium) a drawer left open when the preview closed showed, with its dark layer, while the next book loaded: fixed (the close handler resets the list), with a browser check that is red on the pre-fix build (`tocHidden:false, expanded:"true"`) and green after. F3 (low) the pressed Full screen state was invisible: fixed (`.pv-bar button[aria-pressed="true"]` background), with a browser check red before, green after. F4 (low) three wiring tests would stay green after a regression: tightened to exact lines. F2 (low) Esc closes the whole preview, not the drawer, and the covered arrows stay in the tab order: recorded as debt, not fixed.
+- Independent review (`staid`, read-only): no blocking defect. F1 (medium) a drawer left open when the preview closed showed, with its dark layer, while the next book loaded: fixed (the close handler resets the list), with a browser check that is red on the pre-fix build (`tocHidden:false, expanded:"true"`) and green after. F3 (low) the pressed Full screen state was invisible: fixed (`.pv-bar button[aria-pressed="true"]` background), with a browser check red before, green after. F4 (low) three wiring tests would stay green after a regression: tightened to exact lines. F2 (low) Esc closed the whole preview, not the drawer, and the covered arrows stayed in the tab order: picked in the debt sweep and fixed (`escape` and the dialog `cancel` event close the drawer first; the arrows and the page are `inert` while it covers them), test first, with browser checks that are red on the pre-fix build (`dlgOpen:false`, inert flags all false) and green after.
+
+## Closeout status
+
+Closed by the owner on 2026-11-09 (`Mark Complete` at the debt-sweep question). Readiness `plan-closeout.mjs --readiness`: READY (T1 and T2 DONE, 0 open step boxes). `plan-cost.mjs --plan 2026-11-09-pubmy-web-preview-immersive`: usd 31.1051 (estimate; it also counts other work in the claiming session, the earlier plans of this day included).
