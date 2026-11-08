@@ -122,6 +122,9 @@ let previewRow: Row | null = null;
 dialog.addEventListener("close", () => {
   // Fullscreen belongs to the frame inside the dialog; leaving it open would keep the page covered after the reader is gone.
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  // The reader sets the list state only once the next book has loaded; until then a drawer left open would show with its layer.
+  readerUi.toc.hidden = true;
+  readerUi.tocToggle.setAttribute("aria-expanded", "false");
   preview.close();
   const row = previewRow;
   previewRow = null;

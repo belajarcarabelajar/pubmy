@@ -198,3 +198,10 @@ describe("fullscreen frame", () => {
     expect(html).toMatch(/\.pv:fullscreen\{[^}]*width:100%[^}]*height:100%[^}]*background:#17181c/);
   });
 });
+
+describe("fullscreen button state", () => {
+  // The label stays "Full screen" for screen readers, so sighted users need a visible pressed state.
+  test("a pressed Full screen button looks different from an unpressed one", () => {
+    expect(html).toMatch(/\.pv-bar button\[aria-pressed="true"\]\{[^}]*background:#[0-9a-f]{3,8}/i);
+  });
+});

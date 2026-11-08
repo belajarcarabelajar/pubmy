@@ -42,25 +42,26 @@ describe("preview wiring in main.ts", () => {
 
   test("fullscreenchange keeps aria-pressed in step with the frame being the fullscreen element", () => {
     const body = listener("document", "fullscreenchange");
-    expect(body).toContain("aria-pressed");
-    expect(body).toContain("document.fullscreenElement === frame");
+    expect(body).toMatch(/^\s*fullscreenBtn\.setAttribute\("aria-pressed", String\(document\.fullscreenElement === frame\)\);$/m);
   });
 
   test("closing the dialog leaves fullscreen", () => {
     const body = listener("dialog", "close");
-    expect(body).toContain("document.fullscreenElement");
-    expect(body).toContain("document.exitFullscreen()");
+    expect(body).toMatch(/^\s*if \(document\.fullscreenElement\) document\.exitFullscreen\(\)\.catch\(\(\) => \{\}\);$/m);
+  });
+
+  // A drawer left open when the preview closed would show, with its dark layer, while the next book still loads.
+  test("closing the dialog also closes the contents list, so the next preview starts without a stale drawer", () => {
+    const body = listener("dialog", "close");
+    expect(body).toMatch(/^\s*readerUi\.toc\.hidden = true;$/m);
+    expect(body).toMatch(/^\s*readerUi\.tocToggle\.setAttribute\("aria-expanded", "false"\);$/m);
   });
 
   test("a click on the stage closes the open drawer through the contents button, and only then", () => {
     const body = listener("readerUi.stage", "click");
-    const narrow = body.indexOf("readerUi.narrow()");
-    const open = body.indexOf("readerUi.toc.hidden === false");
-    const toggle = body.indexOf("readerUi.tocToggle.click()");
-    expect(narrow).toBeGreaterThanOrEqual(0);
-    expect(open).toBeGreaterThanOrEqual(0);
-    expect(toggle).toBeGreaterThan(narrow);
-    expect(toggle).toBeGreaterThan(open);
+    expect(body).toMatch(/^\s*if \(readerUi\.narrow\(\) && readerUi\.toc\.hidden === false\) readerUi\.tocToggle\.click\(\);$/m);
+    // nothing else may click or toggle outside that condition
+    expect(body.match(/tocToggle\.click\(\)/g)).toHaveLength(1);
   });
 
   // Measured in Chromium 156: dialog.requestFullscreen() rejects with "TypeError: Dialog elements are invalid".
