@@ -28,7 +28,7 @@ describe("batch actions", () => {
   test("Download all uses the batch helpers and the fixed ZIP name", () => {
     expect(main).toMatch(/from "\.\/batch\.ts"/);
     expect(main).toContain("zipEpubs");
-    expect(main).toContain("batchView");
+    expect(main).toContain("applyBatchBar");
     expect(main).toContain("pubmy-epub.zip");
   });
 
@@ -38,9 +38,10 @@ describe("batch actions", () => {
   });
 
   // Chrome drops focus from a control that is disabled or hidden and does not give it back.
+  // The hidden case lives in applyBatchBar (batch-bar.test.ts proves it on a DOM); the disabled case stays in the handler.
   test("keyboard focus has a fallback when a batch button hides or the ZIP finishes", () => {
     const body = (re: RegExp) => re.exec(main)?.[1] ?? "";
-    expect(body(/function refreshBatch\(\) \{([\s\S]*?)\n\}/)).toContain(".focus()");
+    expect(body(/function refreshBatch\(\) \{([\s\S]*?)\n\}/)).toContain("applyBatchBar(");
     expect(body(/downloadAllBtn\.onclick = async \(\) => \{([\s\S]*?)\n\};/)).toMatch(/finally \{[\s\S]*\.focus\(\)/);
   });
 

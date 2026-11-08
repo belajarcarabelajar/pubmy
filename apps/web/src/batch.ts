@@ -35,3 +35,20 @@ export function zipEpubs(entries: ZipEntry[]): Promise<Uint8Array> {
 export function batchView(rows: number, ready: number): { downloadAll: boolean; clearAll: boolean } {
   return { downloadAll: ready >= 2, clearAll: rows >= 1 };
 }
+
+export interface BatchBar {
+  batch: HTMLElement;
+  downloadAll: HTMLButtonElement;
+  clearAll: HTMLButtonElement;
+  choose: HTMLButtonElement;
+}
+
+/** Shows the bar and its buttons from the row counts. A batch button that had focus and now hides hands focus to Choose, because a browser drops focus from a hidden control. */
+export function applyBatchBar(doc: Document, bar: BatchBar, rows: number, ready: number): void {
+  const view = batchView(rows, ready);
+  const focusedBtn = [bar.downloadAll, bar.clearAll].find((b) => b === doc.activeElement);
+  bar.batch.hidden = !view.downloadAll && !view.clearAll;
+  bar.downloadAll.hidden = !view.downloadAll;
+  bar.clearAll.hidden = !view.clearAll;
+  if (focusedBtn?.hidden) bar.choose.focus();
+}

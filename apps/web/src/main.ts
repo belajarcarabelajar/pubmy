@@ -1,6 +1,6 @@
 import { formatClock, startCountdown, type Countdown, type CountdownItem } from "./countdown.ts";
 import { dropHintKey, failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
-import { batchView, zipEpubs } from "./batch.ts";
+import { applyBatchBar, zipEpubs } from "./batch.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
@@ -164,13 +164,7 @@ function render(row: Row) {
 /** Shows the batch bar and its buttons from the rows that exist now; an expired row no longer counts as ready. */
 function refreshBatch() {
   const ready = [...rows.values()].filter((r) => r.ready && !r.ready.expired).length;
-  const view = batchView(rows.size, ready);
-  const focusedBtn = [downloadAllBtn, clearAllBtn].find((b) => b === document.activeElement);
-  batchEl.hidden = !view.downloadAll && !view.clearAll;
-  downloadAllBtn.hidden = !view.downloadAll;
-  clearAllBtn.hidden = !view.clearAll;
-  // A browser drops focus from a control that hides and does not return it, so it goes to Choose.
-  if (focusedBtn?.hidden) $<HTMLButtonElement>("choose").focus();
+  applyBatchBar(document, { batch: batchEl, downloadAll: downloadAllBtn, clearAll: clearAllBtn, choose: $<HTMLButtonElement>("choose") }, rows.size, ready);
 }
 
 downloadAllBtn.onclick = async () => {
