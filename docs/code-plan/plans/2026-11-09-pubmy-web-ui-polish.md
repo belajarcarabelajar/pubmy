@@ -75,6 +75,45 @@ tasks:
         expect_exit: 0
         retry: 1
         timeout_s: 300
+  - id: T5
+    depends_on: [T4]
+    impacts: ["main.ts calls the extracted batch bar function - bun run typecheck", "text checks of the focus fallback in wiring.test.ts must still pass or move - bun test apps/web/test/wiring.test.ts"]
+    files: { create: [apps/web/test/batch-bar.test.ts], modify: [apps/web/src/batch.ts, apps/web/src/main.ts, apps/web/test/wiring.test.ts], test: [apps/web/test/batch.test.ts] }
+    idempotency_key: "T5:batch-bar-dom-test"
+    skip_if: "bun test apps/web/test/batch-bar.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/batch-bar.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test apps/web/test/batch-bar.test.ts apps/web/test/batch.test.ts apps/web/test/wiring.test.ts"
+        expect_exit: 0
+        retry: 1
+  - id: T6
+    depends_on: [T4]
+    impacts: ["tints are read from the shipped CSS in index.html, so a later palette change is checked - bun test apps/web/test/theme.test.ts"]
+    files: { create: [apps/web/test/theme-tints.test.ts], modify: [], test: [apps/web/test/theme.test.ts] }
+    idempotency_key: "T6:badge-tint-contrast"
+    skip_if: "bun test apps/web/test/theme-tints.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/theme-tints.test.ts"
+        expect_exit: 0
+        retry: 1
+  - id: T7
+    depends_on: [T4]
+    impacts: ["README assertions in the bundle test - bun test apps/cli/test/bundle.test.ts -t readme", "copy rules on the README line - bun scripts/check-copy-rules.mjs"]
+    files: { create: [apps/web/test/readme-web.test.ts], modify: [README.md], test: [apps/cli/test/bundle.test.ts] }
+    idempotency_key: "T7:readme-download-all"
+    skip_if: "bun test apps/web/test/readme-web.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/readme-web.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test apps/web/test/readme-web.test.ts apps/cli/test/bundle.test.ts -t readme"
+        expect_exit: 0
+        retry: 1
 ---
 # pubmy web UI polish Implementation Plan
 
@@ -109,6 +148,12 @@ flowchart TD
     T2 --> T4
     T3 --> T4
     T4 --> V["Verify: typecheck, bun test apps/web/test, build"]
+    T4 --> T5["T5 follow-up: batch bar DOM test"]
+    T4 --> T6["T6 follow-up: badge tint contrast"]
+    T4 --> T7["T7 follow-up: README Download all"]
+    T5 --> D
+    T6 --> D
+    T7 --> D
     V --> D(["Done: PR, debt sweep"])
 ```
 
@@ -122,6 +167,9 @@ flowchart TD
 - [x] AC-5: a converting row has a `<progress class="bar">` with its value, each status has a `.badge` with an `aria-hidden` glyph, and Download is the only filled control; every control keeps its file-named `aria-label` and focus restoration. (evidence: `bun test apps/web/test/row-progress.test.ts apps/web/test/row.test.ts` exit 0)
 - [x] AC-6: `zipEpubs` resolves to a ZIP of the given EPUBs with unique entry names; `batchView` shows Download all from 2 ready rows and Clear all from 1 row. (evidence: `bun test apps/web/test/batch.test.ts` exit 0)
 - [x] AC-7: every element id that `main.ts` reads exists in `index.html`; `main.ts` wires progress, Download all (blob URL revoked after use) and Clear all, with a live-region announcement; typecheck and the whole `apps/web/test` folder pass. (evidence: `bun test apps/web/test/wiring.test.ts` exit 0, `bun run typecheck` exit 0, `bun test apps/web/test` exit 0)
+- [ ] AC-8: the batch bar's visibility and its focus fallback live in `batch.ts` and are tested on a DOM: Download all hides below 2 ready rows, and hiding a focused button moves focus to the Choose button. (evidence: `bun test apps/web/test/batch-bar.test.ts` exit 0)
+- [ ] AC-9: the badge tint pairs read from the shipped CSS are at least 4.5:1. (evidence: `bun test apps/web/test/theme-tints.test.ts` exit 0)
+- [ ] AC-10: `README.md` says the website can download all files as a ZIP. (evidence: `bun test apps/web/test/readme-web.test.ts` exit 0, `bun test apps/cli/test/bundle.test.ts -t readme` exit 0)
 
 **Traceability:**
 
@@ -134,6 +182,9 @@ flowchart TD
 | AC-5 | T2 | `bun test apps/web/test/row-progress.test.ts apps/web/test/row.test.ts` | exit 0 |
 | AC-6 | T3 | `bun test apps/web/test/batch.test.ts` | exit 0 |
 | AC-7 | T4 | `bun test apps/web/test/wiring.test.ts`, `bun run typecheck`, `bun test apps/web/test` | exit 0 |
+| AC-8 | T5 | `bun test apps/web/test/batch-bar.test.ts` | exit 0 |
+| AC-9 | T6 | `bun test apps/web/test/theme-tints.test.ts` | exit 0 |
+| AC-10 | T7 | `bun test apps/web/test/readme-web.test.ts` | exit 0 |
 
 **Assumptions & Open Questions:**
 - Owner approved items 1 to 4 and 6 ("agreed, do it now", 2026-11-09). Items 5, 7, 8, 9, 10 are not in scope.
@@ -191,8 +242,15 @@ flowchart TD
 - [x] T2: RED exit 1 (10 fail, 3 pass); GREEN row-progress + row tests exit 0 (20 pass), typecheck exit 0 (commit 497ef52)
 - [x] T4: RED `bun test apps/web/test/wiring.test.ts` exit 1 (4 fail, 1 pass), `theme.test.ts` hidden-button case exit 1 (1 fail); GREEN `bun run typecheck` exit 0, `bun test apps/web/test` exit 0 (142 pass, 1 skip, 0 fail); added `button[hidden]{display:none}` because `button{display:inline-flex}` overrode `hidden`
 - [x] Parent diff audit and independent review: reviewer `staid` verdict `correct` (no P0/P1; `colab-test -- bun test apps/web/test` exit 0, 142 pass); P2 R1 (expired row painted green), P2 R2 (revoke test vacuous), P3 R3 (focus loss), P3 R4 (progress read twice) fixed test-first: RED exit 1 (3 fail; R2 proven by deleting the revoke line in a scratch copy), GREEN `bun run typecheck` exit 0, `bun test apps/web/test` exit 0 (143 pass, 1 skip, 0 fail); `check-copy-rules.mjs --diff origin/main` exit 0; `bun run --cwd apps/web build` exit 0
-- [ ] PR opened
-- [ ] Debt sweep
+- [x] PR opened: PR #17 https://github.com/belajarcarabelajar/pubmy/pull/17 (registry state open)
+- [ ] Debt sweep follow-ups T5 (batch bar DOM test), T6 (badge tint contrast), T7 (README): RED then GREEN
+- [ ] Debt sweep closed
+
+## Follow-up tasks (debt sweep, owner selected 2026-11-09)
+
+- **T5** batch bar DOM test: move the bar's visibility and focus fallback into `batch.ts` as `applyBatchBar`, test it with linkedom in `batch-bar.test.ts`.
+- **T6** badge tint contrast: `theme-tints.test.ts` reads `li.<status> .badge` rules from the shipped CSS.
+- **T7** `README.md:5` mentions Download all (ZIP); `readme-web.test.ts` asserts it.
 
 ## Task T1: theme, identity, drop zone, strings
 
@@ -234,3 +292,28 @@ flowchart TD
 **Edge Cases:** a row expiring while the ZIP is built is skipped; the bar refreshes on every `onChange`, expiry and removal.
 **Deliberate Shortcuts:** the DOM glue in `main.ts` is not exercised in a browser (A42); `wiring.test.ts` is the RED step and asserts that every `$("id")` and `getElementById` id in `main.ts` exists in `index.html`, and that `main.ts` references `pubmy-epub.zip`.
 **Test Data & Determinism:** text of `main.ts` and `index.html`, no build.
+
+## Task T5: batch bar DOM test (follow-up)
+
+**Files:** Create `apps/web/test/batch-bar.test.ts`; Modify `apps/web/src/batch.ts`, `apps/web/src/main.ts`, `apps/web/test/wiring.test.ts` (only if a text check moves).
+**Interfaces:** `applyBatchBar(doc: Document, bar: { batch: HTMLElement; downloadAll: HTMLButtonElement; clearAll: HTMLButtonElement; choose: HTMLButtonElement }, rows: number, ready: number): void` sets the three `hidden` flags from `batchView` and, when a batch button that had focus becomes hidden, focuses `choose`. `main.ts` `refreshBatch` calls it.
+**Behavior & Acceptance:** AC-8. Same behaviour as today, now tested on a linkedom DOM.
+**Edge Cases:** focus on a row button is left alone; focus on Clear all stays when it stays visible.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** linkedom document with the three buttons and `choose`; `focus()` and `activeElement` support in linkedom is checked first, and if absent the test injects the active element through a small `getActive` parameter (documented in the test).
+
+## Task T6: badge tint contrast (follow-up)
+
+**Files:** Create `apps/web/test/theme-tints.test.ts`.
+**Behavior & Acceptance:** AC-9. Reads every `li.<status> .badge{background:X;color:Y}` and the base `li .badge` rule from the `<style>` of `index.html` and asserts contrast of Y on X is at least 4.5:1 (luminance computed in the test, threshold a literal).
+**Edge Cases:** colours given as `var(--x)` are resolved from `:root`.
+**Deliberate Shortcuts:** None. A test over already compliant CSS passes at once, so its RED is proven by lightening one tint in a scratch copy of `index.html` and showing the test fails (diff proves the mutation landed).
+**Test Data & Determinism:** the shipped CSS only.
+
+## Task T7: README Download all (follow-up)
+
+**Files:** Create `apps/web/test/readme-web.test.ts`; Modify `README.md`.
+**Behavior & Acceptance:** AC-10. The Website line says that files can also be downloaded together as a ZIP; no em dash. `bundle.test.ts` README assertions stay green.
+**Edge Cases:** none.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** text of `README.md`.

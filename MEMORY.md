@@ -39,3 +39,10 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 |---|---|
 | M12 | WHEN running `plan-closeout.mjs --readiness` (or briefing a reviewer to) for a pubmy plan → DO pass `--cwd` to a worktree that has `node_modules` (a detached NVMe worktree after `bun install --frozen-lockfile`), NOT the session worktree on the external disk (its `skip_if` tests fail on imports and tasks read OPEN; a reviewer reported a false blocker from it). |
 | M13 | WHEN a plan task's `run[]` proves a tool installed only for a verification → DO prove the lasting deliverable (the README row or test it produced), NOT `<tool> --version` (the owner later removed Codex and Cursor and the closeout runner failed T6 with exit 127). |
+
+## Task Group: web UI polish (plan 2026-11-09-pubmy-web-ui-polish)
+
+| # | Rule |
+|---|---|
+| M14 | WHEN listing what a page lacks (missing error text, static title, no progress) → DO read the glue code that fills the page (`apps/web/src/main.ts`) before writing the list, NOT infer from `index.html` and the `i18n.ts` table (a review claimed failures had no in-row reason and the title was static; `statusText` and `applyLang` already covered both). |
+| M15 | WHEN a plan task edits a file that already has a green test → DO give its `skip_if` and first RED step a NEW test file (a missing file exits non-zero), NOT the existing test or `bun run typecheck` (both pass on `main`, so the closeout runner reads the task as done before any work). |
