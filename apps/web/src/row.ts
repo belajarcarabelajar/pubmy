@@ -36,15 +36,46 @@ function progressBar(doc: Document, v: RowView): HTMLProgressElement {
   return bar;
 }
 
-function button(doc: Document, action: string, label: string, name: string, onClick: () => void): HTMLButtonElement {
+/** Ids must stay unique inside one page, so the counter is never reset. */
+let menuSeq = 0;
+
+/** `menu` is the popover the button lives in: it closes first, since the row is not re-rendered by every action. */
+function button(doc: Document, action: string, label: string, name: string, onClick: () => void, menu?: HTMLElement): HTMLButtonElement {
   const b = doc.createElement("button");
   b.type = "button";
   b.className = "ghost";
   b.dataset.action = action;
   b.textContent = label;
   b.setAttribute("aria-label", `${label} ${name}`);
-  b.addEventListener("click", onClick);
+  b.addEventListener("click", () => {
+    if (menu && typeof menu.hidePopover === "function") menu.hidePopover();
+    onClick();
+  });
   return b;
+}
+
+/** A refused file never enters the queue, so its row has no actions: name, Refused badge and the reason. */
+export function refusalRow(doc: Document, fileName: string, reason: string, lang: Lang): HTMLLIElement {
+  const li = doc.createElement("li");
+  li.className = "failed refused";
+  const name = doc.createElement("span");
+  name.className = "name";
+  name.textContent = fileName;
+  const status = doc.createElement("span");
+  status.className = "status";
+  const badge = doc.createElement("span");
+  badge.className = "badge";
+  const icon = doc.createElement("span");
+  icon.className = "badge-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = GLYPHS.failed!;
+  badge.append(icon, t("refused", lang));
+  status.append(badge);
+  const why = doc.createElement("span");
+  why.className = "reason";
+  why.textContent = reason;
+  li.append(name, status, why);
+  return li;
 }
 
 /**
@@ -75,6 +106,8 @@ export function renderRow(li: HTMLLIElement, v: RowView, lang: Lang, actions: Ro
   const row = doc.createElement("div");
   row.className = "row-actions";
   const { ready } = v;
+  let menu: HTMLElement | undefined;
+  let more: HTMLButtonElement | undefined;
   if (ready) {
     const a = doc.createElement("a");
     a.className = "btn";
@@ -91,15 +124,33 @@ export function renderRow(li: HTMLLIElement, v: RowView, lang: Lang, actions: Ro
       const clock = doc.createElement("span");
       clock.className = "clock";
       clock.textContent = clockText(ready.remaining, lang);
-      row.append(clock, button(doc, "extend", t("extend", lang), v.name, actions.extend));
+      const id = `menu-${++menuSeq}`;
+      menu = doc.createElement("div");
+      menu.className = "menu";
+      menu.id = id;
+      menu.setAttribute("popover", "");
+      more = doc.createElement("button");
+      more.type = "button";
+      more.className = "ghost more";
+      more.dataset.action = "more";
+      more.setAttribute("popovertarget", id);
+      more.setAttribute("aria-label", `${t("more-actions", lang)} ${v.name}`);
+      const dots = doc.createElement("span");
+      dots.setAttribute("aria-hidden", "true");
+      dots.textContent = "…";
+      more.append(dots);
+      menu.append(button(doc, "extend", t("extend", lang), v.name, actions.extend, menu));
+      row.append(clock, more, menu);
     }
   }
-  const rm = button(doc, "remove", t("remove", lang), v.name, actions.remove);
-  row.append(rm);
+  const rm = button(doc, "remove", t("remove", lang), v.name, actions.remove, menu);
+  (menu ?? row).append(rm);
   li.append(name, status);
   if (v.status === "converting") li.append(progressBar(doc, v));
   li.append(row);
   if (!focused) return undefined;
+  // The rebuilt menu is closed, and a control inside a closed popover cannot take focus.
+  if (more && (focused === "more" || focused === "extend" || focused === "remove")) return more;
   const again = li.querySelector<HTMLElement>(`[data-action="${focused}"]`);
   const usable = again && !(again as HTMLButtonElement).disabled && again.getAttribute("aria-disabled") !== "true";
   return usable ? again : rm;

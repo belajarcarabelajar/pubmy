@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-09-pubmy-web-ui-polish
-status: Draft
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -208,7 +208,7 @@ flowchart TD
 
 **Definition of Done:** AC-1..AC-7 checked with evidence, typecheck exit 0, `bun test apps/web/test` exit 0, build exit 0, PR opened, debt sweep run.
 
-**Plan Status & Version:** Draft, v1.
+**Plan Status & Version:** Complete, v1.
 
 **Reproducibility:** Bun 1.4.4; tests run through `colab-test` (A47), local fallback targeted (A12).
 
@@ -332,4 +332,4 @@ flowchart TD
 
 ## Closeout status
 
-Kept open at the owner's choice at the debt sweep (2026-11-09). Verdict from `bun scripts/plan-closeout.mjs --readiness <plan.md> --cwd <worktree>` after the follow-ups: `READY`, exit 0, tasks T1 to T7 all `DONE`, 0 open `NOW` follow-ups, 0 open step boxes. What remains: the PR is open (#17) and not merged, and nothing has been deployed. Reopen the question when PR #17 merges: run `--readiness` again, then mark `status: Complete` (a status flip after the merge needs a later PR, so the owner may prefer to decide before the merge).
+Marked Complete on 2026-11-09 at the owner's choice at the debt sweep, after PR #17 merged as `eecf5d3` (the status change ships in the next PR, as the closeout rules require). Readiness re-run after the merge with `bun scripts/plan-closeout.mjs --readiness <plan.md> --cwd <worktree>`: `READY`, exit 0, tasks T1 to T7 all `DONE`, 0 open `NOW` follow-ups, 0 open step boxes, 0 other open boxes. Cost estimate from `bun scripts/plan-cost.mjs --plan 2026-11-09-pubmy-web-ui-polish`: 1 main transcript, 9 subagent runs, about 16.30 USD (an estimate; the tool lists three caveats, among them that work in a claiming session outside the plan is also counted). Nothing is deployed; the backlog above stays open for the next UI plan, `2026-11-09-pubmy-web-overflow-menu`, which closes the overflow menu, the dark theme and the indeterminate bar items.

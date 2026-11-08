@@ -30,7 +30,7 @@ describe("renderRow", () => {
     expect(name(control(row, "preview"))).toBe("Preview tabel.md");
     expect(name(control(row, "extend"))).toBe("Extend tabel.md");
     expect(name(control(row, "remove"))).toBe("Remove tabel.md");
-    expect(row.querySelector(".clock")?.textContent).toBe("Deleted in 03:00");
+    expect(row.querySelector(".clock")?.textContent).toBe("Auto-deleted in 03:00");
   });
 
   test("the extend button asks for more time", () => {
@@ -51,7 +51,10 @@ describe("renderRow", () => {
   test("focus goes back to the copy of the control the user was on", () => {
     const row = li();
     renderRow(row, ready(), "en", actions);
-    expect(renderRow(row, ready({ remaining: 120_000 }), "en", actions, "extend")).toBe(control(row, "extend"));
+    // Compared by identity as booleans: a failing toBe on linkedom elements dumps the whole DOM.
+    expect(renderRow(row, ready({ remaining: 120_000 }), "en", actions, "preview") === control(row, "preview")).toBe(true);
+    // Extend now lives in a closed popover, which cannot take focus, so the More actions button gets it.
+    expect(renderRow(row, ready({ remaining: 120_000 }), "en", actions, "extend") === control(row, "more")).toBe(true);
     expect(renderRow(row, ready(), "en", actions)).toBeUndefined();
   });
 
@@ -71,7 +74,7 @@ describe("updateClock", () => {
     const before = [...row.querySelectorAll("*")];
     expect(updateClock(row, 59_000, "en")).toBe(true);
     expect([...row.querySelectorAll("*")]).toEqual(before);
-    expect(row.querySelector(".clock")?.textContent).toBe("Deleted in 00:59");
+    expect(row.querySelector(".clock")?.textContent).toBe("Auto-deleted in 00:59");
   });
 
   test("a row without a countdown needs a full render", () => {

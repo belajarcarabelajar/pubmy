@@ -139,7 +139,7 @@ describe("actions", () => {
     expect(btns).toHaveLength(1);
     expect(btns[0]!.getAttribute("data-action")).toBe("download");
     const others = [...row.querySelectorAll("[data-action]")].filter((e) => e.getAttribute("data-action") !== "download");
-    expect(others.map((e) => e.getAttribute("data-action"))).toEqual(["preview", "extend", "remove"]);
+    expect(others.map((e) => e.getAttribute("data-action"))).toEqual(["preview", "more", "extend", "remove"]);
     for (const e of others) expect(e.classList.contains("ghost")).toBe(true);
   });
 

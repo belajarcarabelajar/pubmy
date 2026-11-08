@@ -7,7 +7,9 @@
 <meta name="description" content="Ubah TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR jadi EPUB 3 langsung di browser.">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
-:root{--accent:#0f5c63;--bg:#f4f7f7;--surface:#ffffff;--text:#1b1b1f;--muted:#55555c;--border:#cfd8da;--ok:#1a6b3a;--err:#a1251b}
+:root{color-scheme:light dark;--accent:#0f5c63;--accent-ink:#0f5c63;--bg:#f4f7f7;--surface:#ffffff;--text:#1b1b1f;--muted:#55555c;--border:#cfd8da;--ok:#1a6b3a;--err:#a1251b;--tint-accent:#e3f0f1;--tint-ok:#e4f2e8;--tint-err:#fbe9e7;--tint-neutral:#eceef0;--track:#dbe6e7;--over-bg:#e3f0f1;--disabled-bg:#c9c9d1}
+/* The only dark values. Keep this the single plain :root above and this block the only override: theme tests read the first :root. */
+@media (prefers-color-scheme:dark){:root{--accent:#0f5c63;--accent-ink:#5cc4ce;--bg:#121416;--surface:#1b1e21;--text:#e8eaed;--muted:#aab0b7;--border:#343a40;--ok:#7fd69b;--err:#ff9d93;--tint-accent:#1d3a3e;--tint-ok:#1d3a2a;--tint-err:#432320;--tint-neutral:#2a2f34;--track:#2a3236;--over-bg:#1d3a3e;--disabled-bg:#3a3f45}}
 *,*::before,*::after{box-sizing:border-box}
 html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:var(--text);background:var(--bg)}
 body{margin:0;min-width:320px}
@@ -21,17 +23,17 @@ h1{font-size:1.4rem;margin:.25rem 0}
 p{margin:.25rem 0 .75rem}
 .muted{color:var(--muted);font-size:.9rem}
 .privacy-badge{display:inline-flex;align-items:center;gap:.4rem;margin:.5rem 0 1rem;padding:.25rem .75rem;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:.9rem}
-.privacy-badge svg{flex:none;width:1rem;height:1rem;color:var(--accent)}
+.privacy-badge svg{flex:none;width:1rem;height:1rem;color:var(--accent-ink)}
 button,.btn{font:inherit;font-size:1rem;min-height:44px;padding:.5rem 1rem;border-radius:.5rem;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
-button.ghost{background:transparent;color:var(--accent)}
+button.ghost{background:transparent;color:var(--accent-ink)}
 .row-actions button.ghost{border-color:transparent;padding:.25rem .6rem;text-decoration:underline;text-underline-offset:.2em}
 :focus-visible{outline:3px solid var(--text);outline-offset:2px}
 .preview :focus-visible{outline-color:#f2b600}
 /* Tab moves focus into the book's frame, where no selector from this page reaches: the reader sets .focused */
 .pv-page.focused{outline:3px solid #f2b600;outline-offset:-3px}
-.drop{border:2px dashed var(--accent);border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:var(--surface)}
-.drop.over{background:#e3f0f1;border-style:solid}
-.drop-icon{display:block;width:2.5rem;height:2.5rem;margin:0 auto .25rem;color:var(--accent)}
+.drop{border:2px dashed var(--accent-ink);border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:var(--surface)}
+.drop.over{background:var(--over-bg);border-style:solid}
+.drop-icon{display:block;width:2.5rem;height:2.5rem;margin:0 auto .25rem;color:var(--accent-ink)}
 .chips{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center;list-style:none;padding:0;margin:.5rem 0 1rem}
 .chip{padding:.1rem .6rem;border:1px solid var(--border);border-radius:999px;background:var(--bg);color:var(--muted);font-size:.75rem;font-weight:600;letter-spacing:.03em}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -39,24 +41,36 @@ button.ghost{background:transparent;color:var(--accent)}
 .batch[hidden],button[hidden]{display:none}
 #queue,#refusals{list-style:none;padding:0;margin:1rem 0 0}
 .batch+#queue{margin-top:.75rem}
-#queue li{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
+#queue li,#refusals li{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
 .name{font-weight:600;overflow-wrap:anywhere}
 .status{font-size:.9rem;color:var(--muted)}
-li .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.1rem .6rem;border-radius:999px;font-size:.8rem;font-weight:600;background:#eceef0;color:var(--muted)}
+li .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.1rem .6rem;border-radius:999px;font-size:.8rem;font-weight:600;background:var(--tint-neutral);color:var(--muted)}
 .badge-icon{flex:none;font-weight:700;line-height:1}
-li.converting .badge{background:#e3f0f1;color:var(--accent)}
-li.ready .badge{background:#e4f2e8;color:var(--ok)}
-li.failed .badge{background:#fbe9e7;color:var(--err)}
-li.waiting .badge,li.deleted .badge{background:#eceef0;color:var(--muted)}
-progress.bar{grid-column:1/-1;display:block;width:100%;height:.5rem;border:0;border-radius:999px;overflow:hidden;appearance:none;-webkit-appearance:none;accent-color:var(--accent);color:var(--accent);background:#dbe6e7}
-progress.bar::-webkit-progress-bar{background:#dbe6e7;border-radius:999px}
-progress.bar::-webkit-progress-value{background:var(--accent);border-radius:999px}
-progress.bar::-moz-progress-bar{background:var(--accent);border-radius:999px}
+li.converting .badge{background:var(--tint-accent);color:var(--accent-ink)}
+li.ready .badge{background:var(--tint-ok);color:var(--ok)}
+li.failed .badge{background:var(--tint-err);color:var(--err)}
+li.waiting .badge,li.deleted .badge{background:var(--tint-neutral);color:var(--muted)}
+progress.bar{grid-column:1/-1;display:block;width:100%;height:.5rem;border:0;border-radius:999px;overflow:hidden;appearance:none;-webkit-appearance:none;accent-color:var(--accent-ink);color:var(--accent-ink);background:var(--track)}
+progress.bar::-webkit-progress-bar{background:var(--track);border-radius:999px}
+progress.bar::-webkit-progress-value{background:var(--accent-ink);border-radius:999px}
+progress.bar::-moz-progress-bar{background:var(--accent-ink);border-radius:999px}
+/* The stripe tile is 1.5rem * sqrt(2) wide so the 45deg gradient repeats seamlessly while background-position moves one tile. */
+progress.bar:not([value]){background:repeating-linear-gradient(45deg,var(--accent-ink) 0 .75rem,var(--track) .75rem 1.5rem);background-size:2.1213rem 2.1213rem;animation:bar-stripe 1s linear infinite}
+progress.bar:not([value])::-webkit-progress-bar{background:transparent}
+progress.bar:not([value])::-moz-progress-bar{background:transparent}
+@keyframes bar-stripe{from{background-position:0 0}to{background-position:2.1213rem 0}}
+@media (prefers-reduced-motion:reduce){progress.bar:not([value]){animation:none}}
 .row-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;grid-column:1/-1}
 .clock{font-variant-numeric:tabular-nums}
-.btn[aria-disabled="true"]{background:#c9c9d1;border-color:#c9c9d1;color:var(--muted);pointer-events:none}
-.failed .status,#refusals li{color:var(--err)}
-button:disabled{border-color:#c9c9d1;color:var(--muted);cursor:default}
+.btn[aria-disabled="true"]{background:var(--disabled-bg);border-color:var(--disabled-bg);color:var(--muted);pointer-events:none}
+.failed .status{color:var(--err)}
+#refusals .reason{grid-column:1/-1;color:var(--text)}
+#kindle-hint{margin:.5rem 0 0;font-size:.9rem}
+button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:default}
+.row-actions button.more{min-width:44px;justify-content:center;padding:.25rem;text-decoration:none;font-size:1.25rem;line-height:1}
+.menu{min-width:9rem;padding:.25rem;border:1px solid var(--border);border-radius:.5rem;background:var(--surface);color:var(--text);box-shadow:0 4px 16px rgb(0 0 0 / .25)}
+.menu:popover-open{position:fixed;margin:0;inset:auto;display:flex;flex-direction:column}
+.row-actions .menu button{width:100%;min-height:44px;justify-content:flex-start;text-decoration:none}
 .preview{width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#17181c;color:#ececf1}
 .preview::backdrop{background:#000c}
 .pv{display:flex;flex-direction:column;height:100%}
@@ -121,6 +135,7 @@ button:disabled{border-color:#c9c9d1;color:var(--muted);cursor:default}
     <button type="button" id="clear-all" class="ghost" data-i18n="clear-all"></button>
   </div>
   <ul id="queue" data-i18n-label="queue-label"></ul>
+  <p id="kindle-hint" class="muted" data-i18n="kindle-hint" hidden></p>
   <p id="live" class="sr-only" role="status" aria-live="polite"></p>
 </main>
 <dialog id="preview" class="preview" aria-labelledby="pv-title">
