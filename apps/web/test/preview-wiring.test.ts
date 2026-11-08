@@ -59,7 +59,7 @@ describe("preview wiring in main.ts", () => {
 
   test("a click on the stage closes the open drawer through the contents button, and only then", () => {
     const body = listener("readerUi.stage", "click");
-    expect(body).toMatch(/^\s*if \(readerUi\.narrow\(\) && readerUi\.toc\.hidden === false\) readerUi\.tocToggle\.click\(\);$/m);
+    expect(body).toMatch(/^\s*if \(drawerOpen\(\)\) readerUi\.tocToggle\.click\(\);$/m);
     // nothing else may click or toggle outside that condition
     expect(body.match(/tocToggle\.click\(\)/g)).toHaveLength(1);
   });
@@ -68,5 +68,27 @@ describe("preview wiring in main.ts", () => {
   test("fullscreen is requested on the .pv frame inside the dialog, never on the dialog itself", () => {
     expect(main).toMatch(/const frame = dialog\.querySelector<HTMLElement>\("\.pv"\)!/);
     expect(main).not.toMatch(/dialog\.requestFullscreen/);
+  });
+
+  test("the drawer is open exactly when the list is a drawer and not hidden", () => {
+    expect(main).toMatch(/^const drawerOpen = \(\) => readerUi\.narrow\(\) && readerUi\.toc\.hidden === false;$/m);
+  });
+
+  // Esc inside the page frame goes through ui.escape (reader.ts); Esc with focus in the dialog is the native cancel event.
+  test("Esc closes an open drawer first, from the page frame and from the dialog, and only then the preview", () => {
+    expect(main).toMatch(/^\s*escape: \(\) => \(drawerOpen\(\) \? readerUi\.tocToggle\.click\(\) : dialog\.close\(\)\),$/m);
+    const body = listener("dialog", "cancel");
+    expect(body).toMatch(/^\s*if \(drawerOpen\(\)\) \{$/m);
+    expect(body).toMatch(/^\s*e\.preventDefault\(\);$/m);
+    expect(body).toMatch(/^\s*readerUi\.tocToggle\.click\(\);$/m);
+  });
+
+  // The layer over the page blocks the pointer only; the arrows and the book frame would stay in the tab order.
+  test("while the drawer covers the page, the arrows and the page are inert, and this follows the list and the breakpoint", () => {
+    const fn = /function syncCovered\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
+    expect(fn).toMatch(/const covered = drawerOpen\(\);/);
+    expect(fn).toMatch(/for \(const el of \[readerUi\.prev, readerUi\.next, readerUi\.page\]\) el\.inert = covered;/);
+    expect(main).toMatch(/new MutationObserver\(syncCovered\)\.observe\(readerUi\.toc, \{ attributes: true, attributeFilter: \["hidden"\] \}\);/);
+    expect(main).toMatch(/matchMedia\(PREVIEW_NARROW\)\.addEventListener\("change", syncCovered\);/);
   });
 });

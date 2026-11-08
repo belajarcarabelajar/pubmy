@@ -108,8 +108,10 @@ const readerUi: ReaderUi = {
   next: $<HTMLButtonElement>("pv-next"),
   keys: dialog,
   narrow: () => matchMedia(PREVIEW_NARROW).matches,
-  escape: () => dialog.close(),
+  escape: () => (drawerOpen() ? readerUi.tocToggle.click() : dialog.close()),
 };
+// True while the contents list covers the page (below the breakpoint and not hidden).
+const drawerOpen = () => readerUi.narrow() && readerUi.toc.hidden === false;
 const preview = createPreview({
   // The reader and foliate-js load on the first preview, as separate chunks.
   mount: async (loader) => (await import("./reader.ts")).mountReader(loader, readerUi),
@@ -148,8 +150,25 @@ document.addEventListener("fullscreenchange", () => {
 
 // The drawer covers the page with a tap-away layer; the reader's own toggle handler keeps aria-expanded right.
 readerUi.stage.addEventListener("click", () => {
-  if (readerUi.narrow() && readerUi.toc.hidden === false) readerUi.tocToggle.click();
+  if (drawerOpen()) readerUi.tocToggle.click();
 });
+
+// Esc with focus in the dialog is the native cancel: it dismisses the drawer first and keeps the preview open.
+dialog.addEventListener("cancel", (e) => {
+  if (drawerOpen()) {
+    e.preventDefault();
+    readerUi.tocToggle.click();
+  }
+});
+
+// The layer over the page blocks the pointer only, so the arrows and the book frame leave the tab order too.
+// The stage itself stays live: its layer is what a tap-away lands on.
+function syncCovered() {
+  const covered = drawerOpen();
+  for (const el of [readerUi.prev, readerUi.next, readerUi.page]) el.inert = covered;
+}
+new MutationObserver(syncCovered).observe(readerUi.toc, { attributes: true, attributeFilter: ["hidden"] });
+matchMedia(PREVIEW_NARROW).addEventListener("change", syncCovered);
 
 async function openPreview(row: Row) {
   if (!row.ready) return;
