@@ -52,3 +52,9 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 | # | Rule |
 |---|---|
 | M16 | WHEN a browser-only bug is intermittent (a popover closing right after it opens) → DO log the state each handler sees (event order, `scrollY`, which events fired) and repeat the real-browser run at least 5 times before and after each fix attempt, NOT trust unit or text-test greens (the first fix recorded the opening position in `toggle`, which the browser skips when the menu closes in the same task; it was green in unit tests and still failed 2 of 5 runs). |
+
+## Task Group: web preview reading (plan 2026-11-09-pubmy-web-preview-immersive)
+
+| # | Rule |
+|---|---|
+| M17 | WHEN a design calls a browser API on a specific element (fullscreen on the preview dialog) → DO call it once in the real browser and read the promise result before writing the tests, NOT assume it works because the method exists (`dialog.requestFullscreen()` exists and rejects with "Dialog elements are invalid"; a text test pinned the wrong call and the `typeof` guard hid nothing). |

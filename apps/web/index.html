@@ -74,8 +74,11 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
 .preview{width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#17181c;color:#ececf1}
 .preview::backdrop{background:#000c}
 .pv{display:flex;flex-direction:column;height:100%}
+.pv:fullscreen{width:100%;height:100%;background:#17181c}
 .pv-bar{display:flex;gap:.5rem;align-items:center;padding:.5rem;border-bottom:1px solid #2c2d35}
-.pv-bar button{background:transparent;border-color:#4b4d5a;color:#ececf1}
+.pv-bar button{min-width:44px;min-height:44px;justify-content:center;gap:.4rem;background:transparent;border-color:#4b4d5a;color:#ececf1}
+.pv-bar button[aria-pressed="true"]{background:#2c2d35;border-color:#ececf1}
+.pv-ico{flex:none;width:1.25rem;height:1.25rem;font-size:1.25rem;line-height:1.25rem;text-align:center}
 .pv-title{flex:1;min-width:0;margin:0;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pv-body{position:relative;display:flex;flex:1;min-height:0}
 .pv-toc{width:16rem;flex:none;overflow:auto;border-right:1px solid #2c2d35;padding:.5rem}
@@ -88,7 +91,9 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
 .pv-page{flex:1;min-width:0;background:#fff}
 .pv-page>*{display:block;width:100%;height:100%}
 .pv-arrow{flex:none;align-self:center;width:44px;padding:0;justify-content:center;background:transparent;border:0;color:#ececf1;font-size:2rem}
-@media (max-width:40rem){.pv-toc{position:absolute;inset:0 auto 0 0;width:min(85%,18rem);z-index:1;background:#17181c}header{flex-direction:column-reverse;align-items:stretch}#lang{align-self:flex-end}}
+/* The list slides over the page below 60rem; keep this width equal to PREVIEW_NARROW in src/main.ts. The tap-away layer sits under the list (z-index 1 < 2) and over the page. */
+@media (max-width:60rem){.pv-toc{position:absolute;inset:0 auto 0 0;width:min(85%,18rem);z-index:2;background:#17181c;box-shadow:4px 0 16px #0008}.pv-toc:not([hidden])~.pv-stage{position:relative}.pv-toc:not([hidden])~.pv-stage::after{content:"";position:absolute;inset:0;z-index:1;background:#0006}}
+@media (max-width:40rem){header{flex-direction:column-reverse;align-items:stretch}#lang{align-self:flex-end}}
 </style>
 </head>
 <body>
@@ -141,8 +146,9 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
 <dialog id="preview" class="preview" aria-labelledby="pv-title">
   <div class="pv">
     <div class="pv-bar">
-      <button type="button" id="pv-toc-toggle" aria-controls="pv-toc" aria-expanded="false" data-i18n="preview-toc"></button>
+      <button type="button" id="pv-toc-toggle" aria-controls="pv-toc" aria-expanded="false"><span class="pv-ico" aria-hidden="true">&#x2630;</span><span data-i18n="preview-toc"></span></button>
       <h2 id="pv-title" class="pv-title"></h2>
+      <button type="button" id="pv-fullscreen" aria-pressed="false" data-i18n-label="preview-fullscreen" hidden><svg class="pv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/></svg></button>
       <button type="button" id="pv-close" data-i18n-label="preview-close">&#x2715;</button>
     </div>
     <div class="pv-body">

@@ -49,6 +49,7 @@ const id = {
   "preview-prev": "Halaman sebelumnya",
   "preview-next": "Halaman berikutnya",
   "preview-toc": "Daftar isi",
+  "preview-fullscreen": "Layar penuh",
   "preview-failed": "Pratinjau tidak bisa dibuka.",
 };
 
@@ -101,6 +102,7 @@ const en: Record<Key, string> = {
   "preview-prev": "Previous page",
   "preview-next": "Next page",
   "preview-toc": "Contents",
+  "preview-fullscreen": "Full screen",
   "preview-failed": "The preview could not be opened.",
 };
 

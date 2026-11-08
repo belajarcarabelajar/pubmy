@@ -96,6 +96,8 @@ function startRetention(row: Row, epub: Uint8Array) {
 }
 
 const dialog = $<HTMLDialogElement>("preview");
+// Must equal the drawer breakpoint in the page CSS, or the list starts open on a width where it is a drawer.
+const PREVIEW_NARROW = "(max-width: 60rem)";
 const readerUi: ReaderUi = {
   stage: $("pv-stage"),
   page: $("pv-page"),
@@ -105,9 +107,11 @@ const readerUi: ReaderUi = {
   prev: $<HTMLButtonElement>("pv-prev"),
   next: $<HTMLButtonElement>("pv-next"),
   keys: dialog,
-  narrow: () => matchMedia("(max-width: 40rem)").matches,
-  escape: () => dialog.close(),
+  narrow: () => matchMedia(PREVIEW_NARROW).matches,
+  escape: () => (drawerOpen() ? readerUi.tocToggle.click() : dialog.close()),
 };
+// True while the contents list covers the page (below the breakpoint and not hidden).
+const drawerOpen = () => readerUi.narrow() && readerUi.toc.hidden === false;
 const preview = createPreview({
   // The reader and foliate-js load on the first preview, as separate chunks.
   mount: async (loader) => (await import("./reader.ts")).mountReader(loader, readerUi),
@@ -118,12 +122,53 @@ const preview = createPreview({
 let previewRow: Row | null = null;
 // Esc, the close button, and expiry all end here, so the reader is always torn down.
 dialog.addEventListener("close", () => {
+  // Fullscreen belongs to the frame inside the dialog; leaving it open would keep the page covered after the reader is gone.
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  // The reader sets the list state only once the next book has loaded; until then a drawer left open would show with its layer.
+  readerUi.toc.hidden = true;
+  readerUi.tocToggle.setAttribute("aria-expanded", "false");
   preview.close();
   const row = previewRow;
   previewRow = null;
   row?.li.querySelector<HTMLElement>('[data-action="preview"]:not(:disabled)')?.focus();
 });
 $<HTMLButtonElement>("pv-close").onclick = () => dialog.close();
+
+const fullscreenBtn = $<HTMLButtonElement>("pv-fullscreen");
+// A dialog cannot be the fullscreen element (Chromium: "Dialog elements are invalid"), so the frame inside it is.
+const frame = dialog.querySelector<HTMLElement>(".pv")!;
+// Hidden in the markup; shown only where the browser exposes the Fullscreen API on elements.
+fullscreenBtn.hidden = typeof frame.requestFullscreen !== "function";
+fullscreenBtn.addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else frame.requestFullscreen().catch(() => {});
+});
+// Esc and the close button also change fullscreen, so the state comes from the event, not from the click.
+document.addEventListener("fullscreenchange", () => {
+  fullscreenBtn.setAttribute("aria-pressed", String(document.fullscreenElement === frame));
+});
+
+// The drawer covers the page with a tap-away layer; the reader's own toggle handler keeps aria-expanded right.
+readerUi.stage.addEventListener("click", () => {
+  if (drawerOpen()) readerUi.tocToggle.click();
+});
+
+// Esc with focus in the dialog is the native cancel: it dismisses the drawer first and keeps the preview open.
+dialog.addEventListener("cancel", (e) => {
+  if (drawerOpen()) {
+    e.preventDefault();
+    readerUi.tocToggle.click();
+  }
+});
+
+// The layer over the page blocks the pointer only, so the arrows and the book frame leave the tab order too.
+// The stage itself stays live: its layer is what a tap-away lands on.
+function syncCovered() {
+  const covered = drawerOpen();
+  for (const el of [readerUi.prev, readerUi.next, readerUi.page]) el.inert = covered;
+}
+new MutationObserver(syncCovered).observe(readerUi.toc, { attributes: true, attributeFilter: ["hidden"] });
+matchMedia(PREVIEW_NARROW).addEventListener("change", syncCovered);
 
 async function openPreview(row: Row) {
   if (!row.ready) return;
