@@ -33,11 +33,20 @@ describe("overflow menu wiring in main.ts", () => {
     expect(queueListener("toggle")).toMatch(/style\.visibility\s*=\s*""/);
   });
 
-  test("scrolling or resizing closes every open menu", () => {
-    expect(main).toMatch(/window\.addEventListener\("scroll", closeMenus/);
-    expect(main).toMatch(/window\.addEventListener\("resize", closeMenus/);
+  test("resizing closes every open menu", () => {
+    expect(main).toMatch(/window\.addEventListener\("resize", closeMenus\)/);
     const fn = /function closeMenus\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
     expect(fn).toContain(":popover-open");
     expect(fn).toContain("hidePopover");
+  });
+
+  // Moving focus to the trigger scrolls it into view and that scroll event can arrive just after the menu opened
+  // (measured: toggle open, then scroll 3 ms later closed it in 1 of 3 browser runs), so only a real move counts.
+  test("scrolling away from where the menu opened closes it; a scroll event that was already pending does not", () => {
+    expect(main).toMatch(/window\.addEventListener\("scroll", closeMenusOnScroll/);
+    const fn = /function closeMenusOnScroll\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
+    expect(fn).toContain("openedAtY");
+    expect(fn).toContain("closeMenus()");
+    expect(queueListener("toggle")).toMatch(/openedAtY\s*=\s*scrollY/);
   });
 });

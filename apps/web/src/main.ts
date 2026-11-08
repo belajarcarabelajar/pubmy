@@ -220,6 +220,7 @@ queueEl.addEventListener("beforetoggle", (e) => {
 queueEl.addEventListener("toggle", (e) => {
   const menu = menuOf(e);
   if (!menu || (e as ToggleEvent).newState !== "open") return;
+  openedAtY = scrollY;
   const trigger = queueEl.querySelector<HTMLElement>(`[popovertarget="${menu.id}"]`);
   if (trigger) {
     const m = menu.getBoundingClientRect();
@@ -230,13 +231,20 @@ queueEl.addEventListener("toggle", (e) => {
   menu.style.visibility = "";
 }, true);
 
-// A fixed menu would stay behind while the page moves, so scrolling or resizing closes it.
+// A fixed menu would stay behind while the page moves, so scrolling or resizing closes it. Focusing the trigger
+// scrolls it into view and that scroll event can land just after the menu opened, so only a scroll that moved the
+// page away from where it was at opening counts.
+let openedAtY = 0;
 function closeMenus() {
   for (const m of queueEl.querySelectorAll<HTMLElement>(".menu:popover-open")) {
     if (typeof m.hidePopover === "function") m.hidePopover();
   }
 }
-window.addEventListener("scroll", closeMenus, { passive: true });
+function closeMenusOnScroll() {
+  if (Math.abs(scrollY - openedAtY) < 2) return;
+  closeMenus();
+}
+window.addEventListener("scroll", closeMenusOnScroll, { passive: true });
 window.addEventListener("resize", closeMenus);
 
 function renderRefusals() {
