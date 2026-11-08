@@ -215,12 +215,15 @@ function removeRow(row: Row) {
 const menuOf = (e: Event) => (e.target instanceof HTMLElement && e.target.classList.contains("menu") ? e.target : null);
 queueEl.addEventListener("beforetoggle", (e) => {
   const menu = menuOf(e);
-  if (menu && (e as ToggleEvent).newState === "open") menu.style.visibility = "hidden";
+  if (menu && (e as ToggleEvent).newState === "open") {
+    menu.style.visibility = "hidden";
+    // beforetoggle, not toggle: a menu closed in the same task never gets its toggle:open event (measured).
+    openedAtY = scrollY;
+  }
 }, true);
 queueEl.addEventListener("toggle", (e) => {
   const menu = menuOf(e);
   if (!menu || (e as ToggleEvent).newState !== "open") return;
-  openedAtY = scrollY;
   const trigger = queueEl.querySelector<HTMLElement>(`[popovertarget="${menu.id}"]`);
   if (trigger) {
     const m = menu.getBoundingClientRect();

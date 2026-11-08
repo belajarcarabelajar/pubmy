@@ -47,6 +47,7 @@ describe("overflow menu wiring in main.ts", () => {
     const fn = /function closeMenusOnScroll\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
     expect(fn).toContain("openedAtY");
     expect(fn).toContain("closeMenus()");
-    expect(queueListener("toggle")).toMatch(/openedAtY\s*=\s*scrollY/);
+    // toggle:open is skipped when the menu closes in the same task (measured), so the position is recorded in beforetoggle
+    expect(queueListener("beforetoggle")).toMatch(/openedAtY\s*=\s*scrollY/);
   });
 });
