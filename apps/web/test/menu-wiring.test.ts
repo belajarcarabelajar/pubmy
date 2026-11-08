@@ -23,9 +23,11 @@ describe("overflow menu wiring in main.ts", () => {
   test("a capture-phase toggle listener on the queue places an opening menu", () => {
     const body = queueListener("toggle");
     expect(body).toContain('"open"');
-    expect(body).toContain("placeMenu(");
-    expect(body).toContain("menu.style.left");
-    expect(body).toContain("menu.style.top");
+    expect(body).toContain("placeMenuFor(menu)");
+    const place = /function placeMenuFor\(menu: HTMLElement\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
+    expect(place).toContain("placeMenu(");
+    expect(place).toContain("menu.style.left");
+    expect(place).toContain("menu.style.top");
   });
 
   test("the menu stays hidden until it is placed, so no frame paints at the default position", () => {
@@ -55,5 +57,25 @@ describe("overflow menu wiring in main.ts", () => {
     expect(fn).toContain("closeMenus()");
     // toggle:open is skipped when the menu closes in the same task (measured), so the position is recorded in beforetoggle
     expect(queueListener("beforetoggle")).toMatch(/openedAtY\s*=\s*scrollY/);
+  });
+
+  // The queue is the only thing above a fixed menu that can change height (a row finishes converting and drops its bar),
+  // and that moves the trigger without any scroll or resize event.
+  test("a height change in the queue re-places every open menu", () => {
+    expect(main).toMatch(/new ResizeObserver\(placeOpenMenus\)/);
+    expect(main).toMatch(/\.observe\(queueEl\)/);
+    const fn = /function placeOpenMenus\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
+    expect(fn).toContain(":popover-open");
+    expect(fn).toContain("placeMenuFor(");
+    expect(queueListener("toggle")).toContain("placeMenuFor(menu)");
+  });
+
+  // Hiding the menu hands focus back to its trigger, which is then deleted with the row.
+  test("removing a row that holds focus gives focus to Choose files", () => {
+    const fn = /function removeRow\(row: Row\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
+    const held = fn.indexOf("row.li.contains(document.activeElement)");
+    expect(held).toBeGreaterThanOrEqual(0);
+    expect(held).toBeLessThan(fn.indexOf("row.li.remove()"));
+    expect(fn).toMatch(/\$<HTMLButtonElement>\("choose"\)\.focus\(\)/);
   });
 });

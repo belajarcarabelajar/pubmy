@@ -54,6 +54,30 @@ function button(doc: Document, action: string, label: string, name: string, onCl
   return b;
 }
 
+/** A refused file never enters the queue, so its row has no actions: name, Refused badge and the reason. */
+export function refusalRow(doc: Document, fileName: string, reason: string, lang: Lang): HTMLLIElement {
+  const li = doc.createElement("li");
+  li.className = "failed refused";
+  const name = doc.createElement("span");
+  name.className = "name";
+  name.textContent = fileName;
+  const status = doc.createElement("span");
+  status.className = "status";
+  const badge = doc.createElement("span");
+  badge.className = "badge";
+  const icon = doc.createElement("span");
+  icon.className = "badge-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = GLYPHS.failed!;
+  badge.append(icon, t("refused", lang));
+  status.append(badge);
+  const why = doc.createElement("span");
+  why.className = "reason";
+  why.textContent = reason;
+  li.append(name, status, why);
+  return li;
+}
+
 /**
  * Builds the row's content. `focused` is the action of the control that had keyboard focus in
  * this row; the return value is the control that should take it now: its new copy, or Remove when

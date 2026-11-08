@@ -41,7 +41,7 @@ button.ghost{background:transparent;color:var(--accent-ink)}
 .batch[hidden],button[hidden]{display:none}
 #queue,#refusals{list-style:none;padding:0;margin:1rem 0 0}
 .batch+#queue{margin-top:.75rem}
-#queue li{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
+#queue li,#refusals li{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
 .name{font-weight:600;overflow-wrap:anywhere}
 .status{font-size:.9rem;color:var(--muted)}
 li .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.1rem .6rem;border-radius:999px;font-size:.8rem;font-weight:600;background:var(--tint-neutral);color:var(--muted)}
@@ -63,7 +63,9 @@ progress.bar:not([value])::-moz-progress-bar{background:transparent}
 .row-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;grid-column:1/-1}
 .clock{font-variant-numeric:tabular-nums}
 .btn[aria-disabled="true"]{background:var(--disabled-bg);border-color:var(--disabled-bg);color:var(--muted);pointer-events:none}
-.failed .status,#refusals li{color:var(--err)}
+.failed .status{color:var(--err)}
+#refusals .reason{grid-column:1/-1;color:var(--text)}
+#kindle-hint{margin:.5rem 0 0;font-size:.9rem}
 button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:default}
 .row-actions button.more{min-width:44px;justify-content:center;padding:.25rem;text-decoration:none;font-size:1.25rem;line-height:1}
 .menu{min-width:9rem;padding:.25rem;border:1px solid var(--border);border-radius:.5rem;background:var(--surface);color:var(--text);box-shadow:0 4px 16px rgb(0 0 0 / .25)}
@@ -133,6 +135,7 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
     <button type="button" id="clear-all" class="ghost" data-i18n="clear-all"></button>
   </div>
   <ul id="queue" data-i18n-label="queue-label"></ul>
+  <p id="kindle-hint" class="muted" data-i18n="kindle-hint" hidden></p>
   <p id="live" class="sr-only" role="status" aria-live="polite"></p>
 </main>
 <dialog id="preview" class="preview" aria-labelledby="pv-title">

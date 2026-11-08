@@ -5,7 +5,7 @@ import { placeMenu, scrolledAway } from "./menu-position.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
-import { renderRow, updateClock } from "./row.ts";
+import { refusalRow, renderRow, updateClock } from "./row.ts";
 import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
 
 const RETENTION_MS = 180_000;
@@ -165,6 +165,7 @@ function render(row: Row) {
 /** Shows the batch bar and its buttons from the rows that exist now; an expired row no longer counts as ready. */
 function refreshBatch() {
   const ready = [...rows.values()].filter((r) => r.ready && !r.ready.expired).length;
+  $<HTMLElement>("kindle-hint").hidden = ready === 0;
   applyBatchBar(document, { batch: batchEl, downloadAll: downloadAllBtn, clearAll: clearAllBtn, choose: $<HTMLButtonElement>("choose") }, rows.size, ready);
 }
 
@@ -203,11 +204,14 @@ function extend(row: Row) {
 }
 
 function removeRow(row: Row) {
+  // Hiding the menu hands focus back to its trigger, which goes with the row: keep it on the page.
+  const heldFocus = row.li.contains(document.activeElement);
   queue.remove(row.item.id);
   row.stop?.();
   row.li.remove();
   rows.delete(row.item.id);
   refreshBatch();
+  if (heldFocus) $<HTMLButtonElement>("choose").focus();
 }
 
 // A row's menu opens in the top layer at the browser's default spot. It stays hidden from the moment it opens
@@ -221,16 +225,18 @@ queueEl.addEventListener("beforetoggle", (e) => {
     openedAtY = scrollY;
   }
 }, true);
+function placeMenuFor(menu: HTMLElement) {
+  const trigger = queueEl.querySelector<HTMLElement>(`[popovertarget="${menu.id}"]`);
+  if (!trigger) return;
+  const m = menu.getBoundingClientRect();
+  const pos = placeMenu(trigger.getBoundingClientRect(), { width: m.width, height: m.height }, { width: innerWidth, height: innerHeight });
+  menu.style.left = `${pos.left}px`;
+  menu.style.top = `${pos.top}px`;
+}
 queueEl.addEventListener("toggle", (e) => {
   const menu = menuOf(e);
   if (!menu || (e as ToggleEvent).newState !== "open") return;
-  const trigger = queueEl.querySelector<HTMLElement>(`[popovertarget="${menu.id}"]`);
-  if (trigger) {
-    const m = menu.getBoundingClientRect();
-    const pos = placeMenu(trigger.getBoundingClientRect(), { width: m.width, height: m.height }, { width: innerWidth, height: innerHeight });
-    menu.style.left = `${pos.left}px`;
-    menu.style.top = `${pos.top}px`;
-  }
+  placeMenuFor(menu);
   menu.style.visibility = "";
 }, true);
 
@@ -251,13 +257,20 @@ function closeMenusOnScroll() {
 window.addEventListener("scroll", closeMenusOnScroll, { passive: true });
 window.addEventListener("resize", closeMenus);
 
+// A row above an open menu can change height (it finishes converting and drops its bar): that moves the trigger
+// without a scroll or resize, so the menu is placed again.
+function placeOpenMenus() {
+  try {
+    for (const m of queueEl.querySelectorAll<HTMLElement>(".menu:popover-open")) placeMenuFor(m);
+  } catch {
+    // no Popover API: nothing is open
+  }
+}
+if (typeof ResizeObserver === "function") new ResizeObserver(placeOpenMenus).observe(queueEl);
+
 function renderRefusals() {
   refusalsEl.replaceChildren(
-    ...lastRefusals.map((r) => {
-      const li = document.createElement("li");
-      li.textContent = `${r.name}: ${t(r.code, lang)}`;
-      return li;
-    }),
+    ...lastRefusals.map((r) => refusalRow(document, r.name, t(r.code, lang), lang)),
   );
 }
 

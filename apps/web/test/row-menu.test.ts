@@ -140,5 +140,5 @@ test("updateClock still updates the clock of a ready row", () => {
   const row = li();
   renderRow(row, ready(), "en", actions);
   expect(updateClock(row, 59_000, "en")).toBe(true);
-  expect(row.querySelector(".clock")?.textContent).toBe("Deleted in 00:59");
+  expect(row.querySelector(".clock")?.textContent).toBe("Auto-deleted in 00:59");
 });

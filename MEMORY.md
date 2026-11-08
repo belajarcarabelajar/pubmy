@@ -46,3 +46,9 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 |---|---|
 | M14 | WHEN listing what a page lacks (missing error text, static title, no progress) → DO read the glue code that fills the page (`apps/web/src/main.ts`) before writing the list, NOT infer from `index.html` and the `i18n.ts` table (a review claimed failures had no in-row reason and the title was static; `statusText` and `applyLang` already covered both). |
 | M15 | WHEN a plan task edits a file that already has a green test → DO give its `skip_if` and first RED step a NEW test file (a missing file exits non-zero), NOT the existing test or `bun run typecheck` (both pass on `main`, so the closeout runner reads the task as done before any work). |
+
+## Task Group: web overflow menu (plan 2026-11-09-pubmy-web-overflow-menu)
+
+| # | Rule |
+|---|---|
+| M16 | WHEN a browser-only bug is intermittent (a popover closing right after it opens) → DO log the state each handler sees (event order, `scrollY`, which events fired) and repeat the real-browser run at least 5 times before and after each fix attempt, NOT trust unit or text-test greens (the first fix recorded the opening position in `toggle`, which the browser skips when the menu closes in the same task; it was green in unit tests and still failed 2 of 5 runs). |
