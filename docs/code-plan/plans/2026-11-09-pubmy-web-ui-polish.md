@@ -167,9 +167,9 @@ flowchart TD
 - [x] AC-5: a converting row has a `<progress class="bar">` with its value, each status has a `.badge` with an `aria-hidden` glyph, and Download is the only filled control; every control keeps its file-named `aria-label` and focus restoration. (evidence: `bun test apps/web/test/row-progress.test.ts apps/web/test/row.test.ts` exit 0)
 - [x] AC-6: `zipEpubs` resolves to a ZIP of the given EPUBs with unique entry names; `batchView` shows Download all from 2 ready rows and Clear all from 1 row. (evidence: `bun test apps/web/test/batch.test.ts` exit 0)
 - [x] AC-7: every element id that `main.ts` reads exists in `index.html`; `main.ts` wires progress, Download all (blob URL revoked after use) and Clear all, with a live-region announcement; typecheck and the whole `apps/web/test` folder pass. (evidence: `bun test apps/web/test/wiring.test.ts` exit 0, `bun run typecheck` exit 0, `bun test apps/web/test` exit 0)
-- [ ] AC-8: the batch bar's visibility and its focus fallback live in `batch.ts` and are tested on a DOM: Download all hides below 2 ready rows, and hiding a focused button moves focus to the Choose button. (evidence: `bun test apps/web/test/batch-bar.test.ts` exit 0)
-- [ ] AC-9: the badge tint pairs read from the shipped CSS are at least 4.5:1. (evidence: `bun test apps/web/test/theme-tints.test.ts` exit 0)
-- [ ] AC-10: `README.md` says the website can download all files as a ZIP. (evidence: `bun test apps/web/test/readme-web.test.ts` exit 0, `bun test apps/cli/test/bundle.test.ts -t readme` exit 0)
+- [x] AC-8: the batch bar's visibility and its focus fallback live in `batch.ts` and are tested on a DOM: Download all hides below 2 ready rows, and hiding a focused button moves focus to the Choose button. (evidence: `bun test apps/web/test/batch-bar.test.ts` exit 0)
+- [x] AC-9: the badge tint pairs read from the shipped CSS are at least 4.5:1. (evidence: `bun test apps/web/test/theme-tints.test.ts` exit 0)
+- [x] AC-10: `README.md` says the website can download all files as a ZIP. (evidence: `bun test apps/web/test/readme-web.test.ts` exit 0, `bun test apps/cli/test/bundle.test.ts -t readme` exit 0)
 
 **Traceability:**
 
@@ -243,8 +243,8 @@ flowchart TD
 - [x] T4: RED `bun test apps/web/test/wiring.test.ts` exit 1 (4 fail, 1 pass), `theme.test.ts` hidden-button case exit 1 (1 fail); GREEN `bun run typecheck` exit 0, `bun test apps/web/test` exit 0 (142 pass, 1 skip, 0 fail); added `button[hidden]{display:none}` because `button{display:inline-flex}` overrode `hidden`
 - [x] Parent diff audit and independent review: reviewer `staid` verdict `correct` (no P0/P1; `colab-test -- bun test apps/web/test` exit 0, 142 pass); P2 R1 (expired row painted green), P2 R2 (revoke test vacuous), P3 R3 (focus loss), P3 R4 (progress read twice) fixed test-first: RED exit 1 (3 fail; R2 proven by deleting the revoke line in a scratch copy), GREEN `bun run typecheck` exit 0, `bun test apps/web/test` exit 0 (143 pass, 1 skip, 0 fail); `check-copy-rules.mjs --diff origin/main` exit 0; `bun run --cwd apps/web build` exit 0
 - [x] PR opened: PR #17 https://github.com/belajarcarabelajar/pubmy/pull/17 (registry state open)
-- [ ] Debt sweep follow-ups T5 (batch bar DOM test), T6 (badge tint contrast), T7 (README): RED then GREEN
-- [ ] Debt sweep closed
+- [x] Debt sweep follow-ups: T5 RED `bun test apps/web/test/batch-bar.test.ts` exit 1 (export missing), GREEN `bun test apps/web/test` exit 0 (165 pass, 1 skip, 0 fail), `bun run typecheck` exit 0, focus-removal mutation fails 2 tests (commit see git log); T6 `bun test apps/web/test/theme-tints.test.ts` exit 0 (7 pass), two scratch mutations exit 1 (commit ef437a7); T7 RED `bun test apps/web/test/readme-web.test.ts` exit 1 (2 fail), GREEN exit 0 (5 pass), `bundle.test.ts -t readme` exit 0, copy-rules exit 0 (commit 7f0a10e)
+- [x] Debt sweep closed: 3 follow-ups selected and closed (T5 to T7), 5 deferred to the backlog below; learning ledger `docs/code-plan/2026-11-09-pubmy-web-ui-polish-learning-ledger.md`, MEMORY.md M14 and M15
 
 ## Follow-up tasks (debt sweep, owner selected 2026-11-09)
 
@@ -317,3 +317,17 @@ flowchart TD
 **Edge Cases:** none.
 **Deliberate Shortcuts:** None.
 **Test Data & Determinism:** text of `README.md`.
+
+## Follow-up backlog (debt sweep)
+
+- Dark mode: `defer: next UI pass, when the owner asks for it` (non-goal of this plan).
+- Overflow menu for the secondary row actions and clearer countdown wording: `defer: next UI pass, when the owner asks for it`.
+- Refusals (queue limit, size) shown inside rows instead of the red list: `defer: next UI pass, when the owner asks for it`.
+- Static Indonesian `<meta name="description">`: `defer: low value for crawlers, when localised metadata is wanted`.
+- Send to Kindle hint after a download: `defer: next UI pass, when the owner asks for it`.
+- Real-browser check (320 px layout, favicon, keyboard focus): `defer: only when the owner asks for a visual run (A42), then screenshot the built page`.
+- Graph sync (`graphify update .`, then `graphify-sync.mjs --root`): `defer: run in the main checkout after PR #17 merges, because the session worktree has no graphify-out and the plan documents are not in the main checkout until then`.
+
+## Closeout status
+
+Kept open at the owner's choice at the debt sweep (2026-11-09). Verdict from `bun scripts/plan-closeout.mjs --readiness <plan.md> --cwd <worktree>` after the follow-ups: `READY`, exit 0, tasks T1 to T7 all `DONE`, 0 open `NOW` follow-ups, 0 open step boxes. What remains: the PR is open (#17) and not merged, and nothing has been deployed. Reopen the question when PR #17 merges: run `--readiness` again, then mark `status: Complete` (a status flip after the merge needs a later PR, so the owner may prefer to decide before the merge).
