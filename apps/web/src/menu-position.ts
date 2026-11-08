@@ -34,3 +34,8 @@ export function placeMenu(
 
   return { left, top };
 }
+
+/** True when the page has moved at least 2 px from where it was when the menu opened (a fixed menu is then left behind). */
+export function scrolledAway(scrollY: number, openedAtY: number): boolean {
+  return Math.abs(scrollY - openedAtY) >= 2;
+}

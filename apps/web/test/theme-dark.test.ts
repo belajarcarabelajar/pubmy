@@ -228,14 +228,17 @@ describe("overflow menu CSS", () => {
   test(".menu is a fixed popover that is only a flex column while open", () => {
     const menu = rules.find((r) => r.sel === ".menu" && r.ctx.length === 0);
     expect(menu).toBeDefined();
-    expect(declared(menu!.body, "position")).toBe("fixed");
-    expect(declared(menu!.body, "margin")).toBe("0");
-    expect(declared(menu!.body, "inset")).toBe("auto");
+    // Fixed positioning lives only in the :popover-open rule: a browser without the Popover API drops that whole rule
+    // (unknown selector) and shows the menu inline in the row instead of as a loose fixed box over it.
+    expect(declared(menu!.body, "position")).toBeUndefined();
     expect(declared(menu!.body, "background")).toBe("var(--surface)");
     expect(declared(menu!.body, "border")).toContain("var(--border)");
     expect(declared(menu!.body, "display")).toBeUndefined();
     const open = rules.find((r) => r.sel === ".menu:popover-open" && r.ctx.length === 0);
     expect(open).toBeDefined();
+    expect(declared(open!.body, "position")).toBe("fixed");
+    expect(declared(open!.body, "margin")).toBe("0");
+    expect(declared(open!.body, "inset")).toBe("auto");
     expect(declared(open!.body, "display")).toBe("flex");
     expect(declared(open!.body, "flex-direction")).toBe("column");
   });

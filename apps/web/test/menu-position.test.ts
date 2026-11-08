@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { placeMenu } from "../src/menu-position";
+import { placeMenu, scrolledAway } from "../src/menu-position";
 
 // Every expected position is worked out by hand in the comment above its case.
 const MENU = { width: 160, height: 96 };
@@ -94,5 +94,16 @@ describe("placeMenu", () => {
     // below: 760 + 10 = 770, 770 + 96 = 866 > 796; above: 716 - 10 - 96 = 610 >= 4.
     const trigger = { left: 1180, top: 716, right: 1228, bottom: 760 };
     expect(placeMenu(trigger, MENU, { width: 1280, height: 800 }, 10)).toEqual({ left: 1068, top: 610 });
+  });
+});
+
+describe("scrolledAway", () => {
+  // The menu is fixed, so only a page that moved at least 2 px from where it was at opening leaves it behind.
+  test("a move of 0 or 1 px in either direction is not scrolled away", () => {
+    for (const y of [310, 311, 309]) expect(scrolledAway(y, 310)).toBe(false);
+  });
+
+  test("a move of 2 px or more in either direction is scrolled away", () => {
+    for (const y of [312, 308, 0, 620]) expect(scrolledAway(y, 310)).toBe(true);
   });
 });

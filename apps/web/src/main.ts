@@ -1,7 +1,7 @@
 import { formatClock, startCountdown, type Countdown, type CountdownItem } from "./countdown.ts";
 import { dropHintKey, failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
 import { applyBatchBar, zipEpubs } from "./batch.ts";
-import { placeMenu } from "./menu-position.ts";
+import { placeMenu, scrolledAway } from "./menu-position.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
@@ -239,13 +239,14 @@ queueEl.addEventListener("toggle", (e) => {
 // page away from where it was at opening counts.
 let openedAtY = 0;
 function closeMenus() {
-  for (const m of queueEl.querySelectorAll<HTMLElement>(".menu:popover-open")) {
-    if (typeof m.hidePopover === "function") m.hidePopover();
+  try {
+    for (const m of queueEl.querySelectorAll<HTMLElement>(".menu:popover-open")) m.hidePopover();
+  } catch {
+    // no Popover API: `:popover-open` is an invalid selector there, and no menu was ever open
   }
 }
 function closeMenusOnScroll() {
-  if (Math.abs(scrollY - openedAtY) < 2) return;
-  closeMenus();
+  if (scrolledAway(scrollY, openedAtY)) closeMenus();
 }
 window.addEventListener("scroll", closeMenusOnScroll, { passive: true });
 window.addEventListener("resize", closeMenus);

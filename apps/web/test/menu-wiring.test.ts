@@ -16,7 +16,7 @@ function queueListener(type: string): string {
 
 describe("overflow menu wiring in main.ts", () => {
   test("it imports the placement helper", () => {
-    expect(main).toMatch(/import \{ placeMenu \} from "\.\/menu-position\.ts"/);
+    expect(main).toMatch(/import \{ placeMenu, scrolledAway \} from "\.\/menu-position\.ts"/);
   });
 
   // toggle does not bubble, so without the capture flag a listener on the list never runs
@@ -33,6 +33,12 @@ describe("overflow menu wiring in main.ts", () => {
     expect(queueListener("toggle")).toMatch(/style\.visibility\s*=\s*""/);
   });
 
+  // `:popover-open` is an invalid selector where the Popover API is missing, and querySelectorAll throws on it.
+  test("closeMenus does not throw where the Popover API is missing", () => {
+    const fn = /function closeMenus\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
+    expect(fn).toMatch(/try \{[\s\S]*querySelectorAll[\s\S]*\} catch/);
+  });
+
   test("resizing closes every open menu", () => {
     expect(main).toMatch(/window\.addEventListener\("resize", closeMenus\)/);
     const fn = /function closeMenus\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
@@ -45,7 +51,7 @@ describe("overflow menu wiring in main.ts", () => {
   test("scrolling away from where the menu opened closes it; a scroll event that was already pending does not", () => {
     expect(main).toMatch(/window\.addEventListener\("scroll", closeMenusOnScroll/);
     const fn = /function closeMenusOnScroll\(\) \{([\s\S]*?)\n\}/.exec(main)?.[1] ?? "";
-    expect(fn).toContain("openedAtY");
+    expect(fn).toMatch(/scrolledAway\(scrollY, openedAtY\)/);
     expect(fn).toContain("closeMenus()");
     // toggle:open is skipped when the menu closes in the same task (measured), so the position is recorded in beforetoggle
     expect(queueListener("beforetoggle")).toMatch(/openedAtY\s*=\s*scrollY/);

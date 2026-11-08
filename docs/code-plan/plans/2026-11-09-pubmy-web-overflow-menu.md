@@ -115,14 +115,14 @@ flowchart TD
 **Reasoning Lenses:** intent (owner wants the overflow menu first, verified in both themes), user-centered and accessibility (focus, Esc, touch targets, contrast), systems (re-render closes the menu), test-first, verification.
 
 **Acceptance Criteria:**
-- [ ] AC-1: a dark token block exists under `@media (prefers-color-scheme: dark)`, `color-scheme: light dark` is set, and every text and background pair, including the badge tints, is at least 4.5:1 in both themes. (evidence: `bun test apps/web/test/theme-dark.test.ts` exit 0)
-- [ ] AC-2: badge tints, chips, bar track, drop-over, disabled and button colours come from tokens (no literal hex outside `:root` and the dark block, except the reader dialog). (evidence: `bun test apps/web/test/theme-dark.test.ts`, `theme-tints.test.ts` exit 0)
-- [ ] AC-3: an indeterminate `progress.bar` has an animated style that is off under `prefers-reduced-motion`. (evidence: `bun test apps/web/test/theme-dark.test.ts` exit 0)
-- [ ] AC-4: a ready, unexpired row shows Download and Preview, a `.more` button named "More actions <file>", and Extend and Remove inside a `.menu` popover; a row with fewer than two menu items shows Remove inline. (evidence: `bun test apps/web/test/row-menu.test.ts` exit 0)
-- [ ] AC-5: every control keeps its file-named `aria-label` and `data-action`; when the focused control is inside a closed menu, `renderRow` returns the `.more` button, never a hidden control. (evidence: `bun test apps/web/test/row.test.ts apps/web/test/row-menu.test.ts` exit 0)
-- [ ] AC-6: `placeMenu` right-aligns the menu to its trigger, flips above when there is no room below, and never leaves the viewport. (evidence: `bun test apps/web/test/menu-position.test.ts` exit 0)
-- [ ] AC-8: `main.ts` positions the popover on toggle and closes open menus on scroll and resize; the ids it reads exist. (evidence: `bun test apps/web/test/menu-wiring.test.ts apps/web/test/wiring.test.ts` exit 0, `bun run typecheck` exit 0)
-- [ ] AC-7: in real Chromium at 320 and 1280 px, in light and dark: the menu opens by keyboard; Esc closes it and returns focus to the trigger; an outside click closes it; Extend resets the countdown and closes the menu; Remove deletes the row; the menu stays inside the viewport on the first painted frame and does not drift when the page scrolls (it closes instead); no console or CSP error; and every visible text node except disabled controls (`aria-disabled` and `:disabled`, which WCAG exempts) has at least 4.5:1 contrast against its effective background. (evidence: harness report with exit codes, screenshots read)
+- [x] AC-1: a dark token block exists under `@media (prefers-color-scheme: dark)`, `color-scheme: light dark` is set, and every text and background pair, including the badge tints, is at least 4.5:1 in both themes. (evidence: `bun test apps/web/test/theme-dark.test.ts` exit 0)
+- [x] AC-2: badge tints, chips, bar track, drop-over, disabled and button colours come from tokens (no literal hex outside `:root` and the dark block, except the reader dialog). (evidence: `bun test apps/web/test/theme-dark.test.ts`, `theme-tints.test.ts` exit 0)
+- [x] AC-3: an indeterminate `progress.bar` has an animated style that is off under `prefers-reduced-motion`. (evidence: `bun test apps/web/test/theme-dark.test.ts` exit 0)
+- [x] AC-4: a ready, unexpired row shows Download and Preview, a `.more` button named "More actions <file>", and Extend and Remove inside a `.menu` popover; a row with fewer than two menu items shows Remove inline. (evidence: `bun test apps/web/test/row-menu.test.ts` exit 0)
+- [x] AC-5: every control keeps its file-named `aria-label` and `data-action`; when the focused control is inside a closed menu, `renderRow` returns the `.more` button, never a hidden control. (evidence: `bun test apps/web/test/row.test.ts apps/web/test/row-menu.test.ts` exit 0)
+- [x] AC-6: `placeMenu` right-aligns the menu to its trigger, flips above when there is no room below, and never leaves the viewport. (evidence: `bun test apps/web/test/menu-position.test.ts` exit 0)
+- [x] AC-8: `main.ts` positions the popover on toggle and closes open menus on scroll and resize; the ids it reads exist. (evidence: `bun test apps/web/test/menu-wiring.test.ts apps/web/test/wiring.test.ts` exit 0, `bun run typecheck` exit 0)
+- [x] AC-7: in real Chromium at 320 and 1280 px, in light and dark: the menu opens by keyboard; Esc closes it and returns focus to the trigger; an outside click closes it; Extend resets the countdown and closes the menu; Remove deletes the row; the menu stays inside the viewport on the first painted frame and does not drift when the page scrolls (it closes instead); no console or CSP error; and every visible text node except disabled controls (`aria-disabled` and `:disabled`, which WCAG exempts) has at least 4.5:1 contrast against its effective background. (evidence: harness report with exit codes, screenshots read)
 
 **Traceability:**
 
@@ -188,13 +188,13 @@ flowchart TD
 
 ## Session checklist
 
-- [ ] Plan validated and Design approved
-- [ ] Worktree claimed via `pr-registry claim --worktree` from `origin/main`
-- [ ] T1 tokens, dark theme, bar, menu CSS: RED then GREEN
-- [ ] T2 row overflow menu: RED then GREEN
-- [ ] T3 placement helper: RED then GREEN
-- [ ] T4 main.ts wiring: RED then GREEN
-- [ ] Real-browser check in light and dark (320 and 1280 px)
+- [x] Plan validated and Design approved
+- [x] Worktree claimed via `pr-registry claim --worktree` from `origin/main`
+- [x] T1 tokens, dark theme, bar, menu CSS: RED then GREEN
+- [x] T2 row overflow menu: RED then GREEN
+- [x] T3 placement helper: RED then GREEN
+- [x] T4 main.ts wiring: RED then GREEN
+- [x] Real-browser check in light and dark (320 and 1280 px)
 - [ ] Parent diff audit and independent review
 - [ ] PR opened
 - [ ] Debt sweep
@@ -238,3 +238,9 @@ flowchart TD
 **Edge Cases:** a menu closed before the scroll fires; two rows opened in turn (the first closes by light dismiss).
 **Deliberate Shortcuts:** the DOM glue is proven by `menu-wiring.test.ts` text checks (anchored on the new calls, red when the line is deleted) plus the real-browser run (AC-7), not a unit test.
 **Test Data & Determinism:** text of `main.ts` and `index.html`.
+
+## Evidence
+
+- Unit gate at `edddfef`: `colab-test -- bun test apps/web/test` exit 0, 232 pass, 0 fail; `bun run typecheck` exit 0; `bun build.ts <scratch>` exit 0; `check-copy-rules.mjs --diff origin/main` exit 0.
+- Real Chromium 156 (puppeteer-core, CSP from `dist/_headers`, theme via `prefers-color-scheme` emulation), harness `check-menu.mjs`, report lines (the harness exit code was not captured, the counts are its own): light-320 10 runs of 26 pass, 0 fail; dark-320 6 runs of 26 pass, 0 fail; light-1280 28 pass, 0 fail (with expiry); dark-1280 26 pass, 0 fail. Screenshots for menu open, converting stripe, expired row and empty state were read in both themes.
+- Defect found only in the browser: the menu closed right after opening in 2 of 5 light-320 runs and once in a dark-320 run. Cause: a scroll event pending from the focus scroll arrived after open, and `toggle:open` is never fired when the menu closes in the same task, so the open position was never recorded. Fix: `openedAtY` is set in `beforetoggle`, and a scroll that did not move the page is ignored (`closeMenusOnScroll`). Before the fix 3 of 8 light-320 runs failed, after it 0 of 18 did.
