@@ -31,9 +31,9 @@ export function zipEpubs(entries: ZipEntry[]): Promise<Uint8Array> {
   });
 }
 
-/** Which batch buttons show: Download all from 2 ready rows, Clear all from 1 row of any kind. */
+/** Which batch buttons show: Download all from 2 ready rows, Clear all from 2 rows of any kind (one row has its own Remove). */
 export function batchView(rows: number, ready: number): { downloadAll: boolean; clearAll: boolean } {
-  return { downloadAll: ready >= 2, clearAll: rows >= 1 };
+  return { downloadAll: ready >= 2, clearAll: rows >= 2 };
 }
 
 export interface BatchBar {

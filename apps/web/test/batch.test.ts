@@ -66,10 +66,10 @@ describe("zipEpubs", () => {
 });
 
 describe("batchView", () => {
-  test("Download all from 2 ready rows, Clear all from 1 row", () => {
+  test("Download all from 2 ready rows, Clear all from 2 rows", () => {
     expect(batchView(0, 0)).toEqual({ downloadAll: false, clearAll: false });
-    expect(batchView(1, 0)).toEqual({ downloadAll: false, clearAll: true });
-    expect(batchView(1, 1)).toEqual({ downloadAll: false, clearAll: true });
+    expect(batchView(1, 0)).toEqual({ downloadAll: false, clearAll: false });
+    expect(batchView(1, 1)).toEqual({ downloadAll: false, clearAll: false });
     expect(batchView(2, 1)).toEqual({ downloadAll: false, clearAll: true });
     expect(batchView(2, 2)).toEqual({ downloadAll: true, clearAll: true });
     expect(batchView(10, 10)).toEqual({ downloadAll: true, clearAll: true });

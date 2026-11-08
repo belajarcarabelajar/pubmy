@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pubmy</title>
-<meta name="description" content="Ubah TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR jadi EPUB 3 langsung di browser, atau buka EPUB untuk dibaca.">
+<meta name="description" content="Ubah dokumen, e-book, dan komik jadi EPUB 3 langsung di browser, atau buka EPUB untuk dibaca.">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
 :root{color-scheme:light dark;--accent:#0f5c63;--accent-ink:#0f5c63;--bg:#f4f7f7;--surface:#ffffff;--text:#1b1b1f;--muted:#55555c;--border:#cfd8da;--ok:#1a6b3a;--err:#a1251b;--tint-accent:#e3f0f1;--tint-ok:#e4f2e8;--tint-err:#fbe9e7;--tint-neutral:#eceef0;--track:#dbe6e7;--over-bg:#e3f0f1;--disabled-bg:#c9c9d1}
@@ -19,30 +19,34 @@ html:not(.ready) main{visibility:hidden;animation:reveal 0s 1.5s forwards}
 @keyframes reveal{to{visibility:visible}}
 header{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;justify-content:space-between}
 /* The header is 38rem wide above 40rem. The brand needs about 389 px (logo plus the English title in a monospace font) and the slimmer button leaves it 416 px beside "Bahasa Indonesia"; 25rem sits between the two, and a wider font wraps the button to its own row. */
-.brand{display:flex;gap:.75rem;align-items:center;flex:1;min-width:min(100%,25rem)}
+.brand{display:flex;gap:.75rem;align-items:flex-start;flex:1;min-width:min(100%,25rem)}
 .brand>div{min-width:0}
-.logo{flex:none;border-radius:.5rem}
-#lang{flex:none;margin-left:auto;padding-inline:.75rem}
+/* The title block starts with the h1's .25rem top margin; the same offset puts the logo's top edge level with the title. */
+.logo{flex:none;border-radius:.5rem;margin-top:.25rem}
+#lang{flex:none;margin-left:auto;gap:.4rem;padding:.25rem .75rem;border:1px solid var(--border);font-size:.9rem}
+#lang svg{flex:none;width:1rem;height:1rem}
 h1{font-size:1.3rem;margin:.25rem 0}
 p{margin:.25rem 0 .75rem}
 .muted{color:var(--muted);font-size:.9rem}
-.privacy-badge{display:inline-flex;align-items:center;gap:.4rem;margin:.5rem 0 1rem;padding:.25rem .75rem;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:.9rem}
+.privacy-badge{display:flex;align-items:center;justify-content:center;gap:.4rem;margin:.5rem 0 1rem;padding:.25rem .75rem;border:1px solid var(--border);border-radius:.75rem;background:var(--surface);font-size:.9rem;text-align:center}
 .privacy-badge svg{flex:none;width:1rem;height:1rem;color:var(--accent-ink)}
 button,.btn{font:inherit;font-size:1rem;min-height:44px;padding:.5rem 1rem;border-radius:.5rem;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
 button.ghost{background:transparent;color:var(--accent-ink)}
-.row-actions button.ghost{border-color:transparent;padding:.25rem .6rem;text-decoration:underline;text-underline-offset:.2em}
+.row-actions button.ghost{border:1px solid var(--border);padding:.25rem .75rem}
 :focus-visible{outline:3px solid var(--text);outline-offset:2px}
 .preview :focus-visible{outline-color:#f2b600}
 /* Tab moves focus into the book's frame, where no selector from this page reaches: the reader sets .focused */
 .pv-page.focused{outline:3px solid #f2b600;outline-offset:-3px}
-.drop{border:2px dashed var(--accent-ink);border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:var(--surface)}
+.drop{border:1px dashed var(--accent-ink);border-radius:.75rem;padding:1.5rem 1rem;text-align:center;background:var(--surface)}
 .drop.over{background:var(--over-bg);border-style:solid}
 .drop-icon{display:block;width:2.5rem;height:2.5rem;margin:0 auto .25rem;color:var(--accent-ink)}
-.chips{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center;list-style:none;padding:0;margin:.5rem 0 1rem}
-.chip{padding:.1rem .6rem;border:1px solid var(--border);border-radius:999px;background:var(--bg);color:var(--muted);font-size:.75rem;font-weight:600;letter-spacing:.03em}
+.formats-label{margin:.5rem 0 0;color:var(--muted);font-size:.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.1rem 1rem;justify-content:center;list-style:none;padding:0;margin:.15rem 0 1rem}
+.chip{color:var(--muted);font-size:.75rem;font-weight:600;letter-spacing:.03em}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .batch{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:1rem 0 0}
 .batch[hidden],button[hidden]{display:none}
+#clear-all{color:var(--muted);border-color:var(--border);font-size:.9rem;padding:.25rem .75rem}
 #queue,#refusals{list-style:none;padding:0;margin:1rem 0 0}
 .batch+#queue{margin-top:.75rem}
 #queue li,#refusals li{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
@@ -66,6 +70,8 @@ progress.bar:not([value])::-moz-progress-bar{background:transparent}
 @media (prefers-reduced-motion:reduce){progress.bar:not([value]){animation:none}}
 .row-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;grid-column:1/-1}
 .clock{font-variant-numeric:tabular-nums}
+/* The countdown takes the free space, so the menu trigger after it sits at the right end of the row. */
+.row-actions .clock{margin-left:auto}
 .btn[aria-disabled="true"]{background:var(--disabled-bg);border-color:var(--disabled-bg);color:var(--muted);pointer-events:none}
 .failed .status{color:var(--err)}
 #refusals .reason{grid-column:1/-1;color:var(--text)}
@@ -74,7 +80,7 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
 .row-actions button.more{min-width:44px;justify-content:center;padding:.25rem;text-decoration:none;font-size:1.25rem;line-height:1}
 .menu{min-width:9rem;padding:.25rem;border:1px solid var(--border);border-radius:.5rem;background:var(--surface);color:var(--text);box-shadow:0 4px 16px rgb(0 0 0 / .25)}
 .menu:popover-open{position:fixed;margin:0;inset:auto;display:flex;flex-direction:column}
-.row-actions .menu button{width:100%;min-height:44px;justify-content:flex-start;text-decoration:none}
+.row-actions .menu button{width:100%;min-height:44px;justify-content:flex-start;text-decoration:none;border-color:transparent}
 .preview{width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#17181c;color:#ececf1}
 .preview::backdrop{background:#000c}
 .pv{display:flex;flex-direction:column;height:100%}
@@ -110,7 +116,10 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
         <p class="muted" data-i18n="tagline"></p>
       </div>
     </div>
-    <button type="button" id="lang" class="ghost" data-i18n="lang-toggle"></button>
+    <button type="button" id="lang" class="ghost">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a4 9 0 1 0 0 18a4 9 0 1 0 0-18z"/></svg>
+      <span id="lang-label" data-i18n="lang-toggle"></span>
+    </button>
   </header>
   <p class="privacy-badge">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
@@ -120,7 +129,8 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
   <section id="drop" class="drop" aria-labelledby="drop-hint">
     <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
     <p id="drop-hint" data-i18n="drop-hint"></p>
-    <ul class="chips">
+    <p id="formats-label" class="formats-label" data-i18n="formats-label"></p>
+    <ul class="chips" aria-labelledby="formats-label">
       <li class="chip">TXT</li>
       <li class="chip">MD</li>
       <li class="chip">HTML</li>

@@ -90,7 +90,7 @@ describe("status badge", () => {
   const cases: [RowView, string, string][] = [
     [plain("waiting", "Waiting"), "o", "Waiting"],
     [converting(0.42, "Converting"), "~", "Converting"],
-    [ready(), "+", "Ready"],
+    [ready(), "✓", "Ready"],
     [plain("failed", "Failed"), "x", "Failed"],
     [plain("deleted", "Deleted"), "-", "Deleted"],
     [plain("mystery", "Something"), "o", "Something"],

@@ -4,7 +4,8 @@ export type Lang = "id" | "en";
 
 const id = {
   title: "pubmy: ubah file jadi EPUB",
-  tagline: "TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR ke EPUB 3 yang lolos Send to Kindle. File EPUB dibuka untuk dibaca.",
+  tagline: "Ubah dokumen, e-book, dan komik jadi EPUB 3 yang lolos Send to Kindle. File EPUB dibuka untuk dibaca.",
+  "formats-label": "Format yang didukung",
   privacy: "Semua diproses di browser kamu. Tidak ada file yang diunggah.",
   "drop-hint": "Tarik file ke sini (maksimal 10 file, masing-masing 50 MB)",
   "drop-hint-touch": "Maksimal 10 file, masing-masing 50 MB",
@@ -22,7 +23,7 @@ const id = {
   remove: "Hapus",
   "download-all": "Unduh semua (ZIP)",
   "clear-all": "Hapus semua",
-  "expires-in": "Dihapus otomatis dalam",
+  "expires-in": "Hasil dihapus dari memori dalam",
   "kindle-hint": "Kirim EPUB ke Kindle lewat Send to Kindle dari Amazon (email, web, atau aplikasi).",
   extend: "Perpanjang",
   "more-actions": "Aksi lainnya",
@@ -60,7 +61,8 @@ export type Key = keyof typeof id;
 
 const en: Record<Key, string> = {
   title: "pubmy: turn files into EPUB",
-  tagline: "TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR to EPUB 3 that passes Send to Kindle. EPUB files open for reading.",
+  tagline: "Turn documents, e-books and comics into EPUB 3 that passes Send to Kindle. EPUB files open for reading.",
+  "formats-label": "Supported formats",
   privacy: "Everything runs in your browser. No file is uploaded.",
   "drop-hint": "Drop files here (up to 10 files, 50 MB each)",
   "drop-hint-touch": "Up to 10 files, 50 MB each",
@@ -78,7 +80,7 @@ const en: Record<Key, string> = {
   remove: "Remove",
   "download-all": "Download all (ZIP)",
   "clear-all": "Clear all",
-  "expires-in": "Auto-deleted in",
+  "expires-in": "Cleared from memory in",
   "kindle-hint": "Send your EPUB to a Kindle with Amazon's Send to Kindle (email, web or app).",
   extend: "Extend",
   "more-actions": "More actions",
