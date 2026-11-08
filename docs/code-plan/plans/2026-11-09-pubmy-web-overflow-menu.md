@@ -195,7 +195,7 @@ flowchart TD
 - [x] T3 placement helper: RED then GREEN
 - [x] T4 main.ts wiring: RED then GREEN
 - [x] Real-browser check in light and dark (320 and 1280 px)
-- [ ] Parent diff audit and independent review
+- [x] Parent diff audit and independent review
 - [ ] PR opened
 - [ ] Debt sweep
 
@@ -241,6 +241,7 @@ flowchart TD
 
 ## Evidence
 
-- Unit gate at `edddfef`: `colab-test -- bun test apps/web/test` exit 0, 232 pass, 0 fail; `bun run typecheck` exit 0; `bun build.ts <scratch>` exit 0; `check-copy-rules.mjs --diff origin/main` exit 0.
-- Real Chromium 156 (puppeteer-core, CSP from `dist/_headers`, theme via `prefers-color-scheme` emulation), harness `check-menu.mjs`, report lines (the harness exit code was not captured, the counts are its own): light-320 10 runs of 26 pass, 0 fail; dark-320 6 runs of 26 pass, 0 fail; light-1280 28 pass, 0 fail (with expiry); dark-1280 26 pass, 0 fail. Screenshots for menu open, converting stripe, expired row and empty state were read in both themes.
-- Defect found only in the browser: the menu closed right after opening in 2 of 5 light-320 runs and once in a dark-320 run. Cause: a scroll event pending from the focus scroll arrived after open, and `toggle:open` is never fired when the menu closes in the same task, so the open position was never recorded. Fix: `openedAtY` is set in `beforetoggle`, and a scroll that did not move the page is ignored (`closeMenusOnScroll`). Before the fix 3 of 8 light-320 runs failed, after it 0 of 18 did.
+- Unit gate at `ff9ee5a`: `colab-test -- bun test apps/web/test` exit 0, 235 pass, 0 fail; `bun run typecheck` exit 0; `bun build.ts <scratch>` exit 0; `check-copy-rules.mjs --diff origin/main` exit 0 (run at `edddfef`).
+- Real Chromium 156 (puppeteer-core, CSP from `dist/_headers`, theme via `prefers-color-scheme` emulation), harness `check-menu.mjs`, on the final build (report lines; the harness exit code was not captured, the counts are its own): light-320 6 runs of 26 pass, 0 fail; dark-320 3 runs of 26 pass, 0 fail; light-1280 28 pass, 0 fail; dark-1280 26 pass, 0 fail. Screenshots for menu open, converting stripe, expired row and empty state were read in both themes.
+- Defect found only in the browser: the menu closed right after opening in 2 of 5 light-320 runs (and once in a dark-320 run). Cause: a scroll event pending from the focus scroll arrived after open, and `toggle:open` is never fired when the menu closes in the same task, so the open position was never recorded. Fix: `openedAtY` is set in `beforetoggle`, and a scroll that did not move the page is ignored. A first attempt that recorded it in `toggle` did not work (2 of 5 still failed); the event log with `scrollY` showed why. After the fix 0 of 18 and then 0 of 9 light/dark 320 runs failed.
+- Independent review (reviewer `staid`, read-only): no blocking defect. F1 (low to medium, `:popover-open` throws and `.menu` shows as a fixed box in browsers without the Popover API) fixed: fixed positioning moved into `.menu:popover-open`, `closeMenus` wrapped in `try/catch`, both test-first. F2 (low, scroll guard checked only by identifier names) fixed: `scrolledAway` is a pure function with boundary tests. F3 (open menu does not follow layout shifts without scroll or resize) and F4 (focus lands on `body` after Remove from the menu, tab past Remove leaves the menu open) are recorded as debt-sweep candidates.
