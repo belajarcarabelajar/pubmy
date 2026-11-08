@@ -51,7 +51,10 @@ describe("renderRow", () => {
   test("focus goes back to the copy of the control the user was on", () => {
     const row = li();
     renderRow(row, ready(), "en", actions);
-    expect(renderRow(row, ready({ remaining: 120_000 }), "en", actions, "extend")).toBe(control(row, "extend"));
+    // Compared by identity as booleans: a failing toBe on linkedom elements dumps the whole DOM.
+    expect(renderRow(row, ready({ remaining: 120_000 }), "en", actions, "preview") === control(row, "preview")).toBe(true);
+    // Extend now lives in a closed popover, which cannot take focus, so the More actions button gets it.
+    expect(renderRow(row, ready({ remaining: 120_000 }), "en", actions, "extend") === control(row, "more")).toBe(true);
     expect(renderRow(row, ready(), "en", actions)).toBeUndefined();
   });
 
