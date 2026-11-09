@@ -186,6 +186,9 @@ describe("blockBookScripts: what it leaves alone", () => {
 
 describe("blockBookScripts: time", () => {
   const MB = 1024 * 1024;
+  // One pass over 40 MB takes 100 to 200 ms on a loaded shared machine (a run measured 180 ms against an earlier bound of
+  // 100 ms). A rescan per character would take minutes, so 1 s still tells the two apart.
+  const LINEAR_MS = 1000;
   const timed = (text: string, type: string) => {
     const t0 = performance.now();
     const out = blockBookScripts(text, type);
@@ -196,28 +199,27 @@ describe("blockBookScripts: time", () => {
     for (const text of ["<p>x</p>".repeat((40 * MB) / 8), "x".repeat(40 * MB), "<".repeat(40 * MB)]) {
       const { out, ms } = timed(text, XHTML);
       expect(out).toBe(text);
-      expect(ms).toBeLessThan(100);
+      expect(ms).toBeLessThan(LINEAR_MS);
     }
   });
 
   test("40 MB with the head at the start is done quickly, and the policy sits at the start", () => {
     const body = "<p>x</p>".repeat((40 * MB) / 8);
     const { out, ms } = timed(`<html xmlns="${NS}"><head><title>T</title></head><body>${body}</body></html>`, XHTML);
-    expect(ms).toBeLessThan(100);
+    expect(ms).toBeLessThan(LINEAR_MS);
     expect(out.slice(0, 200)).toContain(`<head>${META_XHTML}<title>`);
   });
 
   test("40 MB of comment before the root is skipped in one step", () => {
     const { out, ms } = timed(`<!--${"x".repeat(40 * MB)}--><html xmlns="${NS}"><head></head></html>`, XHTML);
-    expect(ms).toBeLessThan(100);
+    expect(ms).toBeLessThan(LINEAR_MS);
     expect(out.endsWith(`<head>${META_XHTML}</head></html>`)).toBe(true);
   });
 
-  // Every one of the 40 million characters is read here (about 100 ms measured), so the bound is looser:
-  // it separates a single pass from a rescan per character, which would take minutes.
+  // Every one of the 40 million characters is read here (about 100 ms measured).
   test("40 MB of white space and a head that never comes is read once", () => {
     const { out, ms } = timed(`<html xmlns="${NS}">${" ".repeat(40 * MB)}<body/></html>`, XHTML);
-    expect(ms).toBeLessThan(500);
+    expect(ms).toBeLessThan(LINEAR_MS);
     expect(out.slice(0, 400)).toContain(`<html xmlns="${NS}"><head xmlns="${NS}">${META_XHTML}</head>`);
   });
 });

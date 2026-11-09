@@ -166,7 +166,9 @@ describe("unzipBounded", () => {
     const result = failure(() => unzipBounded(lying));
     const ms = performance.now() - t0;
     expect(result).toEqual(tooBig);
-    expect(ms).toBeLessThan(300);
+    // unzipCapped decodes all 64 MB first (3.9 to 5.3 s measured on the Colab pool); unzipBounded stops after one 4 KiB
+    // piece (143 to 188 ms there). The bound sits between the two with room for a loaded machine.
+    expect(ms).toBeLessThan(1500);
   }, 30_000);
 
   test("an entry one byte over its declared size is refused, and at its declared size is kept", () => {
