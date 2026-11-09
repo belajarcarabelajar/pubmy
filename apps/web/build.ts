@@ -27,15 +27,17 @@ if (!result.success) {
   process.exit(1);
 }
 
-// The CSP has no style-src 'unsafe-inline', so the authored <style> block ships as style.css.
+// The authored <style> block stays inline in index.html (the CSP allows 'unsafe-inline' for styles, see public/_headers).
+// An inline rule is part of the document, so the hide rule `html:not(.ready) main` is in force from the first paint; as a
+// separate style.css it could not cover the one to four unstyled frames a reload painted before that file applied.
 const html = await Bun.file(join(root, "index.html")).text();
-const style = /<style>([\s\S]*?)<\/style>/.exec(html);
-if (!style) throw new Error("index.html has no <style> block");
-await Bun.write(join(out, "style.css"), style[1]!.trim() + "\n");
 // The page's own text ships in Indonesian (the page is lang="id"): filled in later by main.js, it moved the drop zone.
-const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const filled = html.replace(/(<(\w+)[^>]*\sdata-i18n="([^"]+)"[^>]*>)<\/\2>/g, (_, open: string, tag: string, key: string) => `${open}${escape(t(key as Key, "id"))}</${tag}>`);
-await Bun.write(join(out, "index.html"), filled.replace(style[0], '<link rel="stylesheet" href="./style.css">'));
+const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const filled = html
+  .replace(/(<(\w+)[^>]*\sdata-i18n="([^"]+)"[^>]*>)<\/\2>/g, (_, open: string, tag: string, key: string) => `${open}${escape(t(key as Key, "id"))}</${tag}>`)
+  // The same for accessible names, so the page is complete in the 1.5 s fallback state where main.js never ran.
+  .replace(/\sdata-i18n-label="([^"]+)"/g, (attr: string, key: string) => `${attr} aria-label="${escape(t(key as Key, "id"))}"`);
+await Bun.write(join(out, "index.html"), filled);
 
 // public/ holds files served as-is, such as the Workers _headers file.
 await cp(join(root, "public"), out, { recursive: true }).catch((e: NodeJS.ErrnoException) => {
