@@ -954,6 +954,9 @@ export class Paginator extends HTMLElement {
             this.start - size, this.end - size, this.#getRectMapper())
     }
     #afterScroll(reason) {
+        // pubmy patch (see PATCHES.md): a scroll or resize callback can arrive while the current section is still
+        // loading and has no body; display() reports the position again once it has loaded.
+        if (!this.#view?.document?.body) return
         const range = this.#getVisibleRange()
         this.#lastVisibleRange = range
         // don't set new anchor if relocation was to scroll to anchor

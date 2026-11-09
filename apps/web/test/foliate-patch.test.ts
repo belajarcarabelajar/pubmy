@@ -43,3 +43,27 @@ describe("foliate paginator patch: no render before the section has a body", () 
     expect(patches).toContain("View.render");
   });
 });
+
+// Paginator.#createView() makes the new view the current one before its iframe has loaded, so every place that reads
+// this.#view.document can meet a document without a body. The second one measured is the relocate step, reached when an
+// older view's expand calls back into the paginator: getVisibleRange then calls createTreeWalker(doc.body) with null.
+describe("foliate paginator patch: no relocate before the current section has a body", () => {
+  const after = method(paginator, "    #afterScroll(reason) {");
+
+  test("#afterScroll exists in the form this test anchors on", () => {
+    expect(after).toContain("this.#getVisibleRange()");
+    expect(after).toContain("new CustomEvent('relocate'");
+  });
+
+  test("it returns before reading the visible range when the current view has no body", () => {
+    expect(after).toMatch(/if \(!this\.#view\?\.document\?\.body\) return/);
+    expect(after.indexOf("if (!this.#view?.document?.body) return")).toBeLessThan(after.indexOf("this.#getVisibleRange()"));
+    expect(after).toContain("pubmy patch");
+  });
+
+  test("the display flow still reports the position after the load, so the skipped relocate is not lost", () => {
+    const display = method(paginator, "    async #display(promise) {");
+    expect(display.indexOf("await view.load(")).toBeLessThan(display.indexOf("await this.scrollToAnchor("));
+    expect(patches).toContain("#afterScroll");
+  });
+});
