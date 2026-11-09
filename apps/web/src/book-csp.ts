@@ -1,13 +1,44 @@
-const XHTML = "application/xhtml+xml";
 const HTML = "text/html";
+// foliate hands over the media type of the OPF item as written, and its own parsing accepts all three XML types.
+const XML_TYPES = new Set(["application/xhtml+xml", "application/xml", "text/xml"]);
 const NS = "http://www.w3.org/1999/xhtml";
 const POLICY = "script-src 'none'; object-src 'none'";
 const META_XHTML = `<meta xmlns="${NS}" http-equiv="Content-Security-Policy" content="${POLICY}"/>`;
 const META_HTML = `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`;
 
-/** True for the two types foliate gives a page of the book; the other types are not documents that run scripts through a head. */
+// What a page becomes when the policy cannot be placed and checked: a blank page that carries the policy and nothing of the book.
+const INERT_HTML = `<!DOCTYPE html><html><head>${META_HTML}</head><body></body></html>`;
+const INERT_XML = `<html xmlns="${NS}"><head>${META_XHTML}</head><body/></html>`;
+
+/**
+ * Pages longer than this many characters are not checked but replaced by the inert page: checking parses the
+ * whole page once more, and no real chapter is this long. A judgment call, not measured in a browser.
+ */
+const MAX_PAGE_CHARS = 8 * 1024 * 1024;
+
+type Parse = (text: string, type: string) => Document;
+
+/** Only in a browser; tests give their own. */
+const browserParse: Parse = (text, type) => new DOMParser().parseFromString(text, type as DOMParserSupportedType);
+
+/** The media type without its parameters, in lower case, the way a browser reads it; "" for anything that is not a string. */
+function mimeOf(type: unknown): string {
+  return typeof type === "string" ? type.split(";", 1)[0].trim().toLowerCase() : "";
+}
+
+/** True for the types of a page that the browser parses as a document with a head: HTML and the three XML types foliate may meet. */
 export function isBookMarkup(type: unknown): boolean {
-  return type === XHTML || type === HTML;
+  const mime = mimeOf(type);
+  return mime === HTML || XML_TYPES.has(mime);
+}
+
+/**
+ * The type of a page for the blob that carries it: a markup type without its parameters, spaces and capitals,
+ * any other type exactly as it was written. A charset in the type of a blob overrides everything the page says
+ * about itself, so a book could make a browser read the checked page, which is text, in an encoding of its choice.
+ */
+export function plainMarkupType(type: string): string {
+  return isBookMarkup(type) ? mimeOf(type) : type;
 }
 
 // Sticky, so a run of white space is measured from a given index without looking at what follows it.
@@ -73,17 +104,16 @@ function isNamed(name: string, want: string, xhtml: boolean): boolean {
 }
 
 /**
- * Puts a Content Security Policy that forbids scripts at the top of the head of one page of a book, so it
- * comes before any script the page holds (a policy in a meta tag covers only what follows it). The page has
- * a head, or gets one right after its html tag; text with neither comes back as the same string.
+ * The page with a Content Security Policy that forbids scripts at the top of its head, so it comes before any
+ * script the page holds (a policy in a meta tag covers only what follows it). The page has a head, or gets one
+ * right after its html tag; null when the scan finds neither.
  *
  * The scan walks the prolog (declarations, comments, doctype) and the html tag, and stops at the first
  * thing that is neither, so it reads each character at most once and never backtracks: a book is
- * untrusted, and a page of it can be tens of megabytes. Nothing else in the text is changed.
+ * untrusted. It is a guess at where a browser's parser puts the head, and never agrees with every parser
+ * (an HTML comment may end in --!>, a quote may sit in a tag name), so blockBookScripts checks its result.
  */
-export function blockBookScripts(text: string, type: string): string {
-  if (!isBookMarkup(type)) return text;
-  const xhtml = type === XHTML;
+function place(text: string, xhtml: boolean): string | null {
   const meta = xhtml ? META_XHTML : META_HTML;
   let at = 0;
   let htmlEnd = -1; // just past the opening html tag, once it is seen
@@ -125,11 +155,63 @@ export function blockBookScripts(text: string, type: string): string {
         ? `${text.slice(0, gt - 1)}>${meta}</${name}>${text.slice(gt + 1)}`
         : text.slice(0, gt + 1) + meta + text.slice(gt + 1);
     }
-    if (selfClosing) return text; // an empty root holds no script
+    if (selfClosing) return null; // an empty root in XML; in HTML the slash means nothing, so the tag is not what it seems
     htmlEnd = at = gt + 1;
   }
-  if (htmlEnd < 0) return text;
+  if (htmlEnd < 0) return null;
   // The head the page lacks, or the one that only comes after content. A prefixed root has no default namespace, so the head names it.
   const added = xhtml ? `<head xmlns="${NS}">${meta}</head>` : `<head>${meta}</head>`;
   return text.slice(0, htmlEnd) + added + text.slice(htmlEnd);
+}
+
+/**
+ * True when nothing that runs can come before the policy: the root is html, its first element is a head, and the
+ * first element of that head is the policy meta. Prolog nodes and a doctype cannot run. An XML page must also be
+ * well formed, have every one of the three elements in the XHTML namespace (or a browser would not take the meta
+ * for a policy), and carry no instruction that asks for an XSLT stylesheet: the browser would build a new document
+ * from the book's own stylesheet, one that has none of this page's meta. A CSS stylesheet instruction is fine.
+ */
+function isProtected(doc: Document, xml: boolean): boolean {
+  const root = doc.documentElement;
+  if (!root || root.localName !== "html") return false;
+  if (xml && (root.namespaceURI !== NS || doc.getElementsByTagName("parsererror").length > 0)) return false;
+  // Every node of the document, not only those before the root: a browser takes the instruction wherever it stands.
+  if (xml) {
+    for (const node of doc.childNodes) {
+      if (node.nodeType !== 7) continue;
+      const pi = node as ProcessingInstruction;
+      if (pi.target.toLowerCase() === "xml-stylesheet" && /xsl/i.test(pi.data)) return false;
+    }
+  }
+  const head = root.firstElementChild;
+  if (head?.localName !== "head") return false;
+  const meta = head.firstElementChild;
+  if (meta?.localName !== "meta") return false;
+  if (xml && (head.namespaceURI !== NS || meta.namespaceURI !== NS)) return false;
+  return meta.getAttribute("http-equiv")?.toLowerCase() === "content-security-policy" && meta.getAttribute("content") === POLICY;
+}
+
+/**
+ * One page of a book with a Content Security Policy that forbids scripts at the top of its head, or, when that
+ * cannot be shown, an inert blank page that carries the policy. A book is untrusted and its frame allows scripts.
+ *
+ * The scan (place) proposes the page; `parse` is a real parser (a browser's DOMParser) and decides: the page is
+ * returned only when parsing it gives a head that opens with the policy. Anything else (no html, a root that is
+ * not html, a page the scan and the parser read differently, a parse that throws, a page over MAX_PAGE_CHARS)
+ * gives the inert page, so the book's text is never shown without the policy. Types that are not markup come
+ * back as the same string. Each page is parsed at most once, and never when nothing was placed.
+ */
+export function blockBookScripts(text: string, type: string, parse: Parse = browserParse): string {
+  const mime = mimeOf(type);
+  const xml = XML_TYPES.has(mime);
+  if (!xml && mime !== HTML) return text;
+  const inert = xml ? INERT_XML : INERT_HTML;
+  if (text.length > MAX_PAGE_CHARS) return inert;
+  const candidate = place(text, xml);
+  if (candidate === null) return inert;
+  try {
+    return isProtected(parse(candidate, mime), xml) ? candidate : inert;
+  } catch {
+    return inert;
+  }
 }

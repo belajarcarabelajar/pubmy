@@ -1,6 +1,6 @@
 import { EPUB, type Resolved, type TocItem } from "../vendor/foliate/epub.js";
 import type { EpubLoader } from "./epub-loader.ts";
-import { blockBookScripts, isBookMarkup } from "./book-csp.ts";
+import { blockBookScripts, isBookMarkup, plainMarkupType } from "./book-csp.ts";
 import type { Reader } from "./preview-session.ts";
 import { isolateTables, TABLE_HOST } from "./tables.ts";
 
@@ -74,6 +74,8 @@ export async function mountReader(loader: EpubLoader, ui: ReaderUi): Promise<Rea
       // A page that a frame loads while that page is being read comes as a Blob of its raw bytes, scripts and all.
       return d instanceof Blob ? blockBookScripts(await d.text(), detail.type) : d;
     });
+    // The page was checked as text, so its blob must name no charset: one in the type would override the page's own.
+    detail.type = plainMarkupType(detail.type);
   });
   renderer.open(book);
   renderer.setStyles?.(SECTION_CSS);
