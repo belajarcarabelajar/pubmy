@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-09-pubmy-epub-opener
-status: Approved
+status: InProgress
 version: 1
 runner_contract: true
 defaults:
@@ -86,6 +86,34 @@ tasks:
     idempotency_key: "T5:real-browser-opener-proof"
     skip_if: "false"
     verify_exit: 0
+  - id: F1
+    depends_on: [T4]
+    impacts: ["converted rows keep the generic preview-failed announcement and their Download link when a mount fails - bun test apps/web/test/epub-open-wiring.test.ts apps/web/test/preview-wiring.test.ts", "failOpened clears row.ready, which heldCount, refreshBatch and statusText read - bun run typecheck"]
+    files: { create: [], modify: [apps/web/src/main.ts, apps/web/test/epub-open-wiring.test.ts], test: [apps/web/test/preview-wiring.test.ts] }
+    idempotency_key: "F1:opened-row-mount-failure"
+    skip_if: "bun test apps/web/test/epub-open-wiring.test.ts"
+    verify_exit: 0
+  - id: F2
+    depends_on: [T1]
+    impacts: ["inspectEpub is the only user of the removed constant and keeps its size caps (compressed and declared) - bun test apps/web/test/open-epub.test.ts"]
+    files: { create: [], modify: [apps/web/src/open-epub.ts], test: [apps/web/test/open-epub.test.ts] }
+    idempotency_key: "F2:drop-dead-meta-max-text"
+    skip_if: "! git grep -q META_MAX_TEXT -- apps/web/src"
+    verify_exit: 0
+  - id: F3
+    depends_on: [T5]
+    impacts: ["the README Website line stays pinned and says nothing about scripts - bun test apps/web/test/readme-web.test.ts apps/web/test/readme-opener.test.ts", "other tests that read README.md - bun test apps/cli/test/bundle.test.ts scripts/readme-install.test.ts scripts/pack-skill.test.ts scripts/workflows.test.ts"]
+    files: { create: [], modify: [README.md, apps/web/test/readme-opener.test.ts], test: [apps/web/test/readme-web.test.ts] }
+    idempotency_key: "F3:readme-script-sentence"
+    skip_if: "bun test apps/web/test/readme-opener.test.ts apps/web/test/readme-web.test.ts"
+    verify_exit: 0
+  - id: F4
+    depends_on: [T5]
+    impacts: ["none: F4 is a measurement recorded in this plan and the pull request body; it changes no file - git status --short lists only this plan after F4"]
+    files: { create: [], modify: [], test: [] }
+    idempotency_key: "F4:foliate-error-control-run"
+    skip_if: "false"
+    verify_exit: 0
 ---
 # pubmy EPUB opener Implementation Plan
 
@@ -114,7 +142,7 @@ tasks:
 ```mermaid
 flowchart TD
     accTitle: pubmy EPUB opener task map
-    accDescr: The EPUB check module (T1), the countdown pause (T2) and the opened-row view with its strings (T3) are independent. The main.ts wiring (T4) needs all three. A real browser check (T5) follows, then the full verification and the pull request.
+    accDescr: The EPUB check module (T1), the countdown pause (T2) and the opened-row view with its strings (T3) are independent. The main.ts wiring (T4) needs all three. A real browser check (T5) follows, then the full verification and the pull request. Four follow-ups chosen in the debt sweep (F1 to F4) hang off T4, T1 and T5.
     G0{{"Design approval"}} --> T1["T1 open-epub module, capped loader"]
     G0 --> T2["T2 countdown pause"]
     G0 --> T3["T3 opened row view, strings"]
@@ -123,6 +151,14 @@ flowchart TD
     T3 --> T4
     T4 --> T5["T5 real browser: real, hostile, DRM EPUB"]
     T5 --> V["Verify: typecheck, bun test, build, copy rules"]
+    T4 --> F1["F1 failed row when an opened EPUB cannot mount"]
+    T1 --> F2["F2 drop the dead META_MAX_TEXT check"]
+    T5 --> F3["F3 README sentence on scripts, guard flipped"]
+    T5 --> F4["F4 control run for the foliate error"]
+    F1 --> V
+    F2 --> V
+    F3 --> V
+    F4 --> V
     V --> D(["Done: PR, merge and deploy only on request"])
 ```
 
@@ -166,6 +202,10 @@ sequenceDiagram
 | AC-8 | T4 | `bun test apps/web/test/theme.test.ts apps/web/test/readme-opener.test.ts apps/web/test/readme-web.test.ts` | exit 0 |
 | AC-9 | T5 | Chromium harness `check.mjs` against the built page | report with counts and screenshots read |
 | AC-10 | T4 | `bun test apps/web/test/build-output.test.ts` | exit 0 |
+| AC-11 | F1 | `bun test apps/web/test/epub-open-wiring.test.ts`, then the Chromium check `nomount-check.mjs` | exit 0; 14 browser checks pass, 6 fail on the build from before F1 |
+| AC-12 | F2 | `git grep -q META_MAX_TEXT -- apps/web/src` exits 1, `bun test apps/web/test/open-epub.test.ts` | exit 0 |
+| AC-13 | F3 | `bun test apps/web/test/readme-opener.test.ts apps/web/test/readme-web.test.ts` | exit 0 |
+| AC-14 | F4 | `control-open.mjs` against the built page, `plain.epub` opened 24 times | counts recorded |
 
 **Assumptions & Open Questions:**
 - Owner decisions (2026-11-09, asked through the question tool): (D1) the countdown pauses while the reader of an opened EPUB is open and restarts for 3 minutes when it closes; converted EPUBs keep the old rule. (D2) The first EPUB of each drop opens its reader by itself, not when a reader is already open. (D3) One real-browser check is wanted (A42 opt-in).
@@ -191,9 +231,9 @@ sequenceDiagram
 
 **Definition of Done:** AC-1 to AC-10 checked with evidence, `bun run typecheck` exit 0, `bun test apps/web/test` and `bun test packages/core/test` exit 0, build exit 0, copy rules exit 0, browser report read, pull request opened, debt sweep run.
 
-**Plan Status & Version:** Approved, v1.
+**Plan Status & Version:** InProgress, v1 (follow-ups F1 to F4 added after the debt sweep, 2026-11-09).
 
-**Approval:** Design and plan approved by the owner on 2026-11-09 at the `Design` question (option "Setujui", the recommended one). Earlier answers the same day: D1 reading hold only for opened EPUBs, D2 first EPUB of each drop opens by itself, D3 one real-browser check. The tagline sentence, the no-Download and ZIP choices and the 10 and 50 MB limits were offered for veto and kept.
+**Approval:** Design and plan approved by the owner on 2026-11-09 at the `Design` question (option "Setujui", the recommended one). Earlier answers the same day: D1 reading hold only for opened EPUBs, D2 first EPUB of each drop opens by itself, D3 one real-browser check. The tagline sentence, the no-Download and ZIP choices and the 10 and 50 MB limits were offered for veto and kept. Follow-ups F1 to F4 were selected by the owner at the debt sweep question on 2026-11-09, which also kept this plan and `2026-11-07-pubmy-v1` open.
 
 **Reproducibility:** Bun 1.4.4; Chromium via puppeteer-core (the `/usr/bin/chromium` binary), CSP taken from `dist/_headers`; the real EPUB is Project Gutenberg #1342 (`https://www.gutenberg.org/ebooks/1342.epub3.images`), downloaded into its own empty scratch directory and treated as untrusted data; the hostile and DRM EPUBs are built by the harness from `fflate`.
 
@@ -213,16 +253,20 @@ sequenceDiagram
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `isEpubFile` is true for a name ending `.epub` in any letter case, or for MIME `application/epub+zip`, and false for `.pdf`, `.epub.txt`, and an empty name; `splitDrop` sends EPUBs to `toOpen` and every other file to `toQueue`, refuses an EPUB over `maxBytes` as `TOO_LARGE`, and refuses any EPUB beyond `maxHeld` held rows as `LIMIT_10`.
-- [ ] AC-2: `inspectEpub` accepts a valid EPUB and one whose `encryption.xml` lists only the two font obfuscation algorithms; it refuses an empty file (`READ_FAILED`, `empty-file`), bytes that are not a zip, a zip with no `META-INF/container.xml` (`READ_FAILED`, `read-failed`), a zip over the entry or size cap (`READ_FAILED`, `archive-too-large`), and any other `EncryptionMethod` (`DRM`, `epub-drm`); it inflates nothing but the two `META-INF` entries.
-- [ ] AC-3: `createEpubLoader` unzips through core `unzipCapped`: an archive over a given cap throws `archive-too-large`, and a normal EPUB loads exactly as before.
-- [ ] AC-4: a countdown can be paused: no tick and no expiry fire while paused and `remaining` holds; `extend()` on a paused countdown restarts the full window; calling the stop function while paused still expires it at once.
-- [ ] AC-5: a row with `kind: "opened"` has no `[data-action="download"]` link, its preview button reads `t("read")` and keeps `data-action="preview"`, and it keeps the clock, the Extend entry and Remove; a row without `kind` is byte for byte what it was.
-- [ ] AC-6: `read`, `opened` and `epub-drm` exist in both languages; the tagline names the opener in both languages; `already-epub` stays; the `i18n` parity test still passes.
-- [ ] AC-7: `main.ts` sends EPUBs through `splitDrop` and `inspectEpub` and never through the queue; opens the first EPUB that passes in a drop when no reader is open; pauses the countdown when an opened row's reader opens and extends it when the dialog closes; counts only converted rows for Download all and the Kindle hint; and gives opened rows ids that cannot collide with queue ids.
-- [ ] AC-8: `index.html` shows an EPUB chip and the chip test accepts it (12 chips); the README Website line keeps its pinned text and adds the opener, and the Privacy bullet states the reading hold.
-- [ ] AC-9: in Chromium, (a) a real EPUB dropped alone opens its reader by itself, shows contents and a first page, shows no Download link and no failed row, and next page works; (b) the same drop 3 times gives the same result; (c) a book that tries inline script, packaged script file, SVG script, `onerror`, meta refresh and a `javascript:` link runs none of them under the real CSP, and each sentinel that is set on the copy of the page without the CSP (positive control) shows which routes the CSP is what stops, with no outside request and no navigation; (d) a DRM-style EPUB gives the DRM text and no dialog; (e) a mixed drop converts the text file while the EPUB opens; (f) a second drop while the reader is open does not replace the book; (g) the reader stays open past 3 minutes and the row clock restarts at 03:00 when it closes; (h) no console or CSP error other than the expected violation reports of (c); (i) the header with the longer tagline, in Indonesian and in English (the English title is the wide one), has no horizontal overflow and keeps the language button in the title row above 25rem of brand width, at 390, 640, 641 and 1280 px, the widths PRs #24 and #25 tuned; if the tagline is vetoed at the gate this item drops out.
-- [ ] AC-10: the built page still ships its Indonesian text in place, the worker core chunk is still found by `already-epub`, and the build exits 0.
+- [x] AC-1: `isEpubFile` is true for a name ending `.epub` in any letter case, or for MIME `application/epub+zip`, and false for `.pdf`, `.epub.txt`, and an empty name; `splitDrop` sends EPUBs to `toOpen` and every other file to `toQueue`, refuses an EPUB over `maxBytes` as `TOO_LARGE`, and refuses any EPUB beyond `maxHeld` held rows as `LIMIT_10`.
+- [x] AC-2: `inspectEpub` accepts a valid EPUB and one whose `encryption.xml` lists only the two font obfuscation algorithms; it refuses an empty file (`READ_FAILED`, `empty-file`), bytes that are not a zip, a zip with no `META-INF/container.xml` (`READ_FAILED`, `read-failed`), a zip over the entry or size cap (`READ_FAILED`, `archive-too-large`), and any other `EncryptionMethod` (`DRM`, `epub-drm`); it inflates nothing but the two `META-INF` entries.
+- [x] AC-3: `createEpubLoader` unzips through core `unzipCapped`: an archive over a given cap throws `archive-too-large`, and a normal EPUB loads exactly as before.
+- [x] AC-4: a countdown can be paused: no tick and no expiry fire while paused and `remaining` holds; `extend()` on a paused countdown restarts the full window; calling the stop function while paused still expires it at once.
+- [x] AC-5: a row with `kind: "opened"` has no `[data-action="download"]` link, its preview button reads `t("read")` and keeps `data-action="preview"`, and it keeps the clock, the Extend entry and Remove; a row without `kind` is byte for byte what it was.
+- [x] AC-6: `read`, `opened` and `epub-drm` exist in both languages; the tagline names the opener in both languages; `already-epub` stays; the `i18n` parity test still passes.
+- [x] AC-7: `main.ts` sends EPUBs through `splitDrop` and `inspectEpub` and never through the queue; opens the first EPUB that passes in a drop when no reader is open; pauses the countdown when an opened row's reader opens and extends it when the dialog closes; counts only converted rows for Download all and the Kindle hint; and gives opened rows ids that cannot collide with queue ids.
+- [x] AC-8: `index.html` shows an EPUB chip and the chip test accepts it (12 chips); the README Website line keeps its pinned text and adds the opener, and the Privacy bullet states the reading hold.
+- [x] AC-9: in Chromium, (a) a real EPUB dropped alone opens its reader by itself, shows contents and a first page, shows no Download link and no failed row, and next page works; (b) the same drop 3 times gives the same result; (c) a book that tries inline script, packaged script file, SVG script, `onerror`, meta refresh and a `javascript:` link runs none of them under the real CSP, and each sentinel that is set on the copy of the page without the CSP (positive control) shows which routes the CSP is what stops, with no outside request and no navigation; (d) a DRM-style EPUB gives the DRM text and no dialog; (e) a mixed drop converts the text file while the EPUB opens; (f) a second drop while the reader is open does not replace the book; (g) the reader stays open past 3 minutes and the row clock restarts at 03:00 when it closes; (h) no console or CSP error other than the expected violation reports of (c); (i) the header with the longer tagline, in Indonesian and in English (the English title is the wide one), has no horizontal overflow and keeps the language button in the title row above 25rem of brand width, at 390, 640, 641 and 1280 px, the widths PRs #24 and #25 tuned; if the tagline is vetoed at the gate this item drops out.
+- [x] AC-10: the built page still ships its Indonesian text in place, the worker core chunk is still found by `already-epub`, and the build exits 0.
+- [x] AC-11: an opened EPUB that passes `inspectEpub` but cannot be mounted ends as a failed row with the existing `READ_FAILED` text (not "Ready to read", not "Deleted"), announced through the live region, with no Read button and no clock, its bytes dropped, Remove working, and a good EPUB dropped next still opens by itself; a converted row keeps the generic preview-failed announcement.
+- [x] AC-12: `inspectEpub` has no `META_MAX_TEXT` constant or check (it could never fire: the output is cut at the declared size, at most 128 KiB); the compressed and declared caps stay.
+- [x] AC-13: the README Privacy bullet ends with one sentence that names the date, the browser version, the Content Security Policy and the six routes tried, claims no other browser, and the test that forbade the word "script" is replaced by tests that pin those facts.
+- [x] AC-14: the foliate `columnize` error rate is measured on a control that differs from the real book only in the book: a small EPUB opened through the opener 24 times, and on a converted preview 24 times; the counts are in the plan and the pull request body.
 
 ## Global Constraints
 
@@ -241,11 +285,11 @@ sequenceDiagram
 - [x] T1, T2, T3 dispatched in parallel (disjoint write scopes), RED then GREEN; each report re-checked by the parent (diff read, tests re-run), evidence below
 - [x] T4 main.ts wiring: RED then GREEN
 - [x] Independent review of T1 to T4 (`staid`, 7 findings); findings 1 and 2 confirmed by the parent's own repro and fixed (3 commits), the rest listed under Evidence for the owner
-- [ ] T5 real-browser check (3 EPUBs, 3 repeats, 3 minute hold): partly run (groups a, c, d, e, f, g, i of the harness, see Evidence); the hold past 190 s and the converted-preview baseline for the foliate error are NOT run yet
-- [ ] Parent diff audit of the whole change before the PR (T1 to T4 audited per chunk)
+- [x] T5 real-browser check (3 EPUBs, 3 repeats, 3 minute hold): run in full, see Evidence
+- [x] Debt sweep (owner chose F1 to F4, 2026-11-09), follow-ups executed as real work: RED then GREEN, parent audit, browser check; both plans kept open at the `Close plan` question
+- [x] Parent diff audit of the whole change (read the full source diff at f61f7d6, the follow-ups per chunk)
 - [ ] Verify: typecheck, tests, build, copy rules
 - [ ] PR opened
-- [ ] Debt sweep
 
 ## Task T1: open-epub module and capped loader
 
@@ -304,15 +348,50 @@ sequenceDiagram
 
 **Files:** Modify `README.md` (one sentence, only if the script check passes). The harness `check.mjs` and its EPUBs live in a per-session scratch directory outside the repository and are not committed.
 **Steps (the parent runs them; opted in by the owner, A42):**
-- [ ] Where it runs: locally, by necessity: the build output and the Chromium that loads it must be on the same machine, which `colab-test` cannot give. The build step is written `HEAVY_LOCAL="build output is served to the local Chromium for the browser check (A47)" bun build.ts <scratch>/dist` (run in `apps/web`), and the harness file is named `opener-harness.mjs`, not `check`. Check `free -m` and leftover `chromium` processes first (A12); stop a run that fails at once with `ConnectionClosedError` (A12).
-- [ ] Serve the page with the headers from `dist/_headers`, and a second copy without the CSP header (positive control).
-- [ ] Download the Gutenberg #1342 EPUB into its own empty directory; build with `fflate` a hostile EPUB that tries every route to run code: an inline `<script>`, a packaged `<script src="x.js">` (an in-book file), an `<svg>` with `<script>`, `<img onerror>`, `<meta http-equiv="refresh">` to an outside host, an `<a href="javascript:...">`, each setting its own sentinel on `window` and trying to change `parent.document.title`; and a DRM-style EPUB (`encryption.xml` with `aes128-cbc`).
-- [ ] Run AC-9 (a) to (i); repeat (a) three times; the hold (g) waits more than 190 s with the reader open, then closes it and reads the row clock; record counts, timings (unzip time of the real EPUB), and read the screenshots.
-- [ ] If the hostile book runs a script under the real CSP: stop, record it, return to design. Do not edit `vendor/foliate` or `_headers`.
-- [ ] If it does not run there and does run on the control copy: add one sentence to the README Privacy bullet that scripts inside an EPUB do not run, with the date and browser version.
+- [x] Where it runs: locally, by necessity: the build output and the Chromium that loads it must be on the same machine, which `colab-test` cannot give. The build step is written `HEAVY_LOCAL="build output is served to the local Chromium for the browser check (A47)" bun build.ts <scratch>/dist` (run in `apps/web`), and the harness file is named `opener-harness.mjs`, not `check`. Check `free -m` and leftover `chromium` processes first (A12); stop a run that fails at once with `ConnectionClosedError` (A12).
+- [x] Serve the page with the headers from `dist/_headers`, and a second copy without the CSP header (positive control).
+- [x] Download the Gutenberg #1342 EPUB into its own empty directory; build with `fflate` a hostile EPUB that tries every route to run code: an inline `<script>`, a packaged `<script src="x.js">` (an in-book file), an `<svg>` with `<script>`, `<img onerror>`, `<meta http-equiv="refresh">` to an outside host, an `<a href="javascript:...">`, each setting its own sentinel on `window` and trying to change `parent.document.title`; and a DRM-style EPUB (`encryption.xml` with `aes128-cbc`).
+- [x] Run AC-9 (a) to (i); repeat (a) three times; the hold (g) waits more than 190 s with the reader open, then closes it and reads the row clock; record counts, timings (unzip time of the real EPUB), and read the screenshots.
+- [x] If the hostile book runs a script under the real CSP: stop, record it, return to design. Do not edit `vendor/foliate` or `_headers`. Not triggered: none of the six routes ran under the real CSP.
+- [x] If it does not run there and does run on the control copy: add one sentence to the README Privacy bullet that scripts inside an EPUB do not run, with the date and browser version. Done in F3.
 **Behavior & Acceptance:** AC-9.
 **Edge Cases:** the harness must report the real exit code of its own process (capture `$?` before any pipe, A2); a pass count alone is not evidence.
 **Deliberate Shortcuts & Deferrals:** Chromium only; `defer: Firefox and Safari, upgrade when a visitor reports a reader problem there`.
+
+## Task F1: failed row when an opened EPUB cannot mount
+
+**Files:** Modify `apps/web/src/main.ts`, `apps/web/test/epub-open-wiring.test.ts`; Test `apps/web/test/preview-wiring.test.ts`.
+**Interfaces:** `failOpened(row)` in `main.ts`, called from the catch branch of `openPreview` for `row.kind === "opened"` after `dialog.close()`: sets `item.status = "failed"` and `item.result = { ok: false, code: "READ_FAILED", message: "read-failed" }`, calls the countdown (drops the bytes), then clears `row.ready` and `row.stop`, announces `<name>: <row text>` and renders. A converted row keeps the generic `preview-failed` announcement.
+**Behavior & Acceptance:** AC-11.
+**Edge Cases:** the dialog `close` handler still runs once afterwards and finds no countdown; `heldCount()` stops counting the row; focus falls back to Remove through `renderRow`; `preview.open` returning false is not a failure and stays as it was.
+**Deliberate Shortcuts & Deferrals:** the countdown call renders a transient Deleted row that the next render replaces in the same task; `defer: reorder so no transient render, upgrade when a screen reader is seen to read "Deleted" first`.
+**Test Data & Determinism:** anchored text checks as in T4, plus the Chromium check `nomount-check.mjs` with two books that pass `inspectEpub` and fail to mount (package file missing; package file not XML).
+
+## Task F2: drop the dead `META_MAX_TEXT` check
+
+**Files:** Modify `apps/web/src/open-epub.ts`; Test `apps/web/test/open-epub.test.ts`.
+**Interfaces:** `inspectEpub` loses the `META_MAX_TEXT` constant and the `Object.values(meta).some(...)` clause; the compressed (16 KiB) and declared (128 KiB) caps and the `oversize` refusal stay.
+**Behavior & Acceptance:** AC-12.
+**Edge Cases:** none: the output is cut at the declared size, at most 128 KiB, so a 1 MB text check could not fire (measured: a 15 MB entry declared as 100 bytes returned `ok` and was cut, not refused by this check).
+**Deliberate Shortcuts & Deferrals:** None.
+**Test Data & Determinism:** the existing `open-epub` tests are the guard; no new test for a deletion.
+
+## Task F3: README sentence on scripts, guard flipped
+
+**Files:** Modify `README.md`, `apps/web/test/readme-opener.test.ts`; Test `apps/web/test/readme-web.test.ts`.
+**Interfaces:** the Privacy bullet ends with: "In a check on 2026-11-09 in Chromium 156, none of six ways a book can run a script (inline, packaged file, SVG, `onerror`, `javascript:` link, meta refresh) ran under the page's Content Security Policy." The test that forbade the word "script" is replaced by tests that pin the date, the browser version, the policy and the count by fact, that the sentence is last, and that Firefox, Safari, "all browsers" and "always" do not appear.
+**Behavior & Acceptance:** AC-13.
+**Edge Cases:** the older test that pinned the reading-hold sentence as the last sentence now checks it is present and before the script sentence; a changed live CSP voids the sentence (see Operations & Rollout).
+**Deliberate Shortcuts & Deferrals:** None.
+**Test Data & Determinism:** README read as text.
+
+## Task F4: control run for the foliate error
+
+**Files:** none (a measurement; the harness stays in scratch).
+**Behavior & Acceptance:** AC-14. The same three modes (idle, paged, slow) times 8 runs: `plain.epub` opened through the opener; and a converted preview of a text file of the same size as the real book's text.
+**Edge Cases:** one earlier attempt of this script timed out once waiting 30 s for the dialog (memory about 1.5 GB available, other jobs running); 25 later runs never reproduced it, so it is recorded as unexplained, not as a pass.
+**Deliberate Shortcuts & Deferrals:** `defer: no machine proof (the run lives in scratch), upgrade trigger: a committed browser test if the owner turns e2e on (A42)`.
+**Test Data & Determinism:** none; counts are recorded in Evidence.
 
 ## Evidence
 
@@ -328,6 +407,32 @@ sequenceDiagram
 - **Review of T1 to T4** (`staid`): finding 1, a regex over `encryption.xml` that is quadratic on unclosed `EncryptionMethod` tags; finding 2, `unzipSync` inflating a `META-INF` entry whose central directory lies about its size (parent repro: declared 100 bytes, really 60 MB, 1785 ms on the main thread). Both confirmed by the parent before any fix. Not fixed, for the owner: finding 3 (defense in depth: deny scripts in the reader through `book.transformTarget`, in protected `reader.ts`), finding 5 (a book that passes `inspectEpub` but fails to mount only closes the dialog, the row stays "Ready to read"), finding 6 (D2 edge: a slow large first file), finding 7 (the regex and an XML parser can differ on comments, CDATA and UTF-16; do not "fix" with a lazy `[\s\S]*?` comment stripper, it is quadratic again), and a related one: `createEpubLoader` (`unzipCapped`) can still inflate a lying bomb on the main thread when the reader opens.
 - **Review fixes** (implementer, parent audit; commits `46353fe`, `7af84cc`, `3d63334`): `encryption.xml` is scanned with `/<(?:[\w.-]+:)?EncryptionMethod(?=[\s/>])[^<>]*>/g` (linear); a `META-INF` entry over 16 KiB compressed or 128 KiB declared is refused as `READ_FAILED`, never treated as absent, so a DRM book cannot slip through; the `opening` counter is released for files an early stop skipped (`left` plus an outer `finally`); the README Privacy bullet says the countdown of an opened EPUB stops while its reader is open. RED `colab-test -- bun test` of `open-epub`, `epub-open-wiring`, `readme-opener` exit 1, 84 pass, 11 fail; GREEN exit 0, 95 pass, 0 fail; `bun test apps/web/test` exit 0, 409 pass, 1 skip, 0 fail, 36 files (the parent's own run too); `bun run typecheck` exit 0. Parent probe against the committed code (`verify-review.mjs`, exit 0): 10,000 and 20,000 unclosed tags are refused in 0 ms, 5,000 are accepted in 2 ms, a 60 MB entry with a lying size is refused in 0 ms. Residual, measured (`residual.mjs`, exit 0): an entry that stays under the 16 KiB compressed cap and lies about its size still costs up to about 450 ms of main-thread time (15 MB inflated from a 15.6 KB zip; fflate writes into a buffer of the declared size, so memory stays small but the whole stream is still decoded). The `META_MAX_TEXT` (1 MB) check in `inspectEpub` can never fire, because the output is cut at the declared size, which is at most 128 KiB; it is harmless dead code, a candidate for the debt sweep.
 
+- **Final browser run** (Chromium 156.0.8078.79, build of `f61f7d6`, harness `opener-harness.mjs`, `harness_final_exit=0`): 83 pass, 0 fail (30 a, 22 c, 3 d, 1 e, 6 f, 2 g, 4 h, 12 i). The hold: reader still open after 190 s (more than the 180 s window), clock 02:59 after closing, row wiped 3 minutes later, no console error. The real EPUB opened 113 to 142 ms after the drop, three times, 112,502 characters of text after paging. Six script routes ran on the control copy and none under the real CSP, no request left the browser. Build of `409cda2` (with F1 to F3), groups a, c, d, e, f, g, i again, `harness_final2_exit=0`: 79 pass, 0 fail.
+- **Full verification at `f61f7d6`:** `colab-test -- bun test` (whole repo) exit 0, 852 pass, 2 skip (live-site `connect-src`, `claude plugin install`, both env-gated and older than this plan), 0 fail, 72 files; `bun run typecheck` exit 0; build exit 0; copy rules exit 0 (1590 added lines, 10 commit messages).
+- **F4 control run** (`409cda2` build): `plain.epub` through the opener, 24 runs: 0 page errors, 0 non-opens (idle 0 of 8, paged 0 of 8, slow 0 of 8). A converted preview of a 742,156-character text file (the book's own text), 24 runs: 0 page errors. The real 63-chapter EPUB through the opener: about 5 of 24 (1, 2 and 2 of 8). So the foliate `columnize` error follows the book, not the opener path and not the preview path. One earlier run of the control script timed out once waiting 30 s for the dialog and never reproduced in 25 later runs: unexplained, recorded as such.
+- **F1 mount failure** (implementer, parent audit by diff and re-run; commit `6bc853d`): RED `colab-test -- bun test apps/web/test/epub-open-wiring.test.ts` exit 1, 36 pass, 5 fail at their assertions; GREEN exit 0, 41 pass, 0 fail; `bun test apps/web/test` exit 0, 418 pass, 1 skip, 0 fail, 36 files (agent and parent); `bun run typecheck` exit 0. Browser, `nomount-check.mjs`: against the build of `409cda2`, `nomount_exit=0`, 14 checks pass for two books that pass `inspectEpub` and fail to mount (package file missing, package file not XML): the reader tried to open, the dialog ends closed, one failed row with "The file could not be read." and no Read button, Download or clock, the live region says the row text, Remove removes it, a good EPUB dropped next still opens by itself. Against the build from before F1 (`f61f7d6`), `nomount_before_exit=1`, 6 fail: the row stayed "Ready to read" with a Read button and the live region said "The preview could not be opened."
+- **F2 dead check** (parent, inline: a single-step deletion; commit `8855a4e`): `rg META_MAX_TEXT apps packages` finds nothing; `colab-test -- bun test` of `open-epub`, `epub-loader`, `preview-session` exit 0, 64 pass, 0 fail.
+- **F3 README sentence** (implementer, parent audit by diff and re-run; commit `409cda2`): RED exit 1, 15 pass, 1 fail ("it reports the measurement", at `toContain("2026-11-09")`); a second failure appeared after the README edit, in the old test that pinned the reading-hold sentence as the last sentence, and was changed to `toContain` plus a new "is the last sentence" test; GREEN `bun test` of `readme-opener` and `readme-web` exit 0, 17 pass, 0 fail (agent and parent); the other tests that read `README.md` (`bundle`, `readme-install`, `pack-skill`, `workflows`) exit 0, 29 pass.
+- **Parent audit of the follow-ups:** read `git diff` of `main.ts` and its test, `open-epub.ts`, `README.md` and its test; `failOpened` calls the countdown first, which fires `onTick` once with the item expired (`preview.onTick`, an announce of "Deleted" and one render of a Deleted row) before the fields are cleared and the real text is announced and rendered in the same task; that is the `defer` recorded under F1. Commits checked with `git show --name-only` against the staged paths.
+
+## Follow-up backlog (debt sweep, 2026-11-09)
+
+Items the owner did not select or that need a decision. Each has a `defer:` line; none is asked again in this session.
+
+- `apps/web/vendor/foliate` (protected): `columnize` null-body page error on the real EPUB (about 1 in 5 opens, the book still opens). `defer: vendor patch needs the owner's decision, upgrade trigger: a visitor reports a blank or stuck reader.`
+- `apps/web/src/epub-loader.ts`: the reader inflates a book with lying sizes on the main thread when it opens (`unzipCapped` re-checks real sizes after inflating); the drop-time check is bounded to about 450 ms. `defer: streaming limit in core shared with DOCX and CBZ, upgrade trigger: a reported freeze when opening a book.`
+- Review finding 3: the CSP is the only barrier against book scripts; a second one through `book.transformTarget` needs `reader.ts` (protected). `defer: owner decision, upgrade trigger: any change to the CSP.`
+- Review finding 6: whether the first EPUB of a drop auto-opens is decided after the file has been read. `defer: design choice, upgrade trigger: a report that a dropped EPUB did not open by itself.`
+- Review finding 7: `inspectEpub` reads `encryption.xml` with a regex (comments, CDATA, UTF-16 can differ from an XML parser); do not use a lazy comment stripper. `defer: no DOMParser under Bun, upgrade trigger: a DRM book that opens.`
+- English tagline takes 3 lines from 641 px up. `defer: wording is the owner's, upgrade trigger: owner veto.`
+- Unit test of `main.ts`. `defer: upgrade when main.ts can be imported without the live DOM.`
+- Firefox and Safari. `defer: upgrade trigger: a visitor reports a reader problem there.`
+- F1 transient Deleted render, F4 one unexplained 30 s non-open (see above).
+
 ## Closeout status
 
-Open.
+Open (decision at the `Close plan` question, 2026-11-09: keep it open).
+
+- **Readiness, 2026-11-09, `bun scripts/plan-closeout.mjs --readiness` before the follow-ups:** `NOT-READY` (exit 1): T1 to T4 `DONE`, T5 `UNPROVEN` (no machine proof, the browser run lives in scratch), 6 task step boxes open. The step boxes and the acceptance boxes are ticked from the Evidence above; T5 and F4 stay without machine proof, so the next verdict is `NEEDS-HUMAN` at best.
+- **What remains:** open the pull request (the registry slot is `active`, PR not recorded), review, merge and deploy only on the owner's request; after a deploy re-read the live CSP with `curl -sI` and compare it with `public/_headers`, then drop the real and the hostile EPUB on the live page once.
+- **Reopen trigger:** when the pull request merges, run `--readiness` again and ask the `Close plan` question with the owner's decision on T5 and F4 (no machine proof).
