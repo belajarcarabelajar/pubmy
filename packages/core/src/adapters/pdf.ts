@@ -13,7 +13,7 @@ import { dropOverprints } from "../pdf/overprint.ts";
 import { rotatedTable, tableHtml } from "../pdf/rotated.ts";
 import { bookTitle } from "../pdf/title.ts";
 import { stripRunning } from "../pdf/running.ts";
-import type { Adapter, Asset, Book, Chapter, Ctx, InputFile, PageBox } from "../types.ts";
+import type { Adapter, Asset, Book, Chapter, Ctx, InputFile, PageBox, TocEntry } from "../types.ts";
 import { escAttr } from "../xml.ts";
 import { isScannedPage, ocrScan } from "./scan.ts";
 
@@ -95,8 +95,22 @@ async function outlineOf(doc: Doc): Promise<{ title: string; page: number }[]> {
   return out;
 }
 
-/** Index of each chapter's first block, with its title. */
-function boundaries(blocks: PageBlock[], outline: { title: string; page: number }[], titleBlock: number): { at: number; title: string }[] {
+/** An unnumbered heading this much smaller than the smallest numbered one is a sub-heading, not a chapter. */
+const SUBHEADING_GAP = 0.5;
+/** Numbered at any depth: "1 Alpha", "2.3 Method", "2.3.4 Deep". A dotted heading is never folded into its section. */
+const SECTIONED = /^\d+(\.\d+)*\.?\s+\p{L}/u;
+
+/**
+ * Index of each chapter's first block, with its title, and the headings (block indexes) that stay
+ * inside the chapter before them. Only without an outline: from the first numbered heading on, an
+ * unnumbered heading set smaller than every numbered or dotted-numbered one is a sub-heading of the
+ * section above it.
+ */
+function boundaries(
+  blocks: PageBlock[],
+  outline: { title: string; page: number }[],
+  titleBlock: number,
+): { cuts: { at: number; title: string }[]; demoted: number[] } {
   if (outline.length > 0) {
     const out: { at: number; title: string }[] = [];
     let from = 0;
@@ -108,18 +122,35 @@ function boundaries(blocks: PageBlock[], outline: { title: string; page: number 
       out.push({ at, title: o.title });
       from = at + 1;
     }
-    if (out.length > 0) return out;
+    if (out.length > 0) return { cuts: out, demoted: [] };
   }
   const heads = blocks.map((b, k) => ({ b, k })).filter(({ b, k }) => b.kind === "heading" && k !== titleBlock);
   const firstNumbered = heads.findIndex(({ b }) => NUMBERED.test(b.text));
-  return (firstNumbered >= 0 ? heads.slice(firstNumbered) : heads).map(({ b, k }) => ({ at: k, title: b.text }));
+  if (firstNumbered < 0) return { cuts: heads.map(({ b, k }) => ({ at: k, title: b.text })), demoted: [] };
+  const from = heads.slice(firstNumbered);
+  const sizes = from.filter(({ b }) => SECTIONED.test(b.text) && b.size !== undefined).map(({ b }) => b.size!);
+  const floor = sizes.length > 0 ? Math.min(...sizes) - SUBHEADING_GAP : -Infinity;
+  const sub = ({ b }: (typeof heads)[number]) => !SECTIONED.test(b.text) && b.size !== undefined && b.size < floor;
+  return {
+    cuts: from.filter((h) => !sub(h)).map(({ b, k }) => ({ at: k, title: b.text })),
+    demoted: from.filter(sub).map(({ k }) => k),
+  };
 }
 
-function render(blocks: Block[], headAt: number, inline: Map<string, string>): string {
+/** `first` is the book index of blocks[0]; a heading in `sub` gets an anchor `s<index>` for the table of contents. */
+function render(blocks: Block[], headAt: number, inline: Map<string, string>, first = 0, sub: ReadonlySet<number> = new Set()): string {
   const html = (s: string) => markup(esc(s), inline);
   return blocks
     .map((b, k) =>
-      b.kind === "html" ? b.text : b.kind === "para" ? `<p>${html(b.text)}</p>` : k === headAt ? `<h1>${html(b.text)}</h1>` : `<h2>${html(b.text)}</h2>`,
+      b.kind === "html"
+        ? b.text
+        : b.kind === "para"
+          ? `<p>${html(b.text)}</p>`
+          : k === headAt
+            ? `<h1>${html(b.text)}</h1>`
+            : sub.has(first + k)
+              ? `<h2 id="s${first + k}">${html(b.text)}</h2>`
+              : `<h2>${html(b.text)}</h2>`,
     )
     .join("\n");
 }
@@ -230,17 +261,23 @@ async function bookOf(doc: Doc, f: InputFile, ctx: Ctx): Promise<Book> {
   for (const k of book.skip) blocks[k] = { ...blocks[k], kind: "para" };
   const titleBlock = book.at;
   const title = plain(book.title);
-  const cuts = boundaries(blocks, await outlineOf(doc), titleBlock);
+  const { cuts, demoted } = boundaries(blocks, await outlineOf(doc), titleBlock);
+  const sub = new Set(demoted);
 
-  const placed: { page: number; chapter: Chapter }[] = [];
+  const placed: { page: number; chapter: Chapter; children?: TocEntry[] }[] = [];
   const href = (n: number) => `ch${String(n).padStart(3, "0")}.xhtml`;
   if (cuts.length === 0 && (blocks.length > 0 || scanned.length === 0))
     placed.push({ page: blocks[0]?.page ?? 1, chapter: { href: href(1), title, body: render(blocks, titleBlock, inline) } });
   cuts.forEach((c, k) => {
     // text before the first chapter heading (title page, authors, abstract) opens chapter 1
     const start = k === 0 ? 0 : c.at;
-    const slice = blocks.slice(start, cuts[k + 1]?.at ?? blocks.length);
-    placed.push({ page: blocks[start].page, chapter: { href: href(k + 1), title: plain(c.title), body: render(slice, c.at - start, inline) } });
+    const end = cuts[k + 1]?.at ?? blocks.length;
+    const children = demoted.filter((d) => d >= start && d < end).map((d) => ({ title: plain(blocks[d].text), href: `${href(k + 1)}#s${d}` }));
+    placed.push({
+      page: blocks[start].page,
+      chapter: { href: href(k + 1), title: plain(c.title), body: render(blocks.slice(start, end), c.at - start, inline, start, sub) },
+      children,
+    });
   });
 
   let notes: Book["notes"] = asText ? { warnings: ["formulas-as-text"] } : undefined;
@@ -258,7 +295,8 @@ async function bookOf(doc: Doc, f: InputFile, ctx: Ctx): Promise<Book> {
     meta: { title, creators: str(info.Author) ? [str(info.Author)] : [], language: str(info.Language) || "en" },
     chapters: placed.map((p) => p.chapter),
     assets,
-    toc: [],
+    // empty lets the packager list the chapters; with sub-headings it lists them all, each with its own
+    toc: demoted.length === 0 ? [] : placed.map((p) => ({ title: p.chapter.title, href: p.chapter.href, ...(p.children?.length ? { children: p.children } : {}) })),
     layout: "reflow",
     direction: "ltr",
     ...(notes ? { notes } : {}),
