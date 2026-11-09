@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { pack, type Book } from "@pubmy/core/browser";
+import { unzipSync, zipSync } from "fflate";
 import { createEpubLoader } from "../src/epub-loader.ts";
 
 const book: Book = {
@@ -14,6 +15,20 @@ const book: Book = {
   direction: "ltr",
 };
 const epub = pack(book);
+
+/** The EPUB plus 64 MB of one byte whose central directory record declares 1,024 bytes (zipSync writes no comment, so the end record is the last 22 bytes). */
+function lyingEpub(): Uint8Array {
+  const zip = zipSync({ ...unzipSync(epub), "OEBPS/big.bin": [new Uint8Array(64 << 20).fill(0x61), { level: 1 }] });
+  const v = new DataView(zip.buffer);
+  const eocd = zip.length - 22;
+  let at = v.getUint32(eocd + 16, true);
+  for (let i = 0; i < v.getUint16(eocd + 10, true); i++) {
+    const nameLen = v.getUint16(at + 28, true);
+    if (new TextDecoder().decode(zip.subarray(at + 46, at + 46 + nameLen)) === "OEBPS/big.bin") v.setUint32(at + 24, 1024, true);
+    at += 46 + nameLen + v.getUint16(at + 30, true) + v.getUint16(at + 32, true);
+  }
+  return zip;
+}
 
 // foliate asks for every file by its path inside the container, resolved against the package document.
 describe("createEpubLoader", () => {
@@ -48,6 +63,35 @@ describe("createEpubLoader", () => {
     expect(await blob?.text()).toBe((await loader.loadText("OEBPS/ch001.xhtml")) ?? "missing");
     expect(loader.getSize("OEBPS/ch001.xhtml")).toBe(blob?.size ?? -1);
   });
+
+  test("a normal EPUB loads every file in it with the bytes that went in", async () => {
+    const loader = createEpubLoader(epub);
+    const expected = Object.entries(unzipSync(epub)).filter(([name]) => !name.endsWith("/"));
+    expect([...loader.entries].sort()).toEqual(expected.map(([name]) => name).sort());
+    for (const [name, bytes] of expected) {
+      expect(loader.getSize(name)).toBe(bytes.length);
+      expect(new Uint8Array((await loader.loadBlob(name)?.arrayBuffer()) ?? new ArrayBuffer(0))).toEqual(bytes);
+    }
+  });
+
+  test("a book whose central directory understates an entry is refused as archive-too-large, without inflating 64 MB", () => {
+    const lying = lyingEpub();
+    const t0 = performance.now();
+    let thrown: { name?: string; code?: string; message?: string } | undefined;
+    try {
+      createEpubLoader(lying);
+    } catch (e) {
+      thrown = e as typeof thrown;
+    }
+    const ms = performance.now() - t0;
+    expect({ name: thrown?.name, code: thrown?.code, message: thrown?.message }).toEqual({
+      name: "PubmyError",
+      code: "READ_FAILED",
+      message: "archive-too-large",
+    });
+    // Inflating the whole 64 MB took 1.8 s to 5 s on the machines measured; one piece costs about 0.15 s.
+    expect(ms).toBeLessThan(1000);
+  }, 30_000);
 
   test("close() drops the bytes, so every later load is null", async () => {
     const loader = createEpubLoader(epub);
