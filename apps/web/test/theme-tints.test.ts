@@ -56,24 +56,26 @@ interface Tint {
   color: string;
 }
 
-/** Every `.badge` selector in a rule that sets both background and color. `li .badge` is the default status. */
+/**
+ * Every `.badge` selector in a rule that sets a color. The badge is plain text with no background of its own,
+ * so it is read on --surface, the row card behind it. `li .badge` is the default status.
+ */
 function tints(): Tint[] {
   const out: Tint[] = [];
   for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const bg = declared(rule[2]!, "background");
     const fg = declared(rule[2]!, "color");
-    if (bg === undefined || fg === undefined) continue;
+    if (fg === undefined) continue;
     for (const raw of rule[1]!.split(",")) {
       const selector = raw.trim();
       if (!/\.badge(?![\w-])/.test(selector)) continue;
       const status = /li\.([\w-]+)\s+\.badge/.exec(selector)?.[1] ?? "default";
-      out.push({ status, selector, background: resolve(bg), color: resolve(fg) });
+      out.push({ status, selector, background: resolve("var(--surface)"), color: resolve(fg) });
     }
   }
   return out;
 }
 
-describe("status badge tints", () => {
+describe("status badge colours on the row surface", () => {
   const found = tints();
 
   test("the rules were found: at least 5 distinct pairs and every status covered", () => {

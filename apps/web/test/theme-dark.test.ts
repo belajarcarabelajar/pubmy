@@ -75,13 +75,10 @@ const TOKENS = [
   "--border",
   "--ok",
   "--err",
-  "--tint-accent",
-  "--tint-ok",
-  "--tint-err",
-  "--tint-neutral",
   "--track",
   "--over-bg",
   "--disabled-bg",
+  "--pv-stage",
 ];
 
 // WCAG 2.x relative luminance from a 6 digit hex colour, written out here so the test shares no code with the page.
@@ -100,7 +97,7 @@ function contrast(a: string, b: string): number {
 }
 
 describe("token blocks", () => {
-  test("exactly one plain :root rule, it is the first rule, and it holds color-scheme and all 16 tokens", () => {
+  test("exactly one plain :root rule, it is the first rule, and it holds color-scheme and all 13 tokens", () => {
     expect(plainRoots).toHaveLength(1);
     expect(rules[0]).toBe(plainRoots[0]!);
     expect(declared(plainRoots[0]!.body, "color-scheme")).toBe("light dark");
@@ -132,10 +129,6 @@ const PAIRS: [string, string][] = [
   ["#ffffff", "--accent"],
   ["--ok", "--surface"],
   ["--err", "--surface"],
-  ["--ok", "--tint-ok"],
-  ["--err", "--tint-err"],
-  ["--accent-ink", "--tint-accent"],
-  ["--muted", "--tint-neutral"],
 ];
 
 for (const theme of ["light", "dark"] as const) {
@@ -151,18 +144,15 @@ for (const theme of ["light", "dark"] as const) {
 }
 
 describe("tokens only", () => {
-  test("every .badge rule takes background and color from var(--token), and every status has a rule", () => {
+  // The badge is plain text, so it has a color and no background; status-badge.test.ts pins the missing pill.
+  test("every .badge rule takes its color from var(--token), and every status has a rule", () => {
     const badge = rules.filter((r) => r.sel.split(",").some((p) => /\.badge(?![\w-])/.test(p)));
     const statuses = new Set<string>();
     for (const r of badge) {
       for (const p of r.sel.split(",")) {
         if (/\.badge(?![\w-])/.test(p)) statuses.add(/li\.([\w-]+)\s+\.badge/.exec(p)?.[1] ?? "default");
       }
-      const bg = declared(r.body, "background");
-      const fg = declared(r.body, "color");
-      if (bg === undefined && fg === undefined) continue;
-      expect(bg, r.sel).toMatch(/^var\(--[\w-]+\)$/);
-      expect(fg, r.sel).toMatch(/^var\(--[\w-]+\)$/);
+      expect(declared(r.body, "color"), r.sel).toMatch(/^var\(--[\w-]+\)$/);
     }
     for (const s of ["default", "waiting", "converting", "ready", "failed", "deleted"]) {
       expect(statuses.has(s), s).toBe(true);

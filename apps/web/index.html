@@ -7,9 +7,9 @@
 <meta name="description" content="Ubah dokumen, e-book, dan komik jadi EPUB 3 langsung di browser, atau buka EPUB untuk dibaca.">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
-:root{color-scheme:light dark;--accent:#0f5c63;--accent-ink:#0f5c63;--bg:#f4f7f7;--surface:#ffffff;--text:#1b1b1f;--muted:#55555c;--border:#cfd8da;--ok:#1a6b3a;--err:#a1251b;--tint-accent:#e3f0f1;--tint-ok:#e4f2e8;--tint-err:#fbe9e7;--tint-neutral:#eceef0;--track:#dbe6e7;--over-bg:#e3f0f1;--disabled-bg:#c9c9d1}
+:root{color-scheme:light dark;--accent:#0f5c63;--accent-ink:#0f5c63;--bg:#f4f7f7;--surface:#ffffff;--text:#1b1b1f;--muted:#55555c;--border:#cfd8da;--ok:#1a6b3a;--err:#a1251b;--track:#dbe6e7;--over-bg:#e3f0f1;--disabled-bg:#c9c9d1;--pv-stage:#50535f}
 /* The only dark values. Keep this the single plain :root above and this block the only override: theme tests read the first :root. */
-@media (prefers-color-scheme:dark){:root{--accent:#0f5c63;--accent-ink:#5cc4ce;--bg:#121416;--surface:#1b1e21;--text:#e8eaed;--muted:#aab0b7;--border:#343a40;--ok:#7fd69b;--err:#ff9d93;--tint-accent:#1d3a3e;--tint-ok:#1d3a2a;--tint-err:#432320;--tint-neutral:#2a2f34;--track:#2a3236;--over-bg:#1d3a3e;--disabled-bg:#3a3f45}}
+@media (prefers-color-scheme:dark){:root{--accent:#0f5c63;--accent-ink:#5cc4ce;--bg:#121416;--surface:#1b1e21;--text:#e8eaed;--muted:#aab0b7;--border:#343a40;--ok:#7fd69b;--err:#ff9d93;--track:#2a3236;--over-bg:#1d3a3e;--disabled-bg:#3a3f45;--pv-stage:#50535f}}
 *,*::before,*::after{box-sizing:border-box}
 html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:var(--text);background:var(--bg)}
 body{margin:0;min-width:320px}
@@ -52,12 +52,13 @@ button.ghost{background:transparent;color:var(--accent-ink)}
 #queue li,#refusals li{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
 .name{font-weight:600;overflow-wrap:anywhere}
 .status{font-size:.9rem;color:var(--muted)}
-li .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.1rem .6rem;border-radius:999px;font-size:.8rem;font-weight:600;background:var(--tint-neutral);color:var(--muted)}
+/* Plain text like the format chips: the glyph and the word tell the status, the colour only reinforces it. */
+li .badge{display:inline-flex;align-items:center;gap:.3rem;font-size:.8rem;font-weight:600;color:var(--muted)}
 .badge-icon{flex:none;font-weight:700;line-height:1}
-li.converting .badge{background:var(--tint-accent);color:var(--accent-ink)}
-li.ready .badge{background:var(--tint-ok);color:var(--ok)}
-li.failed .badge{background:var(--tint-err);color:var(--err)}
-li.waiting .badge,li.deleted .badge{background:var(--tint-neutral);color:var(--muted)}
+li.converting .badge{color:var(--accent-ink)}
+li.ready .badge{color:var(--ok)}
+li.failed .badge{color:var(--err)}
+li.waiting .badge,li.deleted .badge{color:var(--muted)}
 progress.bar{grid-column:1/-1;display:block;width:100%;height:.5rem;border:0;border-radius:999px;overflow:hidden;appearance:none;-webkit-appearance:none;accent-color:var(--accent-ink);color:var(--accent-ink);background:var(--track)}
 progress.bar::-webkit-progress-bar{background:var(--track);border-radius:999px}
 progress.bar::-webkit-progress-value{background:var(--accent-ink);border-radius:999px}
@@ -97,7 +98,8 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
 .pv-toc ol ol{padding-left:1rem}
 .pv-toc button{width:100%;justify-content:flex-start;text-align:left;background:transparent;border:0;color:inherit}
 .pv-toc button[aria-current="true"]{background:var(--accent);color:#fff}
-.pv-stage{display:flex;flex:1;min-width:0}
+/* The preview chrome is dark in both themes, so --pv-stage is the same in both blocks: a step between the bar and the white page. */
+.pv-stage{display:flex;flex:1;min-width:0;background:var(--pv-stage)}
 .pv-page{flex:1;min-width:0;background:#fff}
 .pv-page>*{display:block;width:100%;height:100%}
 .pv-arrow{flex:none;align-self:center;width:44px;padding:0;justify-content:center;background:transparent;border:0;color:#ececf1;font-size:2rem}
