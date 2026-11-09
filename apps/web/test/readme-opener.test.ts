@@ -30,8 +30,19 @@ describe("README privacy bullet and the opener", () => {
     expect(privacyLine).toContain("wiped 3 minutes after it is ready");
   });
 
-  test("it says an opened EPUB is kept while its reader is open and wiped 3 minutes after it is closed, as its last sentence", () => {
-    expect(privacyLine.endsWith("An EPUB you open is kept in memory while its reader is open and wiped 3 minutes after you close it.")).toBe(true);
+  // The earlier sentence says the wipe comes 3 minutes after the EPUB is ready; the new one must read as an exception to it, not a rival.
+  test("it says an opened EPUB follows the same 3 minute rule", () => {
+    expect(privacyLine).toContain("An EPUB you open follows the same 3 minute rule");
+  });
+
+  test("it says the countdown of an opened EPUB stops while its reader is open and starts again at close, as its last sentence", () => {
+    expect(
+      privacyLine.endsWith("An EPUB you open follows the same 3 minute rule, except that its countdown stops while its reader is open and starts again when you close it."),
+    ).toBe(true);
+  });
+
+  test("it no longer says an opened EPUB is wiped 3 minutes after you close it", () => {
+    expect(privacyLine).not.toContain("wiped 3 minutes after you close it");
   });
 });
 

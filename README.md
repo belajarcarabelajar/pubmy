@@ -19,7 +19,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 ## Privacy
 
-- **Website:** conversion runs inside your own browser. Your files are not uploaded to any server. Each EPUB stays in the browser tab's memory and is wiped 3 minutes after it is ready; a countdown shows the time left. An open preview closes at the same moment. An EPUB you open is kept in memory while its reader is open and wiped 3 minutes after you close it.
+- **Website:** conversion runs inside your own browser. Your files are not uploaded to any server. Each EPUB stays in the browser tab's memory and is wiped 3 minutes after it is ready; a countdown shows the time left. An open preview closes at the same moment. An EPUB you open follows the same 3 minute rule, except that its countdown stops while its reader is open and starts again when you close it.
 - **CLI:** it writes only to `<folder>/pubmy-epub/` and to the OCR cache in `~/.cache/pubmy`. It never changes, moves, or deletes your source files, and never uploads them. The first scanned PDF downloads the OCR language data (about 7 MB) into that cache, and the first PDF with formulas or line diagrams downloads a drawing library (about 15 MB, checked against a fixed checksum); no file content is sent with either. Without it (offline), formulas stay as text and the report says so.
 
 ## Install the skill
