@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-09-pubmy-ui-review-fixes
-status: InProgress
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -246,10 +246,10 @@ flowchart TD
 - [x] AC-8: (narrowed after review round 1, finding R1) `stripRunning` also removes an item only as a continuation of the header or footer block its band rule already removed on that side of that page: unrotated, in the top or bottom 15 percent, within 5 percent of the page height of that block, containing a letter, and repeating at the same position (2 pt) with the same digit-normalised text on at least `max(3, floor(pages / 2))` pages. Per-page data rows and repeated text in the middle of a page stay. (evidence: `bun test packages/core/test/pdf-running-block.test.ts packages/core/test/pdf-running.test.ts` exit 0)
 - [x] AC-9: in a PDF without an outline whose numbered headings share one size, an unnumbered heading set smaller than that size stays inside the preceding chapter as a sub-heading with an anchor and is a nested `children` entry of that chapter in the TOC; unnumbered headings at the numbered size stay chapters; documents without numbered headings and the arXiv fixture are unchanged. (evidence: `bun test packages/core/test/pdf-chapters.test.ts packages/core/test/pdf.test.ts` exit 0)
 - [x] AC-10: the generated mimic of the sample (header block drawn on pages 2 to N, page 2 drawn twice, three heading sizes) converts to an EPUB with no doubled token, no `dari N` text and a nav of the numbered chapters plus the trailing large unnumbered one, each demoted heading nested; the real sample PDF, converted from a scratch copy, shows the same, and the arXiv fixture (the only other real PDF the repo uses) converts with identical chapter parts, nav titles and, after normalising the random uid, `toc.ncx`. (evidence: `bun test packages/core/test/pdf-header-block.test.ts` exit 0, plus the real-file log under Session checklist)
-- [ ] AC-11: (follow-up F1, review point C) the preview `.pv-stage` has a mid-tone background token `--pv-stage` whose luminance lies between the preview bar and the white page, the white page against it has a lower contrast ratio than against the bar and still at least 3:1, and the arrow glyph colour on it is at least 4.5:1; the token exists in both theme blocks. (evidence: `bun test apps/web/test/preview-stage.test.ts apps/web/test/preview-layout.test.ts apps/web/test/theme.test.ts` exit 0)
-- [ ] AC-12: (follow-up F2) `overprint.ts` and `running.ts` carry `// defer: <ceiling>, <upgrade-trigger>` comments for the O(n squared) pass, the glyph-split edge, the 2 pt rounding edge and the foot-table label edge, so `git grep -nE '(#|//|/[*]) ?defer:'` finds them, and no behaviour changes. (evidence: `bun test packages/core/test/defer-markers.test.ts` exit 0 and the four PDF test files exit 0)
-- [ ] AC-13: (follow-up F3, same class as the chips) the queue status `.badge` is plain text with its glyph (no pill radius, no tinted background), the status colours keep at least 4.5:1 on `--surface` in both themes, and the status is still told by text and glyph, not by colour alone. (evidence: `bun test apps/web/test/status-badge.test.ts apps/web/test/theme-tints.test.ts` exit 0)
-- [ ] AC-14: (follow-up F4) the README PDF row says that, without a PDF outline, an unnumbered heading set smaller than the numbered ones stays inside its chapter and is listed under it in the contents, and the row still says running headers, footers and page numbers are removed. (evidence: `bun test apps/web/test/readme-pdf-toc.test.ts` exit 0)
+- [x] AC-11: (follow-up F1, review point C) the preview `.pv-stage` has a mid-tone background token `--pv-stage` whose luminance lies between the preview bar and the white page, the white page against it has a lower contrast ratio than against the bar and still at least 3:1, and the arrow glyph colour on it is at least 4.5:1; the token exists in both theme blocks. (evidence: `bun test apps/web/test/preview-stage.test.ts apps/web/test/preview-layout.test.ts apps/web/test/theme.test.ts` exit 0)
+- [x] AC-12: (follow-up F2) `overprint.ts` and `running.ts` carry `// defer: <ceiling>, <upgrade-trigger>` comments for the O(n squared) pass, the glyph-split edge, the 2 pt rounding edge and the foot-table label edge, so `git grep -nE '(#|//|/[*]) ?defer:'` finds them, and no behaviour changes. (evidence: `bun test packages/core/test/defer-markers.test.ts` exit 0 and the four PDF test files exit 0)
+- [x] AC-13: (follow-up F3, same class as the chips) the queue status `.badge` is plain text with its glyph (no pill radius, no tinted background), the status colours keep at least 4.5:1 on `--surface` in both themes, and the status is still told by text and glyph, not by colour alone. (evidence: `bun test apps/web/test/status-badge.test.ts apps/web/test/theme-tints.test.ts` exit 0)
+- [x] AC-14: (follow-up F4) the README PDF row says that, without a PDF outline, an unnumbered heading set smaller than the numbered ones stays inside its chapter and is listed under it in the contents, and the row still says running headers, footers and page numbers are removed. (evidence: `bun test apps/web/test/readme-pdf-toc.test.ts` exit 0)
 
 **Traceability:**
 
@@ -292,7 +292,7 @@ flowchart TD
 
 **Definition of Done:** AC-1 to AC-5 and AC-7 to AC-10 checked with evidence, typecheck exit 0, `bun test apps/web/test packages/core/test` exit 0, web build exit 0, copy rules exit 0, real-file log recorded, PR opened, debt sweep run.
 
-**Plan Status & Version:** Approved (owner, 2026-11-09, with T3 moved to the follow-up backlog), v1.
+**Plan Status & Version:** Complete (owner, 2026-11-09, at the debt sweep; approved earlier the same day with T3 moved to the follow-up backlog and then done as F1), v1.
 
 **Reproducibility:** Bun 1.4.4; tests through `colab-test` (A47). Real-file proof: copy `~/Unduhan/User_Manual_SATU_Certificate_Mahasiswa.pdf` into `~/.cache/tmp/pubmy-ui-review-<session>/in/` and run `bun apps/cli/src/main.ts <that dir>`.
 
@@ -328,8 +328,8 @@ flowchart TD
 - [x] Parent diff audit per task; independent review before the PR (two rounds, final verdict `correct`; round 1 P1 fixed by narrowing AC-8)
 - [x] Real-file log, measured with one script on both EPUBs (sample PDF from a scratch copy; base = main at `7eb0883`, after = this branch): chapter files 10 to 8; nav entries 10 to 9 with one nested; doubled words 1 to 0; `(DTD)` 9 to 0; `USER MANUAL` 4 to 0; `Halaman :` 1 to 0; `dari <n>` 9 to 1 (genuine body text). arXiv 2302.13971: 14 chapter parts and nav titles identical to base, `toc.ncx` identical after uid normalisation. EPUBCheck Java 5.4.0 on the EPUB made from `makeHeaderBlockPdf()`: fatal 0, error 0, warning 0. Final run on `abb3851`: typecheck exit 0, `bun test packages/core/test apps/web/test` 702 pass, 1 skip, 0 fail, web build exit 0, copy-rules clean (1511 lines, 10 commit messages). Runner `--execute`: six tasks `SKIPPED-IDEMPOTENT`, exit 0
 - [x] PR opened (#22), plan synced to the vault and issue #19, learning ledger and rules M18 to M21 written
-- [ ] Debt sweep follow-ups F1 to F4 (owner selected all four), then `Close plan` (owner chose Mark Complete) and the closeout record for plan 2026-11-07-pubmy-v1
-- [ ] Merge (own question to the owner) and deploy (owner asked for it mid-session)
+- [x] Debt sweep follow-ups F1 to F4 (owner selected all four): F2 `14f584f`, F4 `8a82d62`, F1 and F3 `e684ef4`, each proving test rerun by the parent with exit 0 (F2 68 pass, F4 24 pass, F1 and F3 179 pass across 12 files, typecheck exit 0). Final run on `e684ef4`: `bun run typecheck && bun test packages/core/test apps/web/test && bun run --cwd apps/web build` exit 0, 734 pass, 1 skip, 0 fail, 67 files; copy-rules exit 0 (2115 added lines in 32 files, 17 commit messages); runner `--execute`: ten tasks `SKIPPED-IDEMPOTENT`, exit 0. Closeout record for plan 2026-11-07-pubmy-v1: `17559b5`
+- Outside the tasks and after this PR, at the owner's request: the merge is asked as its own question, then the deploy the owner asked for on 2026-11-09. Their results are reported in chat, because a plan change after the merge needs its own PR.
 
 ## Task T1: front page
 
@@ -425,7 +425,18 @@ flowchart TD
 
 - Review point C (preview stage mid-tone): done as F1 in this plan (PR #20 landed the Contents icon and merged, session `pubmy-d5` is idle with a clean tree).
 - `defer:` items LATER (also marked in the source by F2): the O(n squared) overprint pass, `defer: a page has at most a few thousand items, bucket by rounded baseline when a measured page is slow`; glyph-split items of one word at about 3 pt, `defer: only a tiny font can trigger it, scale the start tolerance with the font size when a real file shows it`; the 2 pt rounding edge in the header position key, `defer: a key can split across a rounding edge, neighbour-bucket lookup when a real PDF shows it`; foot-table labels stripped while their values stay (review residual R4) and a digit-only page cell of a continued header row left as a stray number (R5), `defer: both need a real PDF that shows them, limit the reach to rows touching the dropped block`.
+- Sweep re-pass (after F1 to F4, one round, no new question): `apps/web/test/theme-tints.test.ts` now measures the badge colours on `--surface` and has no tint left, so its file name is out of date, `defer: rename it to theme-badge-colours.test.ts the next time a theme test is edited, the contents are right and only the name misleads`.
 - Not exercised: a mixed scanned and text PDF, and math-dense or two-column PDFs beyond the generated fixtures and arXiv 2302.13971, `defer: no sample at hand, add a fixture when one fails in the field`.
 - Not looked at in a browser (owner chose unit tests only, A42): chip wrapping at 320 px, the new framing, the flat badges and the preview stage in light and dark, `defer: owner opt-in, check at 320 and 1280 px in both themes when asked`.
 - Owner request 2026-11-09 (mid-session): deploy after the work is done. Deploy is `bun run --cwd apps/web build` then `bunx wrangler deploy` from `apps/web` (Worker `pubmy`, `pubmy.belajarcarabelajar.com`), from `main` after the owner merges PR #22.
 - Merge note: this branch edits `apps/web/index.html` (header, chips, row and batch CSS), `apps/web/src/i18n.ts` (tagline, new `formats-label`, `expires-in`) and `apps/web/src/main.ts` (`applyLang`); the other branch edits the preview CSS, the preview keys and `main.ts` lines 98 to 135. Different hunks; whichever merges second rebases and re-runs `bun test apps/web/test`.
+
+## Closeout status
+
+Marked Complete on 2026-11-09 at the owner's choice at the debt sweep (`Mark Complete`), after a readiness re-run that followed the follow-ups. The status change ships in PR #22; after the merge only `plan-sync.mjs` remains (published copy and issue #19).
+
+- **Readiness:** `bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-09-pubmy-ui-review-fixes.md --cwd <worktree>` gave `READY`, exit 0 (2026-11-09, on `e684ef4`). Tasks T1, T2, T4 to T7 and F1 to F4 are `DONE`; open `NOW` follow-ups 0, open step boxes 0, other open boxes 0.
+- **Tick evidence:** `ultra-plan-runner.mjs --execute` exit 0 with ten tasks `SKIPPED-IDEMPOTENT`; `plan-mark-done.mjs --from <runner log>` exit 0, nothing left to tick.
+- **Cost estimate:** `bun ~/vivera/scripts/plan-cost.mjs --plan 2026-11-09-pubmy-ui-review-fixes` printed `usd: 30.2921 (estimate)`, 1 main transcript, 7 subagent runs. Its caveats: a session that continued the plan without running the registry claim is not counted; other work done in a claiming session, before or after the claim, is also counted; a claim behind an env prefix, inside `bash -c` or a subshell, or split by a backslash line continuation is not counted.
+- **Not part of the tasks:** the merge (asked as its own question) and the deploy the owner requested on 2026-11-09. Their results are reported in chat.
+- **Still open, as `defer:` lines in the follow-up backlog above:** the O(n squared) overprint pass, the 3 pt glyph-split edge, the 2 pt rounding edge, review residuals R4 and R5, the unexercised mixed and math-dense PDFs, the browser check the owner chose to skip, and the `theme-tints.test.ts` file name.
