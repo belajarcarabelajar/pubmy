@@ -104,3 +104,32 @@ Scratch directory `~/.cache/tmp/pubmy-epub-opener/` (not in the repository; logs
 - **F9:** `f9-red.log` (exit 1, 23 pass, 13 fail), `f9-green*.log` (exit 0, 35 pass), `f9-mutation.log` (exit 1, 24 pass, 11 fail), `f9-bench.log` and `f9-timing.log` (piece size and lying-entry timings on the Colab pool), `f9-suite.log` (whole repo exit 0, 945 pass in the implementer run), `f9-typecheck2.log`.
 - **Parent runs at `441fe0d`:** `p-suite.log` (`bun test`, exit 0, 946 pass, 2 skip, 0 fail, 75 files) and `p-typecheck.log` (exit 0).
 - **Flaky bound found and fixed:** `final2-suite.log` (`bun test` at `6bb4942`, exit 1, 945 pass, 1 fail) failed `blockBookScripts: time > 40 MB of comment before the root is skipped in one step` at 179.8 ms against a bound of 100 ms, with other jobs on the pool. `flake-fix.log` (the two edited files, exit 0, 52 pass) and `final3-suite.log` (`bun test` at `de2dee1`, exit 0, 946 pass, 2 skip, 0 fail, 75 files). Readiness: `readiness3.log` (`NEEDS-HUMAN`, exit 3).
+
+# Firefox check (2026-11-09, asked for by the owner at the "Firefox" question)
+
+Firefox 159.0 (Arch package), headless, launched by `puppeteer-core` 25.16 with `-no-remote`, `MOZ_NO_REMOTE=1` and puppeteer's own throwaway profile (never the real profile, whose Firefox was running), inside `systemd-run --user --scope -p MemoryMax=1000M -p MemorySwapMax=0` because only about 1.1 GB of RAM was free; one browser at a time. Scripts in scratch: `gen/f7-check-ff.mjs` (the Chromium `f7-check.mjs` with a different launch) and `gen/ff-read.mjs`.
+
+- `f7chk-ff-pre-nocsp.log` (`dist-f8b`, no CSP header; the positive control): 8 of 8 routes ran, 9 requests left the browser, as in Chromium.
+- `f7chk-ff-f7-nocsp.log` (`dist-f7`, no CSP header): 1 route ran (the standalone SVG page), 2 requests (that page and the meta refresh), as in Chromium.
+- `f7chk-ff-f7-csp.log` (`dist-f7`, real CSP): 0 routes ran. The script counts one failed request to the outside host, the meta refresh; Firefox's own message for it says the CSP `frame-src` blocked the load, and the script counts any failed request, so it does not show that none was sent. Read as: blocked by the CSP.
+- `ffread.log` (`ff-read.mjs`, `dist-f7`, real CSP, the real Gutenberg EPUB, 3 runs, `ffread_exit=0`): opens by itself in 201, 121 and 142 ms, 63 contents entries, 112,502 characters of text after turning 3 pages (the same number as in Chromium), no page error, one ready row with no Download link.
+- Not checked: Safari (no build for this machine), a Firefox with the visitor's extensions, a long hold.
+
+# Independent review of F7, F8 and F9 and the fixes it led to (2026-11-09)
+
+Reviewer: `staid`, read-only, 21 tool calls, asked for by the owner ("Review all three"). It was given the commits and the context, not my conclusions. Its scripts are in `review/` (scratch); the parent re-ran the function-level claims with `review/parent-repro.ts`.
+
+- **Finding 1, F7 (security, second layer only):** `isBookMarkup` compared the type with `===` (a media type with a parameter or other letter case is not markup), a root that is not `html` was returned unchanged, and the scan disagreed with the HTML parser on a comment closed by `--!>`, a quote in a tag name, a doctype with `>` inside brackets and `<html/>`. All seven cases reproduced with the real function (`parent-repro.ts`: the policy was missing or after the script). In Chromium, on a copy served without the CSP header, two ran their script on the build of `441fe0d`: `h-typeparam.epub` and `h-divroot.epub` (`f7chk2-pre-nocsp.log`); with the real CSP none ran (`f7chk2-pre-csp.log`). The two parser-disagreement books (`h-comment.epub`, `h-doctype.epub`, built by `gen/f7-extra-books2.ts`) did not run in Chromium through my construction: confirmed at function level only. Fix, `aa6c9b1`: `blockBookScripts` verifies the candidate page with `DOMParser` and fails closed to a blank page, types are normalized, `detail.type` loses its charset (a transport charset such as UTF-16 would decode the policy as junk), an XSLT instruction in the prolog is refused, pages over 8 MiB are blank. The implementer named what can still fool the check: differences between `DOMParser` and a frame (`noscript`), types a browser sniffs as HTML, and blank pages for legitimate but odd chapters.
+- **Finding 2, F9 (low):** `unzipBounded` decoded entry names as UTF-8 always; fflate decodes UTF-8 only with flag bit 11 and Latin-1 otherwise, so a legacy zip with Latin-1 names got different keys (`café.x` against `caf\uFFFD.x`) and a leading U+FEFF collided with `a`. Fixed in `fa8ba05` with `strFromU8(name, !(flag & 0x800))`; hand-built archives in the tests (RED 3 of 40 fail, GREEN exit 0, 40 pass).
+- **Finding 3, tests (low):** the 1000 ms bound of the lying-entry web test has about 1.8 times margin against the unbounded path on the reviewer's machine; the throw (`archive-too-large`) is the real guard, the time is a second one. Left as it is.
+- **Unconfirmed, checked:** `View.render` no longer sets `#layout` before returning early. `#layout` starts as `{}`, and `expand()` on a view that has not rendered only builds an invalid padding string that the browser ignores; the F8 run (0 of 36 page errors) agrees. Left as it is.
+- **Areas with nothing found:** denial of service (`blockBookScripts` 14 to 313 ms on 45 to 100 MB of hostile input, `unzipBounded` about 40 ms on the 64 MB bomb) and the foliate patches (every early return is re-entered after load).
+
+## Browser runs on the fixed build (`aa6c9b1`, `dist-f7c`)
+
+`run-f7c.sh` in scratch ran them one browser at a time. Chromium 156: `c-f7-nocsp.log` (9 hostile books, no CSP header: 1 ran, the standalone SVG page, 2 requests as before), `c-f7-csp.log` (0 ran, 0 requests), `c-h-nocsp.log` and `c-h-csp.log` (the four bypass books: 0 ran in both; `h-divroot` no longer shows page errors), `c-harness.log` (groups a, c, d, e, f, i: 72 pass, 5 fail, the same five control-copy checks). Real EPUB: drop-to-open 130, 141 and 176 ms, longest main-thread task 85 to 109 ms (114 to 128 ms and 78 to 91 ms at `441fe0d`: one more parse per page). Firefox 159 in the memory-capped scope: `c-ff-f7-nocsp.log` (1 ran, the standalone SVG page), `c-ff-h-nocsp.log` (0 ran), `c-ff-read.log` (3 of 3 runs ok: 133 to 189 ms, 63 contents entries, 112,502 characters after paging, no page error).
+
+## Parent runs at `aa6c9b1`
+
+`final4-suite.log`: `colab-test -- bun test` exit 0, 972 pass, 2 skip, 0 fail, 75 files; `final4-typecheck.log`: exit 0; `build-f7c.log`: exit 0.
+
