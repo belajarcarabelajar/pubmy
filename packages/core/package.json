@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./browser": "./src/browser.ts",
+    "./zip-caps": "./src/zip-caps.ts",
     "./ocr": "./src/ocr/load.ts",
     "./render-bun": "./src/render/bun.ts",
     "./render-browser": "./src/render/browser.ts"

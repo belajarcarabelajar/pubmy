@@ -1,4 +1,5 @@
-import { strFromU8, unzipSync } from "fflate";
+import { unzipBounded, type Limits } from "@pubmy/core/zip-caps";
+import { strFromU8 } from "fflate";
 
 /** The loader foliate-js's EPUB class reads a book through: entries of an EPUB held in memory, never the network. */
 export interface EpubLoader {
@@ -13,8 +14,8 @@ export interface EpubLoader {
   close(): void;
 }
 
-export function createEpubLoader(epub: Uint8Array): EpubLoader {
-  let files: Record<string, Uint8Array> = unzipSync(epub);
+export function createEpubLoader(epub: Uint8Array, limits?: Limits): EpubLoader {
+  let files: Record<string, Uint8Array> = unzipBounded(epub, limits);
   const get = (name: string) => (Object.hasOwn(files, name) ? files[name] : undefined);
   return {
     get entries() {

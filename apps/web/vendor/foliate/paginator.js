@@ -285,6 +285,9 @@ class View {
     }
     render(layout) {
         if (!layout) return
+        // pubmy patch (see PATCHES.md): the paginator's resize observer can call this while the section is still
+        // loading and has no body; the load handler renders again once it does.
+        if (!this.document?.body) return
         this.#column = layout.flow !== 'scrolled'
         this.#layout = layout
         if (this.#column) this.columnize(layout)
@@ -951,6 +954,9 @@ export class Paginator extends HTMLElement {
             this.start - size, this.end - size, this.#getRectMapper())
     }
     #afterScroll(reason) {
+        // pubmy patch (see PATCHES.md): a scroll or resize callback can arrive while the current section is still
+        // loading and has no body; display() reports the position again once it has loaded.
+        if (!this.#view?.document?.body) return
         const range = this.#getVisibleRange()
         this.#lastVisibleRange = range
         // don't set new anchor if relocation was to scroll to anchor

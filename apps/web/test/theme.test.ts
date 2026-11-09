@@ -81,7 +81,7 @@ describe("markup", () => {
 
   // Aliases of a listed extension and the types the page accepts but does not advertise as formats.
   const ALIASES = ["markdown", "htm", "azw"];
-  const NOT_ADVERTISED = ["zip", "rar", "epub"];
+  const NOT_ADVERTISED = ["zip", "rar"];
 
   test("the format chips are the accepted extensions without aliases and archive types", () => {
     const accept = document.getElementById("file")!.getAttribute("accept")!;
@@ -91,7 +91,7 @@ describe("markup", () => {
       .filter((e) => ![...ALIASES, ...NOT_ADVERTISED].includes(e));
     const chips = [...document.querySelectorAll("#drop .chips .chip")].map((c) => (c.textContent ?? "").trim().toLowerCase());
     expect(chips.sort()).toEqual(expected.sort());
-    expect(chips).toHaveLength(11);
+    expect(chips).toHaveLength(12);
   });
 
   test("no inline style attribute in the page body", () => {

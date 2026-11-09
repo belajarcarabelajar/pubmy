@@ -64,3 +64,10 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 | # | Rule |
 |---|---|
 | M18 | WHEN reading a screen recording to learn what a page did → DO decide from frame timestamps, phase durations compared with timers in the code, and layout, NOT from absolute pixel colors (the recorded teal button read (10,72,77) where the CSS says (15,92,99), so a color match proves nothing; the blank phase of 1.47 s matched the 1.5 s fallback timer in the CSS). After `ffmpeg -vf select`, `drawtext` `%{n}` counts the selected frames, not the original numbers. |
+
+## Task Group: EPUB opener (plan 2026-11-09-pubmy-epub-opener)
+
+| # | Rule |
+|---|---|
+| M19 | WHEN a build or browser run of a worktree under `/mnt/belajarcarabelajar/pubmy-wt/` fails with `Could not resolve "@pubmy/core/..."` after the change added an export entry (its `node_modules` symlink points at the main checkout, which has the old `package.json`) → DO build in a temporary detached worktree under `~/.cache/tmp/` with its own `bun install --frozen-lockfile` (A44), and read the job's `.exit` file, NOT the background notification (it reports the last command of the chain, `tee` or `echo`, so a failed build showed "exit 0"). |
+| M20 | WHEN a test asserts elapsed time (a linear scan of 40 MB, a bounded unzip) → DO set the bound between the two costs it must tell apart, with room for a loaded shared machine on both sides (1 s for a scan that takes 0.1 to 0.2 s and a rescan that takes minutes; 1.5 s for an unzip that takes 0.16 s against 4 to 5 s unbounded), and state the two costs in a comment, NOT a bound 1.5 times one quiet measurement (a 100 ms bound failed at 180 ms while other jobs ran on the Colab pool and turned one whole-suite run red). |
