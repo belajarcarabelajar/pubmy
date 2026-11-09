@@ -11,7 +11,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 | Input | Extensions | Notes |
 |---|---|---|
-| PDF with text | `.pdf` | Columns and headings are detected from the text layout. Running headers, footers and page numbers are removed. Figures are kept as images, and a table printed sideways is rebuilt as a table. Formulas and line diagrams are kept as pictures of their area of the page, so they look exactly as printed |
+| PDF with text | `.pdf` | Columns and headings are detected from the text layout. Running headers, footers and page numbers are removed. Without a PDF outline, an unnumbered heading set smaller than the numbered ones stays inside its chapter and is listed under it in the table of contents. Figures are kept as images, and a table printed sideways is rebuilt as a table. Formulas and line diagrams are kept as pictures of their area of the page, so they look exactly as printed |
 | Scanned PDF | `.pdf` | Read with OCR in Indonesian and English (`ind+eng`) |
 | Word processor and text documents | `.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.md`, `.txt` | Headings become chapters |
 | Kindle ebooks without DRM | `.mobi`, `.azw3` | Files with DRM are refused (see DRM policy) |
