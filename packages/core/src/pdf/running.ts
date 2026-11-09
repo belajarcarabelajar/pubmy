@@ -17,6 +17,7 @@ const ZONE = 0.15;
 /** How far, as a share of the page height, the position rule reaches past the block the band rule removed. */
 const REACH = 0.05;
 /** Points to which x and y are rounded when two items count as the same position. */
+// defer: a key can split across a 2 pt rounding edge, neighbour-bucket lookup when a real PDF shows it
 const ROUND = 2;
 
 /** Lower case, every number as "#", punctuation and spacing ignored. */
@@ -55,6 +56,7 @@ function bandLines(p: PageItems): TextItem[][] {
  * pages, which the caller checks. The rule only continues a detected block: position alone cannot
  * tell a template row from a per-page data row such as a total or a list entry.
  */
+// defer: labels of a foot table can go while its values stay when a true footer sits close below, limit the reach to rows touching the dropped block when a real PDF shows it
 function continuation(p: PageItems, dropped: Set<TextItem>): { item: TextItem; key: string }[] {
   // Infinity and -Infinity when nothing was dropped on that side: no item is within reach of them.
   let topEdge = Infinity;

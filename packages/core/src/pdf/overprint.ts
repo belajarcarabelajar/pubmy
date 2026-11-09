@@ -13,10 +13,12 @@ const START = 1;
  */
 export function dropOverprints(items: TextItem[]): TextItem[] {
   const text = items.map((i) => i.str.trim());
+  // defer: a page has at most a few thousand items, bucket by rounded baseline when a measured page is slow
   return items.filter((a, i) => {
     if (text[i] === "") return true;
     return !items.some((b, j) => {
       if (j === i || text[j] === "") return false;
+      // defer: two glyph-split items of one word at about 3 pt can look like an overprint, scale the start tolerance with the font size when a real file shows it
       if (Math.abs(a.fontSize - b.fontSize) > SIZE || Math.abs(a.y - b.y) > BASELINE || Math.abs(a.x - b.x) > START) return false;
       return text[j].startsWith(text[i]) && (text[j].length > text[i].length || j < i);
     });
