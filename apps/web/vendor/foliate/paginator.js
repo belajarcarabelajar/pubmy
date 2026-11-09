@@ -285,6 +285,9 @@ class View {
     }
     render(layout) {
         if (!layout) return
+        // pubmy patch (see PATCHES.md): the paginator's resize observer can call this while the section is still
+        // loading and has no body; the load handler renders again once it does.
+        if (!this.document?.body) return
         this.#column = layout.flow !== 'scrolled'
         this.#layout = layout
         if (this.#column) this.columnize(layout)
