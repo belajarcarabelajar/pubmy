@@ -10,7 +10,9 @@ export interface RowView {
   statusText: string;
   /** 0 to 1, only read while converting; 0, missing or invalid shows an indeterminate bar. */
   progress?: number;
-  /** Set once the EPUB is ready: its download link and countdown. */
+  /** "opened" is an EPUB read as it is, with no conversion; absent means "converted". */
+  kind?: "converted" | "opened";
+  /** Set once the EPUB is ready: its download link and countdown. An opened row has no download link, so `download` is ignored. */
   ready?: { url?: string; download: string; expired: boolean; remaining: number };
 }
 
@@ -109,17 +111,23 @@ export function renderRow(li: HTMLLIElement, v: RowView, lang: Lang, actions: Ro
   let menu: HTMLElement | undefined;
   let more: HTMLButtonElement | undefined;
   if (ready) {
-    const a = doc.createElement("a");
-    a.className = "btn";
-    a.dataset.action = "download";
-    a.textContent = t("download", lang);
-    a.setAttribute("aria-label", `${t("download", lang)} ${v.name}`);
-    a.download = ready.download;
-    if (ready.url) a.href = ready.url;
-    else a.setAttribute("aria-disabled", "true");
-    const pv = button(doc, "preview", t("preview", lang), v.name, actions.preview);
+    const opened = v.kind === "opened";
+    // The action stays "preview" for an opened row: main.ts and the focus logic below look it up by that name.
+    const pv = button(doc, "preview", t(opened ? "read" : "preview", lang), v.name, actions.preview);
     pv.disabled = ready.expired;
-    row.append(a, pv);
+    if (opened) {
+      row.append(pv);
+    } else {
+      const a = doc.createElement("a");
+      a.className = "btn";
+      a.dataset.action = "download";
+      a.textContent = t("download", lang);
+      a.setAttribute("aria-label", `${t("download", lang)} ${v.name}`);
+      a.download = ready.download;
+      if (ready.url) a.href = ready.url;
+      else a.setAttribute("aria-disabled", "true");
+      row.append(a, pv);
+    }
     if (!ready.expired) {
       const clock = doc.createElement("span");
       clock.className = "clock";
