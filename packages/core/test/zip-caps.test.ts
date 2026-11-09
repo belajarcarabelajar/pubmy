@@ -261,3 +261,87 @@ describe("unzipBounded", () => {
     sameFiles(unzipCapped(twin), files);
   });
 });
+
+/** A zip of stored entries written byte by byte, so each name's bytes and general purpose flag are exactly as given (zipSync sets the UTF-8 flag whenever a name is not ASCII). */
+function handZip(entries: { name: Uint8Array; flag: number; data: string }[]): Uint8Array {
+  const parts: Uint8Array[] = [];
+  const central: Uint8Array[] = [];
+  let offset = 0;
+  for (const { name, flag, data: text } of entries) {
+    const data = strToU8(text);
+    const local = new Uint8Array(30 + name.length);
+    const l = new DataView(local.buffer);
+    l.setUint32(0, 0x04034b50, true);
+    l.setUint16(4, 20, true);
+    l.setUint16(6, flag, true);
+    l.setUint32(18, data.length, true);
+    l.setUint32(22, data.length, true);
+    l.setUint16(26, name.length, true);
+    local.set(name, 30);
+    const record = new Uint8Array(46 + name.length);
+    const c = new DataView(record.buffer);
+    c.setUint32(0, 0x02014b50, true);
+    c.setUint16(4, 20, true);
+    c.setUint16(6, 20, true);
+    c.setUint16(8, flag, true);
+    c.setUint32(20, data.length, true);
+    c.setUint32(24, data.length, true);
+    c.setUint16(28, name.length, true);
+    c.setUint32(42, offset, true);
+    record.set(name, 46);
+    parts.push(local, data);
+    central.push(record);
+    offset += local.length + data.length;
+  }
+  const end = new Uint8Array(22);
+  const e = new DataView(end.buffer);
+  e.setUint32(0, 0x06054b50, true);
+  e.setUint16(8, entries.length, true);
+  e.setUint16(10, entries.length, true);
+  e.setUint32(12, central.reduce((n, r) => n + r.length, 0), true);
+  e.setUint32(16, offset, true);
+  return new Uint8Array([...parts, ...central, end].flatMap((p) => [...p]));
+}
+
+const latin1Bytes = (s: string) => Uint8Array.from(s, (ch) => ch.charCodeAt(0));
+const UTF8_FLAG = 0x800;
+
+// fflate reads a name as UTF-8 only when general purpose flag bit 11 is set, and as Latin-1 otherwise.
+describe("unzipBounded entry names", () => {
+  /** The keys of `unzipBounded`, after checking it agrees with `unzipCapped` key for key and byte for byte. */
+  const keysAfterParity = (zip: Uint8Array): string[] => {
+    const bounded = unzipBounded(zip);
+    sameFiles(unzipCapped(zip), bounded);
+    return Object.keys(bounded);
+  };
+
+  test("an unflagged name is Latin-1: the byte 0xE9 is `é`, and its contents come with it", () => {
+    const zip = handZip([{ name: latin1Bytes("café.x"), flag: 0, data: "latin one" }]);
+    expect(keysAfterParity(zip)).toEqual(["café.x"]);
+    expect(strFromU8(unzipBounded(zip)["café.x"])).toBe("latin one");
+  });
+
+  test("a flagged name is UTF-8", () => {
+    const zip = handZip([{ name: strToU8("café.x"), flag: UTF8_FLAG, data: "utf eight" }]);
+    expect(keysAfterParity(zip)).toEqual(["café.x"]);
+    expect(strFromU8(unzipBounded(zip)["café.x"])).toBe("utf eight");
+  });
+
+  test("an unflagged name whose bytes are valid UTF-8 is still read as Latin-1, as unzipCapped reads it", () => {
+    const zip = handZip([{ name: strToU8("café.x"), flag: 0, data: "unflagged" }]);
+    expect(keysAfterParity(zip)).toEqual(["cafÃ©.x"]);
+  });
+
+  test("an unflagged name that starts with U+FEFF keeps its bytes, so it does not collapse into the name without it", () => {
+    const zip = handZip([
+      { name: strToU8("a"), flag: 0, data: "plain" },
+      { name: strToU8("﻿a"), flag: 0, data: "with bom" },
+    ]);
+    expect(keysAfterParity(zip)).toEqual(["a", "ï»¿a"]);
+    expect(strFromU8(unzipBounded(zip)["a"])).toBe("plain");
+  });
+
+  test("a flagged name that starts with U+FEFF is read the way unzipCapped reads it", () => {
+    keysAfterParity(handZip([{ name: strToU8("﻿a"), flag: UTF8_FLAG, data: "flagged bom" }]));
+  });
+});
