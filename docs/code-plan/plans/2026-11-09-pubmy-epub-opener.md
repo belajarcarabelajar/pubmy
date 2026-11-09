@@ -289,7 +289,7 @@ sequenceDiagram
 - [x] Debt sweep (owner chose F1 to F4, 2026-11-09), follow-ups executed as real work: RED then GREEN, parent audit, browser check; both plans kept open at the `Close plan` question
 - [x] Parent diff audit of the whole change (read the full source diff at f61f7d6, the follow-ups per chunk)
 - [x] Verify: typecheck, tests, build, copy rules (fresh at `49ff051`, see Evidence)
-- [ ] PR opened
+- [x] PR opened: #27 (`belajarcarabelajar/pubmy`, head `9becfbc`, mergeable, not draft), recorded in the registry as `open`
 
 ## Task T1: open-epub module and capped loader
 
@@ -437,5 +437,6 @@ Open (decision at the `Close plan` question, 2026-11-09: keep it open).
 
 - **Readiness at `49ff051`, 2026-11-09, `bun scripts/plan-closeout.mjs --readiness`:** `NEEDS-HUMAN` (exit 3): T1 to T4 and F1 to F3 `DONE` by their own `skip_if`, T5 and F4 `UNPROVEN` (no machine proof: the browser runs live in scratch), 0 open task step boxes, 2 other open boxes at that moment: the Verify item, ticked right after from this evidence, and `PR opened`, which closes when the PR is opened, 0 open `NOW` follow-ups.
 - **Readiness before the follow-ups:** `NOT-READY` (exit 1): T1 to T4 `DONE`, T5 `UNPROVEN` (no machine proof, the browser run lives in scratch), 6 task step boxes open. The step boxes and the acceptance boxes are ticked from the Evidence above; T5 and F4 stay without machine proof, so the next verdict is `NEEDS-HUMAN` at best.
-- **What remains:** open the pull request (the registry slot is `active`, PR not recorded), review, merge and deploy only on the owner's request; after a deploy re-read the live CSP with `curl -sI` and compare it with `public/_headers`, then drop the real and the hostile EPUB on the live page once.
+- **What remains:** review of PR #27, then merge and deploy only on the owner's request; after a deploy re-read the live CSP with `curl -sI` and compare it with `public/_headers`, then drop the real and the hostile EPUB on the live page once.
+- **Graphify (debt sweep 6.6), not run for this branch:** the graph (`graphify-out/graph.json`) belongs to the main checkout and is already older than its last commit; this session's documents sit on an unmerged branch in a worktree that has no graph, so a sync here would index a throwaway tree. After the merge, from the main checkout: `graphify update .`, then `bun ~/vivera/scripts/graphify-sync.mjs --root "$(pwd)"`, then `--check`, and read the node delta.
 - **Reopen trigger:** when the pull request merges, run `--readiness` again and ask the `Close plan` question with the owner's decision on T5 and F4 (no machine proof).
