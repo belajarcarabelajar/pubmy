@@ -20,8 +20,13 @@ export interface CountdownOptions {
 /** Calling it stops the countdown now: the URL is revoked and the bytes dropped. */
 export interface Countdown {
   (): void;
-  /** Restarts the full window from now; does nothing once the item has expired. */
+  /** Restarts the full window from now, also when paused; does nothing once the item has expired. */
   extend(): void;
+  /**
+   * Stops ticking and expiry, keeping `remaining` as it was; `extend()` resumes with a full window.
+   * Calling the countdown itself still expires it. Does nothing once the item has expired.
+   */
+  pause(): void;
 }
 
 /**
@@ -32,6 +37,7 @@ export function startCountdown(item: CountdownItem, o: CountdownOptions): Countd
   let deadline = o.now() + o.ms;
   let cancel: (() => void) | null = null;
   let done = false;
+  let paused = false;
 
   const expire = () => {
     if (done) return;
@@ -47,7 +53,7 @@ export function startCountdown(item: CountdownItem, o: CountdownOptions): Countd
   };
 
   const tick = () => {
-    if (done) return;
+    if (done || paused) return;
     item.remaining = Math.max(0, deadline - o.now());
     if (item.remaining === 0) return expire();
     o.onTick?.(item);
@@ -59,9 +65,16 @@ export function startCountdown(item: CountdownItem, o: CountdownOptions): Countd
   return Object.assign(expire, {
     extend() {
       if (done) return;
+      paused = false;
       deadline = o.now() + o.ms;
       cancel?.();
       tick();
+    },
+    pause() {
+      if (done) return;
+      paused = true;
+      cancel?.();
+      cancel = null;
     },
   });
 }
