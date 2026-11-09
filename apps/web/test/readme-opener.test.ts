@@ -35,10 +35,11 @@ describe("README privacy bullet and the opener", () => {
     expect(privacyLine).toContain("An EPUB you open follows the same 3 minute rule");
   });
 
-  test("it says the countdown of an opened EPUB stops while its reader is open and starts again at close, as its last sentence", () => {
-    expect(
-      privacyLine.endsWith("An EPUB you open follows the same 3 minute rule, except that its countdown stops while its reader is open and starts again when you close it."),
-    ).toBe(true);
+  // The script sentence is appended after this one, so this sentence is no longer the end of the bullet.
+  test("it says the countdown of an opened EPUB stops while its reader is open and starts again at close", () => {
+    expect(privacyLine).toContain(
+      "An EPUB you open follows the same 3 minute rule, except that its countdown stops while its reader is open and starts again when you close it.",
+    );
   });
 
   test("it no longer says an opened EPUB is wiped 3 minutes after you close it", () => {
@@ -53,9 +54,31 @@ describe("README wording on these lines", () => {
     expect(privacyLine).not.toContain(emDash);
   });
 
-  // What a book's own scripts can do is measured in the browser first; until then the README says nothing about it.
-  test("neither line says anything about scripts", () => {
+  test("the Website line still says nothing about scripts", () => {
     expect(websiteLine).not.toMatch(/script/i);
-    expect(privacyLine).not.toMatch(/script/i);
+  });
+});
+
+// The script claim was measured in one browser on one date, so the Privacy bullet may state exactly that and no more.
+// It is pinned by its facts, not by a whole-string copy, so a rewording that keeps the facts stays green.
+describe("README privacy bullet and what a book's scripts can do", () => {
+  test("it reports the measurement: the date, the browser version, the policy, and how many routes were tried", () => {
+    expect(privacyLine).toContain("2026-11-09");
+    expect(privacyLine).toContain("Chromium 156");
+    expect(privacyLine).toContain("Content Security Policy");
+    expect(privacyLine).toContain("six");
+    expect(privacyLine).toMatch(/script/i);
+  });
+
+  test("it is the last sentence of the bullet, after the reading hold", () => {
+    expect(privacyLine.endsWith("Content Security Policy.")).toBe(true);
+    expect(privacyLine.indexOf("2026-11-09")).toBeGreaterThan(privacyLine.indexOf("starts again when you close it."));
+  });
+
+  test("it claims nothing beyond that one browser and date", () => {
+    expect(privacyLine).not.toMatch(/firefox/i);
+    expect(privacyLine).not.toMatch(/safari/i);
+    expect(privacyLine).not.toMatch(/all browsers/i);
+    expect(privacyLine).not.toMatch(/always/i);
   });
 });
