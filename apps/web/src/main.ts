@@ -189,8 +189,22 @@ async function openPreview(row: Row) {
     if (!(await preview.open(row.ready))) dialog.close();
   } catch {
     dialog.close();
-    announce(`${row.item.name}: ${t("preview-failed", lang)}`);
+    if (row.kind === "opened") failOpened(row);
+    else announce(`${row.item.name}: ${t("preview-failed", lang)}`);
   }
+}
+
+/** An opened EPUB that passed the check but cannot be mounted can never be read: it becomes a failed row and its bytes go now. */
+function failOpened(row: Row) {
+  row.item.status = "failed";
+  row.item.result = { ok: false, code: "READ_FAILED", message: "read-failed" };
+  // Calling the countdown expires it and drops the bytes; the fields are cleared after, or the row would render as Deleted.
+  // The reader's close handler still runs once after this and finds no countdown to extend.
+  row.stop?.();
+  row.ready = undefined;
+  row.stop = undefined;
+  announce(`${row.item.name}: ${statusText(row)}`);
+  render(row);
 }
 
 function statusText(row: Row): string {

@@ -162,6 +162,49 @@ describe("opening an EPUB: auto-open and the reading hold", () => {
   });
 });
 
+// An EPUB that passed inspectEpub but that foliate cannot mount would stay "Ready to read" with a Read button
+// that can never work, so the catch branch of openPreview turns an opened row into a failed one and drops its bytes.
+describe("opening an EPUB: a book the reader cannot mount", () => {
+  const open = fn("openPreview");
+  const caught = open.includes("} catch {") ? open.slice(open.indexOf("} catch {")) : "";
+  const failed = fn("failOpened");
+
+  test("a mount failure is told apart by kind: an opened row is failed after the dialog closes", () => {
+    expect(caught).toMatch(/dialog\.close\(\);\s*if \(row\.kind === "opened"\) failOpened\(row\);/);
+  });
+
+  test("a converted row keeps the generic preview-failed announcement, and an opened row does not get it", () => {
+    expect(caught).toMatch(/else announce\(`\$\{row\.item\.name\}: \$\{t\("preview-failed", lang\)\}`\);/);
+    expect(failed).not.toContain("preview-failed");
+  });
+
+  test("the failed row carries a READ_FAILED read-failed result, so its text is the failure text", () => {
+    expect(failed).toContain('row.item.status = "failed";');
+    expect(failed).toContain('row.item.result = { ok: false, code: "READ_FAILED", message: "read-failed" };');
+  });
+
+  test("the countdown is called first, which drops the bytes, and only then are the ready item and the countdown cleared", () => {
+    expect(failed).toContain("row.stop?.();");
+    expect(failed).toContain("row.ready = undefined;");
+    expect(failed).toContain("row.stop = undefined;");
+    expect(before(failed, "row.stop?.();", "row.ready = undefined;")).toBe(true);
+    expect(before(failed, "row.stop?.();", "row.stop = undefined;")).toBe(true);
+  });
+
+  test("the failure is announced with the row text and the row is rendered, after the row has changed", () => {
+    expect(failed).toContain("announce(`${row.item.name}: ${statusText(row)}`);");
+    expect(failed).toContain("render(row);");
+    expect(before(failed, "row.stop = undefined;", "announce(")).toBe(true);
+    expect(before(failed, "announce(", "render(row);")).toBe(true);
+  });
+
+  // Pins that already held: the close handler runs after failOpened cleared the countdown and has no Read button to focus.
+  test("the close handler's focus call is optional on a row with no Read button, and a false from open only closes the dialog", () => {
+    expect(listener("dialog", "close")).toContain(`row?.li.querySelector<HTMLElement>('[data-action="preview"]:not(:disabled)')?.focus();`);
+    expect(open).toContain("if (!(await preview.open(row.ready))) dialog.close();");
+  });
+});
+
 describe("opened rows beside converted rows", () => {
   test("a row is a converted or an opened one", () => {
     expect(main).toMatch(/interface Row \{[\s\S]*?kind: "converted" \| "opened";[\s\S]*?\n\}/);
