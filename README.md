@@ -2,7 +2,7 @@
 
 pubmy turns your documents, ebooks, and comics into EPUB files that Kindle accepts. It comes in two forms:
 
-- **Website** at [pubmy.belajarcarabelajar.com](https://pubmy.belajarcarabelajar.com): drop up to 10 files (50 MB each), preview each EPUB in the page, and download one EPUB per file, or every ready file at once with Download all (ZIP).
+- **Website** at [pubmy.belajarcarabelajar.com](https://pubmy.belajarcarabelajar.com): drop up to 10 files (50 MB each), preview each EPUB in the page, and download one EPUB per file, or every ready file at once with Download all (ZIP). A file you drop that is already an EPUB (.epub) is not converted: it opens in the reader so you can read it.
 - **Agent skill and CLI**: give your coding agent (Claude Code, Codex, Cursor, OpenCode, Antigravity) a folder, and it converts every supported file in it, keeping the folder layout.
 
 Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB validator before it is written.
@@ -19,7 +19,7 @@ Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB valid
 
 ## Privacy
 
-- **Website:** conversion runs inside your own browser. Your files are not uploaded to any server. Each EPUB stays in the browser tab's memory and is wiped 3 minutes after it is ready; a countdown shows the time left. An open preview closes at the same moment.
+- **Website:** conversion runs inside your own browser. Your files are not uploaded to any server. Each EPUB stays in the browser tab's memory and is wiped 3 minutes after it is ready; a countdown shows the time left. An open preview closes at the same moment. An EPUB you open is kept in memory while its reader is open and wiped 3 minutes after you close it.
 - **CLI:** it writes only to `<folder>/pubmy-epub/` and to the OCR cache in `~/.cache/pubmy`. It never changes, moves, or deletes your source files, and never uploads them. The first scanned PDF downloads the OCR language data (about 7 MB) into that cache, and the first PDF with formulas or line diagrams downloads a drawing library (about 15 MB, checked against a fixed checksum); no file content is sent with either. Without it (offline), formulas stay as text and the report says so.
 
 ## Install the skill

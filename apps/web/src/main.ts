@@ -2,6 +2,7 @@ import { formatClock, startCountdown, type Countdown, type CountdownItem } from 
 import { dropHintKey, failureText, pickLang, t, type Key, type Lang } from "./i18n.ts";
 import { applyBatchBar, zipEpubs } from "./batch.ts";
 import { placeMenu, scrolledAway } from "./menu-position.ts";
+import { inspectEpub, splitDrop } from "./open-epub.ts";
 import { createPreview } from "./preview-session.ts";
 import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
@@ -9,6 +10,8 @@ import { refusalRow, renderRow, updateClock } from "./row.ts";
 import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
 
 const RETENTION_MS = 180_000;
+const MAX_FILES = 10;
+const MAX_BYTES = 50 * 1024 * 1024;
 const ZIP_NAME = "pubmy-epub.zip";
 // A variable keeps the bundler from trying to resolve the built worker file at build time.
 const WORKER_URL = "./worker.js";
@@ -29,6 +32,8 @@ interface Row {
   li: HTMLLIElement;
   item: QueueItem<File>;
   progress: number;
+  /** "opened" is a dropped EPUB read as it is: no conversion, no download. */
+  kind: "converted" | "opened";
   ready?: CountdownItem;
   stop?: Countdown;
 }
@@ -57,7 +62,7 @@ function onChange(item: QueueItem<File>) {
   if (!row) {
     const li = document.createElement("li");
     queueEl.append(li);
-    row = { li, item, progress: 0 };
+    row = { li, item, progress: 0, kind: "converted" };
     rows.set(item.id, row);
   }
   if (item.status === "ready" && item.result?.ok && !row.ready) {
@@ -74,7 +79,8 @@ function onChange(item: QueueItem<File>) {
 }
 
 function startRetention(row: Row, epub: Uint8Array) {
-  const url = URL.createObjectURL(new Blob([epub as BlobPart], { type: "application/epub+zip" }));
+  // An opened EPUB is only read in the page, so it gets no object URL to hand out.
+  const url = row.kind === "converted" ? URL.createObjectURL(new Blob([epub as BlobPart], { type: "application/epub+zip" })) : undefined;
   const ready: CountdownItem = { url, epub, remaining: RETENTION_MS, expired: false };
   row.ready = ready;
   row.stop = startCountdown(ready, {
@@ -130,6 +136,8 @@ dialog.addEventListener("close", () => {
   preview.close();
   const row = previewRow;
   previewRow = null;
+  // The reading hold ends here: an opened EPUB gets a full window from the moment its reader closes.
+  if (row?.kind === "opened") row.stop?.extend();
   row?.li.querySelector<HTMLElement>('[data-action="preview"]:not(:disabled)')?.focus();
 });
 $<HTMLButtonElement>("pv-close").onclick = () => dialog.close();
@@ -175,6 +183,8 @@ async function openPreview(row: Row) {
   previewRow = row;
   $("pv-title").textContent = row.item.name;
   dialog.showModal();
+  // Right after showModal, so every failure path below still ends in the close handler that restarts the window.
+  if (row.kind === "opened") row.stop?.pause();
   try {
     if (!(await preview.open(row.ready))) dialog.close();
   } catch {
@@ -186,6 +196,7 @@ async function openPreview(row: Row) {
 function statusText(row: Row): string {
   const { item } = row;
   if (row.ready?.expired) return t("deleted", lang);
+  if (row.kind === "opened" && item.status === "ready") return t("opened", lang);
   if (item.status === "failed" && item.result && !item.result.ok) return failureText(item.result.code, item.result.message, lang);
   if (item.status === "converting" && row.progress > 0) return `${t("converting", lang)} ${Math.round(row.progress * 100)}%`;
   return t(item.status, lang);
@@ -201,22 +212,23 @@ function render(row: Row) {
     status: item.status,
     statusText: statusText(row),
     progress: row.progress,
+    kind: row.kind,
     ready: ready && { url: ready.url, download: epubName(item.name), expired: ready.expired, remaining: ready.remaining },
   };
   renderRow(li, view, lang, { preview: () => void openPreview(row), extend: () => extend(row), remove: () => removeRow(row) }, focused)?.focus();
   refreshBatch();
 }
 
-/** Shows the batch bar and its buttons from the rows that exist now; an expired row no longer counts as ready. */
+/** Shows the batch bar and its buttons from the rows that exist now; an expired row no longer counts as ready, and an opened one has nothing to download. */
 function refreshBatch() {
-  const ready = [...rows.values()].filter((r) => r.ready && !r.ready.expired).length;
+  const ready = [...rows.values()].filter((r) => r.kind === "converted" && r.ready && !r.ready.expired).length;
   $<HTMLElement>("kindle-hint").hidden = ready === 0;
   applyBatchBar(document, { batch: batchEl, downloadAll: downloadAllBtn, clearAll: clearAllBtn, choose: $<HTMLButtonElement>("choose") }, rows.size, ready);
 }
 
 downloadAllBtn.onclick = async () => {
   // Taken before the await: a row that expires while the ZIP builds has already been counted or skipped.
-  const entries = [...rows.values()].flatMap((r) => (r.ready?.epub && !r.ready.expired ? [{ name: epubName(r.item.name), epub: r.ready.epub }] : []));
+  const entries = [...rows.values()].flatMap((r) => (r.kind === "converted" && r.ready?.epub && !r.ready.expired ? [{ name: epubName(r.item.name), epub: r.ready.epub }] : []));
   if (entries.length < 2) return;
   downloadAllBtn.disabled = true;
   try {
@@ -319,12 +331,55 @@ function renderRefusals() {
   );
 }
 
-const queue = createQueue<File>({ maxFiles: 10, maxBytes: 50 * 1024 * 1024, convert: client.convert, onChange });
+const queue = createQueue<File>({ maxFiles: MAX_FILES, maxBytes: MAX_BYTES, convert: client.convert, onChange });
+
+// Opened rows have no queue id; counting down from -1 keeps them clear of the queue's ids, which start at 1.
+let nextOpenedId = -1;
+// EPUBs of earlier drops still being read: they are not rows yet but already hold a place.
+let opening = 0;
+
+/** Opened rows that are ready and not expired, plus the files still being read. */
+function heldCount(): number {
+  return [...rows.values()].filter((r) => r.kind === "opened" && r.ready && !r.ready.expired).length + opening;
+}
+
+/** Reads and checks each dropped EPUB in drop order; the queue never sees these files, so nothing is converted. */
+async function openEpubs(files: File[]) {
+  // Only the first file of a drop that passes may open the reader, and only if none is open: the book being read stays.
+  let firstOpen = true;
+  for (const file of files) {
+    try {
+      const read = await file.arrayBuffer().then((b) => new Uint8Array(b), () => null);
+      const check = read ? inspectEpub(read) : ({ ok: false, code: "READ_FAILED", message: "read-failed" } as const);
+      const id = nextOpenedId--;
+      const li = document.createElement("li");
+      queueEl.append(li);
+      // The row is built only once the result is known, so it never shows a waiting state.
+      const item: QueueItem<File> = check.ok
+        ? { id, name: file.name, file, status: "ready" }
+        : { id, name: file.name, file, status: "failed", result: check };
+      const row: Row = { li, item, progress: 0, kind: "opened" };
+      rows.set(id, row);
+      if (read && check.ok) startRetention(row, read);
+      announce(`${file.name}: ${statusText(row)}`);
+      render(row);
+      if (check.ok && firstOpen) {
+        firstOpen = false;
+        if (!dialog.open) void openPreview(row);
+      }
+    } finally {
+      opening--;
+    }
+  }
+}
 
 function addFiles(list: FileList | null) {
   if (!list?.length) return;
-  lastRefusals = queue.add(Array.from(list));
+  const { toQueue, toOpen, refused } = splitDrop(Array.from(list), { maxBytes: MAX_BYTES, maxHeld: MAX_FILES, held: heldCount() });
+  lastRefusals = [...queue.add(toQueue), ...refused];
   renderRefusals();
+  opening += toOpen.length;
+  void openEpubs(toOpen);
 }
 
 // A phone or tablet has no mouse to drag files with.
