@@ -288,7 +288,7 @@ sequenceDiagram
 - [x] T5 real-browser check (3 EPUBs, 3 repeats, 3 minute hold): run in full, see Evidence
 - [x] Debt sweep (owner chose F1 to F4, 2026-11-09), follow-ups executed as real work: RED then GREEN, parent audit, browser check; both plans kept open at the `Close plan` question
 - [x] Parent diff audit of the whole change (read the full source diff at f61f7d6, the follow-ups per chunk)
-- [ ] Verify: typecheck, tests, build, copy rules
+- [x] Verify: typecheck, tests, build, copy rules (fresh at `49ff051`, see Evidence)
 - [ ] PR opened
 
 ## Task T1: open-epub module and capped loader
@@ -415,6 +415,8 @@ sequenceDiagram
 - **F3 README sentence** (implementer, parent audit by diff and re-run; commit `409cda2`): RED exit 1, 15 pass, 1 fail ("it reports the measurement", at `toContain("2026-11-09")`); a second failure appeared after the README edit, in the old test that pinned the reading-hold sentence as the last sentence, and was changed to `toContain` plus a new "is the last sentence" test; GREEN `bun test` of `readme-opener` and `readme-web` exit 0, 17 pass, 0 fail (agent and parent); the other tests that read `README.md` (`bundle`, `readme-install`, `pack-skill`, `workflows`) exit 0, 29 pass.
 - **Parent audit of the follow-ups:** read `git diff` of `main.ts` and its test, `open-epub.ts`, `README.md` and its test; `failOpened` calls the countdown first, which fires `onTick` once with the item expired (`preview.onTick`, an announce of "Deleted" and one render of a Deleted row) before the fields are cleared and the real text is announced and rendered in the same task; that is the `defer` recorded under F1. Commits checked with `git show --name-only` against the staged paths.
 
+- **Verification at `49ff051` (the head; the last code change is `409cda2`, later commits change only the plan and `MEMORY.md`):** `colab-test -- bun test` (whole repo) exit 0, 861 pass, 2 skip, 0 fail, 72 files; `bun run typecheck` exit 0; copy rules exit 0 (1781 added lines, 15 commit messages; merge base `0a979b8` equals `origin/main`); build exit 0 (from `409cda2`).
+
 ## Follow-up backlog (debt sweep, 2026-11-09)
 
 Items the owner did not select or that need a decision. Each has a `defer:` line; none is asked again in this session.
@@ -433,6 +435,7 @@ Items the owner did not select or that need a decision. Each has a `defer:` line
 
 Open (decision at the `Close plan` question, 2026-11-09: keep it open).
 
-- **Readiness, 2026-11-09, `bun scripts/plan-closeout.mjs --readiness` before the follow-ups:** `NOT-READY` (exit 1): T1 to T4 `DONE`, T5 `UNPROVEN` (no machine proof, the browser run lives in scratch), 6 task step boxes open. The step boxes and the acceptance boxes are ticked from the Evidence above; T5 and F4 stay without machine proof, so the next verdict is `NEEDS-HUMAN` at best.
+- **Readiness at `49ff051`, 2026-11-09, `bun scripts/plan-closeout.mjs --readiness`:** `NEEDS-HUMAN` (exit 3): T1 to T4 and F1 to F3 `DONE` by their own `skip_if`, T5 and F4 `UNPROVEN` (no machine proof: the browser runs live in scratch), 0 open task step boxes, 2 other open boxes at that moment: the Verify item, ticked right after from this evidence, and `PR opened`, which closes when the PR is opened, 0 open `NOW` follow-ups.
+- **Readiness before the follow-ups:** `NOT-READY` (exit 1): T1 to T4 `DONE`, T5 `UNPROVEN` (no machine proof, the browser run lives in scratch), 6 task step boxes open. The step boxes and the acceptance boxes are ticked from the Evidence above; T5 and F4 stay without machine proof, so the next verdict is `NEEDS-HUMAN` at best.
 - **What remains:** open the pull request (the registry slot is `active`, PR not recorded), review, merge and deploy only on the owner's request; after a deploy re-read the live CSP with `curl -sI` and compare it with `public/_headers`, then drop the real and the hostile EPUB on the live page once.
 - **Reopen trigger:** when the pull request merges, run `--readiness` again and ask the `Close plan` question with the owner's decision on T5 and F4 (no machine proof).
