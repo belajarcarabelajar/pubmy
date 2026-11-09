@@ -251,6 +251,86 @@ describe("inspectEpub", () => {
   });
 });
 
+/** The text as UTF-16 behind a byte order mark, built by hand so the fixture does not lean on TextDecoder's own tables. */
+function utf16(text: string, order: "le" | "be"): Uint8Array {
+  const out = new Uint8Array(2 + text.length * 2);
+  out.set(order === "le" ? [0xff, 0xfe] : [0xfe, 0xff]);
+  const [lo, hi] = order === "le" ? [2, 3] : [3, 2];
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    out[i * 2 + lo] = c & 0xff;
+    out[i * 2 + hi] = c >> 8;
+  }
+  return out;
+}
+
+describe("inspectEpub: encryption.xml is read the way an XML parser reads it", () => {
+  const DRM = { ok: false, code: "DRM", message: "epub-drm" } as const;
+  const aes = `<enc:EncryptionMethod Algorithm="${AES}"/>`;
+  const fontsOnly = encryptionXml(`<enc:EncryptionMethod Algorithm="${FONT_IDPF}"/>`, `<enc:EncryptionMethod Algorithm="${FONT_ADOBE}"/>`);
+  const orders = [
+    ["little-endian", "le"],
+    ["big-endian", "be"],
+  ] as const;
+
+  test.each(orders)("a UTF-16 %s encryption.xml with a non-font algorithm is refused as DRM epub-drm", (_label, order) => {
+    expect(inspectEpub(epubWithEncryption(utf16(encryptionXml(aes), order)))).toEqual(DRM);
+  });
+
+  test.each(orders)("a UTF-16 %s encryption.xml with a non-font algorithm among font ones is refused as DRM epub-drm", (_label, order) => {
+    const xml = encryptionXml(`<enc:EncryptionMethod Algorithm="${FONT_IDPF}"/>`, aes);
+    expect(inspectEpub(epubWithEncryption(utf16(xml, order)))).toEqual(DRM);
+  });
+
+  test.each(orders)("a UTF-16 %s encryption.xml listing only the two font obfuscations is accepted", (_label, order) => {
+    expect(inspectEpub(epubWithEncryption(utf16(fontsOnly, order)))).toEqual({ ok: true });
+  });
+
+  test("a UTF-8 encryption.xml behind a byte order mark with a non-font algorithm is refused as DRM epub-drm", () => {
+    const bom = Uint8Array.of(0xef, 0xbb, 0xbf);
+    expect(inspectEpub(epubWithEncryption(concat(bom, strToU8(encryptionXml(aes)))))).toEqual(DRM);
+  });
+
+  test("an EncryptionMethod inside an XML comment is not a method", () => {
+    expect(inspectEpub(epubWithEncryption(encryptionXml(`<!-- ${aes} -->`)))).toEqual({ ok: true });
+  });
+
+  test("an EncryptionMethod inside a CDATA section is not a method", () => {
+    expect(inspectEpub(epubWithEncryption(encryptionXml(`<![CDATA[ ${aes} ]]>`)))).toEqual({ ok: true });
+  });
+
+  test("the same EncryptionMethod outside a comment is refused as DRM epub-drm", () => {
+    expect(inspectEpub(epubWithEncryption(encryptionXml(aes)))).toEqual(DRM);
+  });
+
+  test.each([
+    ["a comment before it", `<!-- note -->${aes}`],
+    ["a comment after it", `${aes}<!-- note -->`],
+    ["two comments around it", `<!-- a --><!-- b -->${aes}<!-- c -->`],
+    ["a CDATA section before it", `<![CDATA[ note ]]>${aes}`],
+    // A comment opener inside CDATA is text, so the comment that follows must not reach back and swallow the tag.
+    ["a comment opener inside CDATA before it and a real comment after", `<![CDATA[ <!-- ]]>${aes}<!-- x -->`],
+    // A CDATA opener inside a comment is text for the same reason.
+    ["a CDATA opener inside a comment before it and a real CDATA after", `<!-- <![CDATA[ -->${aes}<![CDATA[ x ]]>`],
+  ])("a real EncryptionMethod with %s is refused as DRM epub-drm", (_label, method) => {
+    expect(inspectEpub(epubWithEncryption(encryptionXml(method)))).toEqual(DRM);
+  });
+
+  test("two commented-out methods and a CDATA one are all ignored", () => {
+    const hidden = `<!-- ${aes} --><![CDATA[ ${aes} ]]><!-- ${aes} -->`;
+    expect(inspectEpub(epubWithEncryption(encryptionXml(hidden)))).toEqual({ ok: true });
+  });
+
+  // A tag after an unterminated opener stays visible: stripping stops there instead of guessing where the comment ends.
+  test.each([
+    ["an unterminated comment", `<!-- ${aes}`],
+    ["an unterminated CDATA section", `<![CDATA[ ${aes}`],
+    ["a hiding comment followed by an unterminated one", `<!-- ${aes} --><!-- ${aes}`],
+  ])("an EncryptionMethod after %s still counts and is refused as DRM epub-drm", (_label, method) => {
+    expect(inspectEpub(epubWithEncryption(encryptionXml(method)))).toEqual(DRM);
+  });
+});
+
 describe("inspectEpub: the two META-INF entries are read within bounds", () => {
   const CONTAINER = "META-INF/container.xml";
   const ENCRYPTION = "META-INF/encryption.xml";
@@ -259,6 +339,23 @@ describe("inspectEpub: the two META-INF entries are read within bounds", () => {
     const result = inspectEpub(zip);
     return { result, ms: performance.now() - t0 };
   };
+
+  // Both stay inside the 128 KiB declared bound, so the scan is what takes the time and not the size cap.
+  test("8000 unterminated comment openers are scanned in linear time", () => {
+    const xml = "<!--".repeat(8000);
+    expect(strToU8(xml).length).toBeLessThanOrEqual(128 * 1024);
+    const { result, ms } = timed(epubWithEncryption(xml));
+    expect(result).toEqual({ ok: true });
+    expect(ms).toBeLessThan(100);
+  });
+
+  test("8000 closed comments are scanned in linear time", () => {
+    const xml = "<!-- x -->".repeat(8000);
+    expect(strToU8(xml).length).toBeLessThanOrEqual(128 * 1024);
+    const { result, ms } = timed(epubWithEncryption(xml));
+    expect(result).toEqual({ ok: true });
+    expect(ms).toBeLessThan(100);
+  });
 
   test("an encryption.xml of 20000 unclosed EncryptionMethod tags is answered in under 500 ms", () => {
     const { result, ms } = timed(epubWithEncryption("<EncryptionMethod ".repeat(20000)));

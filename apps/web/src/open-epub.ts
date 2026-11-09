@@ -28,12 +28,45 @@ const META_MAX_DECLARED = 128 * 1024;
 /** The package's mark: a zip local file header. */
 const hasZipSignature = (b: Uint8Array) => b.length >= 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04;
 
+/** An XML parser reads UTF-16 when the file starts with a byte order mark, so a UTF-16 encryption.xml must not be read as UTF-8. */
+function decodeXml(b: Uint8Array): string {
+  if (b[0] === 0xff && b[1] === 0xfe) return new TextDecoder("utf-16le").decode(b.subarray(2));
+  if (b[0] === 0xfe && b[1] === 0xff) return new TextDecoder("utf-16be").decode(b.subarray(2));
+  return strFromU8(b);
+}
+
+/**
+ * Drops comments and CDATA sections the way a parser skips them, in one pass over indexOf so the cost stays linear
+ * (a lazy `[\s\S]*?` regex retries from every opener of an unclosed file). Each opener is searched for once and
+ * again only after the scan has moved past it. An opener without a terminator ends the stripping and the rest is
+ * kept, so a tag after it is still seen.
+ */
+function stripCommentsAndCdata(xml: string): string {
+  const parts: string[] = [];
+  let pos = 0;
+  let comment = xml.indexOf("<!--");
+  let cdata = xml.indexOf("<![CDATA[");
+  while (comment !== -1 || cdata !== -1) {
+    const isComment = cdata === -1 || (comment !== -1 && comment < cdata);
+    const start = isComment ? comment : cdata;
+    const end = xml.indexOf(isComment ? "-->" : "]]>", start + (isComment ? 4 : 9));
+    if (end === -1) break;
+    parts.push(xml.slice(pos, start), " ");
+    pos = end + 3;
+    // An opener that sat inside the stretch just dropped is text, so it is searched for again from the new position.
+    if (comment !== -1 && comment < pos) comment = xml.indexOf("<!--", pos);
+    if (cdata !== -1 && cdata < pos) cdata = xml.indexOf("<![CDATA[", pos);
+  }
+  parts.push(xml.slice(pos));
+  return parts.join("");
+}
+
 /**
  * A regex instead of a DOM: this runs on the main thread and under Bun, where DOMParser is absent.
  * `[^<>]*` ends each attempt at the next tag, so a file of unclosed tags is scanned in linear time.
  */
 function usesDrm(encryptionXml: string): boolean {
-  for (const [tag] of encryptionXml.matchAll(/<(?:[\w.-]+:)?EncryptionMethod(?=[\s/>])[^<>]*>/g)) {
+  for (const [tag] of stripCommentsAndCdata(encryptionXml).matchAll(/<(?:[\w.-]+:)?EncryptionMethod(?=[\s/>])[^<>]*>/g)) {
     const m = /\sAlgorithm\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(tag);
     if (!FONT_OBFUSCATION.has(m?.[1] ?? m?.[2] ?? "")) return true;
   }
@@ -71,7 +104,7 @@ export function inspectEpub(bytes: Uint8Array): Inspect {
   }
   if (oversize) return READ_FAILED();
   if (!meta[CONTAINER]) return READ_FAILED();
-  if (meta[ENCRYPTION] && usesDrm(strFromU8(meta[ENCRYPTION]))) return fail("DRM", "epub-drm");
+  if (meta[ENCRYPTION] && usesDrm(decodeXml(meta[ENCRYPTION]))) return fail("DRM", "epub-drm");
   return { ok: true };
 }
 
