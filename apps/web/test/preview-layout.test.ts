@@ -99,6 +99,23 @@ describe("preview drawer breakpoint", () => {
   });
 });
 
+describe("header wrap above 40rem", () => {
+  // The English page labels the button "Bahasa Indonesia" (184 px). With a monospace system-ui the title
+  // needs about 406 px beside the logo, so beside that button the 608 px header squeezed it onto two lines.
+  test("the button drops to its own right-aligned row when the brand column has less than 27rem", () => {
+    const header = find("header", "");
+    expect(header).toHaveLength(1);
+    expect(declared(header[0]!.body, "flex-wrap")).toBe("wrap");
+    const brand = find(".brand", "");
+    expect(brand).toHaveLength(1);
+    expect(declared(brand[0]!.body, "flex")).toBe("1");
+    expect(declared(brand[0]!.body, "min-width")).toBe("min(100%,27rem)");
+    const lang = find("#lang", "");
+    expect(lang).toHaveLength(1);
+    expect(declared(lang[0]!.body, "margin-left")).toBe("auto");
+  });
+});
+
 describe("tap-away layer", () => {
   test("an open drawer puts an inset-0 absolute layer over the page, and only inside the 60rem query", () => {
     const layer = find(TAP_AWAY, DRAWER);
