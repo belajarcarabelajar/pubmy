@@ -99,20 +99,42 @@ describe("preview drawer breakpoint", () => {
   });
 });
 
-describe("header wrap above 40rem", () => {
-  // The English page labels the button "Bahasa Indonesia" (184 px). With a monospace system-ui the title
-  // needs about 406 px beside the logo, so beside that button the 608 px header squeezed it onto two lines.
-  test("the button drops to its own right-aligned row when the brand column has less than 27rem", () => {
-    const header = find("header", "");
-    expect(header).toHaveLength(1);
-    expect(declared(header[0]!.body, "flex-wrap")).toBe("wrap");
-    const brand = find(".brand", "");
+describe("header row above 40rem", () => {
+  // Above 40rem the header is always 38rem (608 px) wide: main is 40rem with 1rem padding. The English
+  // title ("pubmy: turn files into EPUB") needs about 415 px beside the logo in a monospace system font, and
+  // the button reads "Bahasa Indonesia". With 1rem of padding the two did not fit by about 7 px and the
+  // button dropped to its own row (or the title broke before "EPUB"), so the button is slimmer instead.
+  const rem = (v: string | undefined): number => Number.parseFloat(v ?? "NaN") * 16;
+  const brand = find(".brand", "");
+  const lang = find("#lang", "");
+
+  test("the brand column keeps 26rem and the button hugs the right edge", () => {
     expect(brand).toHaveLength(1);
     expect(declared(brand[0]!.body, "flex")).toBe("1");
-    expect(declared(brand[0]!.body, "min-width")).toBe("min(100%,27rem)");
-    const lang = find("#lang", "");
+    expect(declared(brand[0]!.body, "min-width")).toBe("min(100%,26rem)");
     expect(lang).toHaveLength(1);
     expect(declared(lang[0]!.body, "margin-left")).toBe("auto");
+    expect(declared(find("header", "")[0]!.body, "flex-wrap")).toBe("wrap");
+  });
+
+  test("beside the longest label the brand column still fits, so the button stays in the title row", () => {
+    const min = /^min\(100%,([\d.]+rem)\)$/.exec(declared(brand[0]!.body, "min-width") ?? "")?.[1];
+    const longest = Math.max(t("lang-toggle", "id").length, t("lang-toggle", "en").length);
+    // monospace glyphs are 0.6em wide at the 1rem button font; border is 1px a side
+    const button = longest * 0.6 * 16 + 2 * rem(declared(lang[0]!.body, "padding-inline")) + 2;
+    const free = 38 * 16 - rem(declared(find("header", "")[0]!.body, "gap")) - button;
+    expect(free).toBeGreaterThanOrEqual(rem(min));
+  });
+
+  test("the longest title fits the brand text column with 1rem to spare, so a slightly wider font does not break it", () => {
+    const min = /^min\(100%,([\d.]+rem)\)$/.exec(declared(brand[0]!.body, "min-width") ?? "")?.[1];
+    const h1 = find("h1", "");
+    expect(h1).toHaveLength(1);
+    const longest = Math.max(t("title", "id").length, t("title", "en").length);
+    const title = longest * 0.6 * rem(declared(h1[0]!.body, "font-size"));
+    // the logo is 40 px wide (index.html width attribute) and the brand gap is .75rem
+    const column = rem(min) - 40 - rem(declared(brand[0]!.body, "gap"));
+    expect(column - title).toBeGreaterThanOrEqual(16);
   });
 });
 
