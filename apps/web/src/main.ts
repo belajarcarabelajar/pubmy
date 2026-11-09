@@ -94,6 +94,8 @@ function startRetention(row: Row, epub: Uint8Array) {
     onTick: (it) => {
       // An open preview of this row closes and frees what it holds before the row shows Deleted.
       preview.onTick(it);
+      // failOpened drops the item from the row before it calls the countdown: that last tick must not show or announce Deleted.
+      if (row.ready !== ready) return;
       if (it.expired) announce(`${row.item.name}: ${t("deleted", lang)}`);
       // A tick only changes the clock; rebuilding the row every second loses a screen reader's place.
       if (it.expired || !updateClock(row.li, it.remaining, lang)) render(row);
@@ -198,11 +200,12 @@ async function openPreview(row: Row) {
 function failOpened(row: Row) {
   row.item.status = "failed";
   row.item.result = { ok: false, code: "READ_FAILED", message: "read-failed" };
-  // Calling the countdown expires it and drops the bytes; the fields are cleared after, or the row would render as Deleted.
-  // The reader's close handler still runs once after this and finds no countdown to extend.
-  row.stop?.();
+  // Calling the countdown expires it and drops the bytes. The row lets go of it first, so its last tick finds the item
+  // detached and neither announces nor renders Deleted. The reader's close handler still runs once after this and finds no countdown to extend.
+  const countdown = row.stop;
   row.ready = undefined;
   row.stop = undefined;
+  countdown?.();
   announce(`${row.item.name}: ${statusText(row)}`);
   render(row);
 }

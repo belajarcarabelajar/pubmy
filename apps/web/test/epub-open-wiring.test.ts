@@ -168,6 +168,7 @@ describe("opening an EPUB: a book the reader cannot mount", () => {
   const open = fn("openPreview");
   const caught = open.includes("} catch {") ? open.slice(open.indexOf("} catch {")) : "";
   const failed = fn("failOpened");
+  const retention = fn("startRetention");
 
   test("a mount failure is told apart by kind: an opened row is failed after the dialog closes", () => {
     expect(caught).toMatch(/dialog\.close\(\);\s*if \(row\.kind === "opened"\) failOpened\(row\);/);
@@ -183,12 +184,37 @@ describe("opening an EPUB: a book the reader cannot mount", () => {
     expect(failed).toContain('row.item.result = { ok: false, code: "READ_FAILED", message: "read-failed" };');
   });
 
-  test("the countdown is called first, which drops the bytes, and only then are the ready item and the countdown cleared", () => {
-    expect(failed).toContain("row.stop?.();");
+  test("the countdown is captured and the ready item and the countdown are cleared first; only then is it called, which drops the bytes", () => {
+    expect(failed).toContain("const countdown = row.stop;");
     expect(failed).toContain("row.ready = undefined;");
     expect(failed).toContain("row.stop = undefined;");
-    expect(before(failed, "row.stop?.();", "row.ready = undefined;")).toBe(true);
-    expect(before(failed, "row.stop?.();", "row.stop = undefined;")).toBe(true);
+    expect(failed).toContain("countdown?.();");
+    // Calling it through the row would run its last tick while the row still owns the item.
+    expect(failed).not.toContain("row.stop?.();");
+    expect(before(failed, "const countdown = row.stop;", "row.ready = undefined;")).toBe(true);
+    expect(before(failed, "const countdown = row.stop;", "row.stop = undefined;")).toBe(true);
+    expect(before(failed, "row.ready = undefined;", "countdown?.();")).toBe(true);
+    expect(before(failed, "row.stop = undefined;", "countdown?.();")).toBe(true);
+  });
+
+  // The countdown's last tick is what announces Deleted and renders the Deleted row; a failed open must not run that part.
+  test("the tick of a countdown whose item the row has dropped returns early: the preview is told, then nothing is announced or rendered", () => {
+    const guard = "if (row.ready !== ready) return;";
+    expect(retention).toContain(guard);
+    expect(before(retention, "preview.onTick(it);", guard)).toBe(true);
+    expect(before(retention, guard, "announce(")).toBe(true);
+    expect(before(retention, guard, "render(row);")).toBe(true);
+  });
+
+  // Pins that already held, and that the guard above relies on.
+  test("the guard changes nothing else: the row owns its item before the first tick, and only failOpened ever drops it", () => {
+    expect(before(retention, "row.ready = ready;", "startCountdown(")).toBe(true);
+    expect(main.match(/row\.ready = undefined;/g)).toHaveLength(1);
+    expect(main.match(/\.ready = /g)).toHaveLength(2);
+    // removeRow and extend still go through the countdown without detaching the item, so a removed row still announces Deleted.
+    expect(fn("removeRow")).toContain("row.stop?.();");
+    expect(fn("removeRow")).not.toContain("row.ready");
+    expect(fn("extend")).not.toContain("row.ready =");
   });
 
   test("the failure is announced with the row text and the row is rendered, after the row has changed", () => {
