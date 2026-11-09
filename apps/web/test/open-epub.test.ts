@@ -24,7 +24,52 @@ const encryptionXml = (...methods: string[]) =>
     .map((m, i) => `<enc:EncryptedData>${m}<enc:CipherData><enc:CipherReference URI="OEBPS/f${i}.bin"/></enc:CipherData></enc:EncryptedData>`)
     .join("\n")}\n</encryption>`;
 
-const epubWithEncryption = (xml: string) => zipSync({ ...unzipSync(epub), "META-INF/encryption.xml": strToU8(xml) });
+const epubWithEncryption = (xml: string | Uint8Array) =>
+  zipSync({ ...unzipSync(epub), "META-INF/encryption.xml": typeof xml === "string" ? strToU8(xml) : xml });
+
+/** Deterministic bytes that deflate cannot shrink: the high byte of a 32-bit linear congruential generator. */
+function noise(n: number): Uint8Array {
+  const out = new Uint8Array(n);
+  let x = 12345;
+  for (let i = 0; i < n; i++) {
+    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
+    out[i] = x >>> 24;
+  }
+  return out;
+}
+
+const concat = (a: Uint8Array, b: Uint8Array) => {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a);
+  out.set(b, a.length);
+  return out;
+};
+
+/** The central-directory record of an entry: where it starts and the sizes it declares. */
+function central(zip: Uint8Array, name: string) {
+  const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  // zipSync writes no archive comment, so the end record is the last 22 bytes.
+  const eocd = zip.length - 22;
+  let at = view.getUint32(eocd + 16, true);
+  for (let k = view.getUint16(eocd + 10, true); k > 0; k--) {
+    expect(view.getUint32(at, true)).toBe(0x02014b50);
+    const nameLen = view.getUint16(at + 28, true);
+    if (new TextDecoder().decode(zip.subarray(at + 46, at + 46 + nameLen)) === name) {
+      return { at, compressed: view.getUint32(at + 20, true), declared: view.getUint32(at + 24, true) };
+    }
+    at += 46 + nameLen + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
+  }
+  throw new Error(`no central-directory record for ${name}`);
+}
+
+/** A copy of the zip whose central directory declares another uncompressed size for the entry. */
+function declaring(zip: Uint8Array, name: string, size: number): Uint8Array {
+  const copy = zip.slice();
+  new DataView(copy.buffer).setUint32(central(copy, name).at + 24, size, true);
+  return copy;
+}
+
+const READ_FAILED = { ok: false, code: "READ_FAILED", message: "read-failed" } as const;
 
 describe("isEpubFile", () => {
   test.each([
@@ -203,6 +248,79 @@ describe("inspectEpub", () => {
     // Positive control: the corruption really breaks a full unzip.
     expect(() => unzipSync(corrupt)).toThrow();
     expect(inspectEpub(corrupt)).toEqual({ ok: true });
+  });
+});
+
+describe("inspectEpub: the two META-INF entries are read within bounds", () => {
+  const CONTAINER = "META-INF/container.xml";
+  const ENCRYPTION = "META-INF/encryption.xml";
+  const timed = (zip: Uint8Array) => {
+    const t0 = performance.now();
+    const result = inspectEpub(zip);
+    return { result, ms: performance.now() - t0 };
+  };
+
+  test("an encryption.xml of 20000 unclosed EncryptionMethod tags is answered in under 500 ms", () => {
+    const { result, ms } = timed(epubWithEncryption("<EncryptionMethod ".repeat(20000)));
+    expect(typeof result.ok).toBe("boolean");
+    expect(ms).toBeLessThan(500);
+  });
+
+  // Largest such file the declared-size bound lets through, so the scan itself is what takes the time.
+  test("unclosed EncryptionMethod tags up to the declared-size bound are scanned in linear time", () => {
+    const xml = "<EncryptionMethod ".repeat(7281);
+    expect(xml.length).toBeLessThanOrEqual(128 * 1024);
+    const { result, ms } = timed(epubWithEncryption(xml));
+    expect(result).toEqual({ ok: true });
+    expect(ms).toBeLessThan(100);
+  });
+
+  test("a container.xml whose compressed size is over 16 KiB is refused as READ_FAILED read-failed", () => {
+    const zip = zipSync({ ...unzipSync(epub), [CONTAINER]: noise(32 * 1024) });
+    // Fixture check: over the compressed bound but under the declared one, so only the compressed bound can refuse it.
+    expect(central(zip, CONTAINER).compressed).toBeGreaterThan(16 * 1024);
+    expect(central(zip, CONTAINER).declared).toBeLessThan(128 * 1024);
+    expect(inspectEpub(zip)).toEqual(READ_FAILED);
+  });
+
+  // Skipping a too-large encryption.xml as if absent would let a DRM book through as ok.
+  test("an oversize encryption.xml that names a non-font algorithm is refused as READ_FAILED read-failed, not ignored", () => {
+    const xml = strToU8(encryptionXml(`<enc:EncryptionMethod Algorithm="${AES}"/>`));
+    // Control: unpadded, the same file is DRM.
+    expect(inspectEpub(epubWithEncryption(xml))).toEqual({ ok: false, code: "DRM", message: "epub-drm" });
+    const zip = epubWithEncryption(concat(xml, noise(32 * 1024)));
+    expect(central(zip, ENCRYPTION).compressed).toBeGreaterThan(16 * 1024);
+    expect(inspectEpub(zip)).toEqual(READ_FAILED);
+  });
+
+  test("a container.xml of 24 MB of one letter, about 24 KB compressed, is refused fast as READ_FAILED read-failed", () => {
+    const zip = zipSync({ ...unzipSync(epub), [CONTAINER]: new Uint8Array(24 * 1024 * 1024).fill(0x61) });
+    expect(central(zip, CONTAINER).compressed).toBeGreaterThan(16 * 1024);
+    expect(central(zip, CONTAINER).declared).toBe(24 * 1024 * 1024);
+    const { result, ms } = timed(zip);
+    expect(result).toEqual(READ_FAILED);
+    expect(ms).toBeLessThan(500);
+  });
+
+  test("an encryption.xml that declares 200 KiB uncompressed is refused as READ_FAILED read-failed", () => {
+    const honest = epubWithEncryption(encryptionXml(`<enc:EncryptionMethod Algorithm="${FONT_IDPF}"/>`));
+    const lying = declaring(honest, ENCRYPTION, 200 * 1024);
+    expect(central(lying, ENCRYPTION).declared).toBe(200 * 1024);
+    expect(inspectEpub(honest)).toEqual({ ok: true });
+    expect(inspectEpub(lying)).toEqual(READ_FAILED);
+  });
+
+  test("a zip whose central directory declares 600 MiB is refused as READ_FAILED archive-too-large", () => {
+    const zip = declaring(epub, CONTAINER, 600 * 1024 * 1024);
+    expect(central(zip, CONTAINER).declared).toBe(600 * 1024 * 1024);
+    expect(inspectEpub(zip)).toEqual({ ok: false, code: "READ_FAILED", message: "archive-too-large" });
+  });
+
+  test.each([
+    ["no attributes", "<enc:EncryptionMethod/>"],
+    ["only an Id", `<enc:EncryptionMethod Id="m1"/>`],
+  ])("an EncryptionMethod with %s has no Algorithm and is refused as DRM epub-drm", (_label, method) => {
+    expect(inspectEpub(epubWithEncryption(encryptionXml(method)))).toEqual({ ok: false, code: "DRM", message: "epub-drm" });
   });
 });
 
