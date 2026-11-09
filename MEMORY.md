@@ -64,3 +64,9 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 | # | Rule |
 |---|---|
 | M18 | WHEN reading a screen recording to learn what a page did → DO decide from frame timestamps, phase durations compared with timers in the code, and layout, NOT from absolute pixel colors (the recorded teal button read (10,72,77) where the CSS says (15,92,99), so a color match proves nothing; the blank phase of 1.47 s matched the 1.5 s fallback timer in the CSS). After `ffmpeg -vf select`, `drawtext` `%{n}` counts the selected frames, not the original numbers. |
+
+## Task Group: EPUB opener (plan 2026-11-09-pubmy-epub-opener)
+
+| # | Rule |
+|---|---|
+| M19 | WHEN a build or browser run of a worktree under `/mnt/belajarcarabelajar/pubmy-wt/` fails with `Could not resolve "@pubmy/core/..."` after the change added an export entry (its `node_modules` symlink points at the main checkout, which has the old `package.json`) → DO build in a temporary detached worktree under `~/.cache/tmp/` with its own `bun install --frozen-lockfile` (A44), and read the job's `.exit` file, NOT the background notification (it reports the last command of the chain, `tee` or `echo`, so a failed build showed "exit 0"). |
