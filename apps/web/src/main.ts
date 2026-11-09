@@ -347,29 +347,36 @@ function heldCount(): number {
 async function openEpubs(files: File[]) {
   // Only the first file of a drop that passes may open the reader, and only if none is open: the book being read stays.
   let firstOpen = true;
-  for (const file of files) {
-    try {
-      const read = await file.arrayBuffer().then((b) => new Uint8Array(b), () => null);
-      const check = read ? inspectEpub(read) : ({ ok: false, code: "READ_FAILED", message: "read-failed" } as const);
-      const id = nextOpenedId--;
-      const li = document.createElement("li");
-      queueEl.append(li);
-      // The row is built only once the result is known, so it never shows a waiting state.
-      const item: QueueItem<File> = check.ok
-        ? { id, name: file.name, file, status: "ready" }
-        : { id, name: file.name, file, status: "failed", result: check };
-      const row: Row = { li, item, progress: 0, kind: "opened" };
-      rows.set(id, row);
-      if (read && check.ok) startRetention(row, read);
-      announce(`${file.name}: ${statusText(row)}`);
-      render(row);
-      if (check.ok && firstOpen) {
-        firstOpen = false;
-        if (!dialog.open) void openPreview(row);
+  // If something throws, the files after it are never reached and would hold their places for the life of the page.
+  let left = files.length;
+  try {
+    for (const file of files) {
+      try {
+        const read = await file.arrayBuffer().then((b) => new Uint8Array(b), () => null);
+        const check = read ? inspectEpub(read) : ({ ok: false, code: "READ_FAILED", message: "read-failed" } as const);
+        const id = nextOpenedId--;
+        const li = document.createElement("li");
+        queueEl.append(li);
+        // The row is built only once the result is known, so it never shows a waiting state.
+        const item: QueueItem<File> = check.ok
+          ? { id, name: file.name, file, status: "ready" }
+          : { id, name: file.name, file, status: "failed", result: check };
+        const row: Row = { li, item, progress: 0, kind: "opened" };
+        rows.set(id, row);
+        if (read && check.ok) startRetention(row, read);
+        announce(`${file.name}: ${statusText(row)}`);
+        render(row);
+        if (check.ok && firstOpen) {
+          firstOpen = false;
+          if (!dialog.open) void openPreview(row);
+        }
+      } finally {
+        opening--;
+        left--;
       }
-    } finally {
-      opening--;
     }
+  } finally {
+    opening -= left;
   }
 }
 

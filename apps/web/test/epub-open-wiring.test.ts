@@ -113,8 +113,17 @@ describe("opening an EPUB: one file", () => {
     expect(body).toContain("nextOpenedId--");
   });
 
-  test("each file ends its open attempt by taking itself off the being-read count, whatever happened", () => {
-    expect(body).toMatch(/finally \{\s*opening--;\s*\}/);
+  test("each file ends its open attempt by taking itself off the being-read count and the files-left count, whatever happened", () => {
+    expect(body).toContain("let left = files.length;");
+    expect(body).toMatch(/finally \{\s*opening--;\s*left--;\s*\}/);
+  });
+
+  // A throw out of one file's body must not leave the places of the files after it held for the life of the page.
+  test("an unexpected throw gives back the places of the files never reached, and still propagates", () => {
+    expect(body).toMatch(/\} finally \{\s*opening -= left;\s*\}\s*\}$/);
+    // The outer try opens before the loop, and no catch swallows the exception.
+    expect(before(body, "try {", "for (const file of files) {")).toBe(true);
+    expect(body).not.toContain("catch (");
   });
 
   test("the files are opened one after another, in drop order", () => {
@@ -142,9 +151,14 @@ describe("opening an EPUB: auto-open and the reading hold", () => {
     expect(before(close, 'if (row?.kind === "opened") row.stop?.extend();', ".focus();")).toBe(true);
   });
 
-  test("a converted row is not paused or extended by the reader", () => {
-    expect(main.match(/row\.stop\?\.pause\(\)/g)).toHaveLength(1);
-    expect(main.match(/row\??\.stop\?\.extend\(\)/g)).toHaveLength(2);
+  // Anchored on the guard of each line, not on how many calls exist, so a harmless extra guarded call does not break it.
+  test("the reader pauses and restarts the countdown of an opened row only, never of a converted one", () => {
+    const pauses = main.split("\n").filter((l) => l.includes(".stop?.pause()"));
+    expect(pauses.length).toBeGreaterThan(0);
+    for (const line of pauses) expect(line).toContain('kind === "opened"');
+    const restarts = listener("dialog", "close").split("\n").filter((l) => l.includes(".stop?.extend()"));
+    expect(restarts.length).toBeGreaterThan(0);
+    for (const line of restarts) expect(line).toContain('kind === "opened"');
   });
 });
 
