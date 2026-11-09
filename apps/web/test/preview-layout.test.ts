@@ -108,25 +108,27 @@ describe("header row above 40rem", () => {
   const brand = find(".brand", "");
   const lang = find("#lang", "");
 
-  test("the brand column keeps 26rem and the button hugs the right edge", () => {
+  test("the brand column keeps 25rem and the button hugs the right edge", () => {
     expect(brand).toHaveLength(1);
     expect(declared(brand[0]!.body, "flex")).toBe("1");
-    expect(declared(brand[0]!.body, "min-width")).toBe("min(100%,26rem)");
+    expect(declared(brand[0]!.body, "min-width")).toBe("min(100%,25rem)");
     expect(lang).toHaveLength(1);
     expect(declared(lang[0]!.body, "margin-left")).toBe("auto");
     expect(declared(find("header", "")[0]!.body, "flex-wrap")).toBe("wrap");
   });
 
+  // The 25rem threshold sits between what the title needs and what the button leaves free, so a font a
+  // few pixels wider breaks neither: 8 px of slack on each side.
   test("beside the longest label the brand column still fits, so the button stays in the title row", () => {
     const min = /^min\(100%,([\d.]+rem)\)$/.exec(declared(brand[0]!.body, "min-width") ?? "")?.[1];
     const longest = Math.max(t("lang-toggle", "id").length, t("lang-toggle", "en").length);
     // monospace glyphs are 0.6em wide at the 1rem button font; border is 1px a side
     const button = longest * 0.6 * 16 + 2 * rem(declared(lang[0]!.body, "padding-inline")) + 2;
     const free = 38 * 16 - rem(declared(find("header", "")[0]!.body, "gap")) - button;
-    expect(free).toBeGreaterThanOrEqual(rem(min));
+    expect(free - rem(min)).toBeGreaterThanOrEqual(8);
   });
 
-  test("the longest title fits the brand text column with 1rem to spare, so a slightly wider font does not break it", () => {
+  test("the longest title fits the brand text column with 8 px to spare, so a slightly wider font does not break it", () => {
     const min = /^min\(100%,([\d.]+rem)\)$/.exec(declared(brand[0]!.body, "min-width") ?? "")?.[1];
     const h1 = find("h1", "");
     expect(h1).toHaveLength(1);
@@ -134,7 +136,7 @@ describe("header row above 40rem", () => {
     const title = longest * 0.6 * rem(declared(h1[0]!.body, "font-size"));
     // the logo is 40 px wide (index.html width attribute) and the brand gap is .75rem
     const column = rem(min) - 40 - rem(declared(brand[0]!.body, "gap"));
-    expect(column - title).toBeGreaterThanOrEqual(16);
+    expect(column - title).toBeGreaterThanOrEqual(8);
   });
 });
 

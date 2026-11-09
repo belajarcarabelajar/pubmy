@@ -18,8 +18,8 @@ main{max-width:40rem;margin:0 auto;padding:1rem}
 html:not(.ready) main{visibility:hidden;animation:reveal 0s 1.5s forwards}
 @keyframes reveal{to{visibility:visible}}
 header{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;justify-content:space-between}
-/* The header is 38rem wide above 40rem. The brand keeps 26rem (logo plus the English title in a monospace font) and the slimmer button leaves it that much beside "Bahasa Indonesia"; a wider font wraps the button to its own row. */
-.brand{display:flex;gap:.75rem;align-items:center;flex:1;min-width:min(100%,26rem)}
+/* The header is 38rem wide above 40rem. The brand needs about 389 px (logo plus the English title in a monospace font) and the slimmer button leaves it 416 px beside "Bahasa Indonesia"; 25rem sits between the two, and a wider font wraps the button to its own row. */
+.brand{display:flex;gap:.75rem;align-items:center;flex:1;min-width:min(100%,25rem)}
 .brand>div{min-width:0}
 .logo{flex:none;border-radius:.5rem}
 #lang{flex:none;margin-left:auto;padding-inline:.75rem}
