@@ -14,6 +14,9 @@
 html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:var(--text);background:var(--bg)}
 body{margin:0;min-width:320px}
 main{max-width:40rem;margin:0 auto;padding:1rem}
+/* The static text is Indonesian for a desktop pointer; main.js picks the visitor's language and touch wording first. The timer shows the page anyway if the script never runs. */
+html:not(.ready) main{visibility:hidden;animation:reveal 0s 1.5s forwards}
+@keyframes reveal{to{visibility:visible}}
 header{display:flex;gap:.75rem;align-items:center;justify-content:space-between}
 .brand{display:flex;gap:.75rem;align-items:center;flex:1;min-width:0}
 .brand>div{min-width:0}

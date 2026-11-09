@@ -368,3 +368,4 @@ window.addEventListener("dragover", (e) => e.preventDefault());
 window.addEventListener("drop", (e) => e.preventDefault());
 
 applyLang();
+document.documentElement.classList.add("ready");
