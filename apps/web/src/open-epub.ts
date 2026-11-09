@@ -24,7 +24,6 @@ const FONT_OBFUSCATION = new Set(["http://www.idpf.org/2008/embedding", "http://
 // entry that is big, or claims to be, is refused instead of inflated.
 const META_MAX_COMPRESSED = 16 * 1024;
 const META_MAX_DECLARED = 128 * 1024;
-const META_MAX_TEXT = 1024 * 1024;
 
 /** The package's mark: a zip local file header. */
 const hasZipSignature = (b: Uint8Array) => b.length >= 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04;
@@ -70,7 +69,7 @@ export function inspectEpub(bytes: Uint8Array): Inspect {
   } catch {
     return READ_FAILED();
   }
-  if (oversize || Object.values(meta).some((d) => d.length > META_MAX_TEXT)) return READ_FAILED();
+  if (oversize) return READ_FAILED();
   if (!meta[CONTAINER]) return READ_FAILED();
   if (meta[ENCRYPTION] && usesDrm(strFromU8(meta[ENCRYPTION]))) return fail("DRM", "epub-drm");
   return { ok: true };
