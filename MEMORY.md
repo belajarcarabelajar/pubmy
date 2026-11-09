@@ -58,3 +58,9 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 | # | Rule |
 |---|---|
 | M17 | WHEN a design calls a browser API on a specific element (fullscreen on the preview dialog) → DO call it once in the real browser and read the promise result before writing the tests, NOT assume it works because the method exists (`dialog.requestFullscreen()` exists and rejects with "Dialog elements are invalid"; a text test pinned the wrong call and the `typeof` guard hid nothing). |
+
+## Task Group: web inline CSS (session pubmy-web-inline-css, no plan file)
+
+| # | Rule |
+|---|---|
+| M18 | WHEN reading a screen recording to learn what a page did → DO decide from frame timestamps, phase durations compared with timers in the code, and layout, NOT from absolute pixel colors (the recorded teal button read (10,72,77) where the CSS says (15,92,99), so a color match proves nothing; the blank phase of 1.47 s matched the 1.5 s fallback timer in the CSS). After `ffmpeg -vf select`, `drawtext` `%{n}` counts the selected frames, not the original numbers. |
