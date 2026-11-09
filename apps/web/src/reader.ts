@@ -1,5 +1,6 @@
 import { EPUB, type Resolved, type TocItem } from "../vendor/foliate/epub.js";
 import type { EpubLoader } from "./epub-loader.ts";
+import { blockBookScripts, isBookMarkup } from "./book-csp.ts";
 import type { Reader } from "./preview-session.ts";
 import { isolateTables, TABLE_HOST } from "./tables.ts";
 
@@ -43,6 +44,11 @@ interface Renderer extends HTMLElement {
   destroy(): void;
 }
 
+/** foliate's loader tells this target before it reads a resource of the book ("load") and before it makes a blob URL of it ("data"). */
+interface BookEvents {
+  transformTarget?: EventTarget;
+}
+
 /** Opens the book with foliate-js and shows its first page in ui.page. */
 export async function mountReader(loader: EpubLoader, ui: ReaderUi): Promise<Reader> {
   const book = await new EPUB(loader).init();
@@ -52,6 +58,23 @@ export async function mountReader(loader: EpubLoader, ui: ReaderUi): Promise<Rea
   const renderer = document.createElement(fixed ? "foliate-fxl" : "foliate-paginator") as Renderer;
   ui.page.dir = "ltr";
   ui.page.replaceChildren(renderer);
+  // A book is untrusted and its frame allows scripts (foliate needs that). The page's CSP is the first barrier to
+  // them; these two are the second, for the day a rule on the host replaces that CSP. They are registered before
+  // open(), so no resource of the book is read without them.
+  const transform = (book as EPUB & BookEvents).transformTarget;
+  transform?.addEventListener("load", (e) => {
+    const { detail } = e as CustomEvent<{ isScript: boolean; allow: boolean }>;
+    if (detail.isScript) detail.allow = false;
+  });
+  transform?.addEventListener("data", (e) => {
+    const { detail } = e as CustomEvent<{ data: unknown; type: string }>;
+    if (!isBookMarkup(detail.type)) return;
+    detail.data = Promise.resolve(detail.data).then(async (d) => {
+      if (typeof d === "string") return blockBookScripts(d, detail.type);
+      // A page that a frame loads while that page is being read comes as a Blob of its raw bytes, scripts and all.
+      return d instanceof Blob ? blockBookScripts(await d.text(), detail.type) : d;
+    });
+  });
   renderer.open(book);
   renderer.setStyles?.(SECTION_CSS);
 
