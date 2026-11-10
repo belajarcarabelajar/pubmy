@@ -7,6 +7,25 @@ import { PNG_1X1 } from "../../../fixtures/make-rtf.ts";
 
 const html = (body: string) => readOdt(makeOdt(body)).html;
 
+/** Rewrites the uncompressed-size field of the central directory record named `name` (the fixture zip has no comment, so the EOCD is the last 22 bytes). */
+function declareSize(zip: Uint8Array, name: string, size: number): Uint8Array {
+  const out = zip.slice();
+  const v = new DataView(out.buffer);
+  const eocd = out.length - 22;
+  let at = v.getUint32(eocd + 16, true);
+  let patched = 0;
+  for (let i = 0; i < v.getUint16(eocd + 10, true); i++) {
+    const nameLen = v.getUint16(at + 28, true);
+    if (strFromU8(out.subarray(at + 46, at + 46 + nameLen)) === name) {
+      v.setUint32(at + 24, size, true);
+      patched++;
+    }
+    at += 46 + nameLen + v.getUint16(at + 30, true) + v.getUint16(at + 32, true);
+  }
+  if (patched !== 1) throw new Error(`declareSize: ${patched} records named ${name}`);
+  return out;
+}
+
 describe("ODT reader", () => {
   test("maps text:h outline levels to heading levels", () => {
     expect(html('<text:h text:outline-level="1">A</text:h><text:h text:outline-level="3">C</text:h>')).toBe(
@@ -30,6 +49,20 @@ describe("ODT reader", () => {
     expect(html('<text:p>a<text:s text:c="2"/>b<text:tab/>c<text:line-break/>d</text:p>')).toBe(
       "<p>a  b\tc<br/>d</p>",
     );
+  });
+
+  test("caps a text:s count of one billion at 1,000 no-break spaces", () => {
+    const start = performance.now();
+    const out = html('<text:p>a<text:s text:c="1000000000"/>b</text:p>');
+    const ms = performance.now() - start;
+    expect(out).toBe(`<p>a${"\u00a0".repeat(1000)}b</p>`);
+    // Capped, the paragraph costs under 10 ms; uncapped it builds a string of one billion characters, 17 s measured
+    // on the test runner. The bound sits between the two with room for a loaded machine.
+    expect(ms).toBeLessThan(1500);
+  });
+
+  test("keeps a text:s count of exactly 1,000", () => {
+    expect(html('<text:p>a<text:s text:c="1000"/>b</text:p>')).toBe(`<p>a${"\u00a0".repeat(1000)}b</p>`);
   });
 
   test("decodes XML entities and re-escapes markup characters", () => {
@@ -141,6 +174,18 @@ describe("odt adapter through convert()", () => {
 });
 
 describe("ODT reader archive safety", () => {
+  test("refuses an entry that inflates past its declared size as READ_FAILED archive-too-large", () => {
+    const honest = makeOdtWithEntries([["junk/big.bin", new Uint8Array(200_000).fill(0x61)]]);
+    expect(readOdt(honest).html).toContain("<h1>Chapter One</h1>");
+    let thrown: unknown;
+    try {
+      readOdt(declareSize(honest, "junk/big.bin", 1024));
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toMatchObject({ code: "READ_FAILED", message: "archive-too-large" });
+  });
+
   test("ignores an entry whose path climbs out with `..`", () => {
     const body = '<text:p><draw:frame><draw:image xlink:href="../evil.png"/></draw:frame>Text</text:p>';
     const doc = readOdt(makeOdtWithEntries([["../evil.png", PNG_1X1]], body));
