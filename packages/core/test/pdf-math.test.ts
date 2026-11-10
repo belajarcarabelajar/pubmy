@@ -157,3 +157,24 @@ test("a page of 20,000 separate strokes (a scatter plot or a map) costs about 4 
   const big = await fastest(100);
   expect(big / small).toBeLessThan(9);
 }, 180_000);
+
+test("a path with a point at 1e12 is clipped to the page, and a small diagram beside it is still found", async () => {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([612, 792]);
+  // diagonal and 200 pt tall: not a rule and not page-sized, so it reaches the diagram grouping
+  page.drawLine({ start: { x: 0, y: 100 }, end: { x: 1e12, y: 300 }, thickness: 1 });
+  for (const r of [60, 54, 48, 42]) page.drawEllipse({ x: 300, y: 550, xScale: r, yScale: r, borderWidth: 1 });
+  const { OPS } = await getResolvedPDFJS();
+  const doc = await getDocumentProxy(await pdf.save(), { fontExtraProperties: true } as Parameters<typeof getDocumentProxy>[1]);
+  const p1 = await doc.getPage(1);
+  const ops = await p1.getOperatorList();
+  const t0 = performance.now();
+  const areas = findMathAreas({ page: 1, view: p1.view, items: [], fonts: {}, ops, OPS: OPS as Record<string, number> });
+  // Clipped, the whole test took under 5 ms. Unclipped, the grid has about 2e11 cells of 32 pt
+  // (1e12 / 32 columns by 7 rows) to visit and did not finish in 25 s; that loop is synchronous,
+  // so the `timeout` in front of the test command is what ends it.
+  expect(performance.now() - t0).toBeLessThan(2000);
+  expect(areas.diagrams.length).toBe(1);
+  const { x0, y0, x1, y1 } = areas.diagrams[0].box;
+  expect([x0 > 230, y0 > 480, x1 < 370, y1 < 620]).toEqual([true, true, true, true]);
+}, 30_000);

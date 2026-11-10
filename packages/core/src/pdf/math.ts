@@ -4,7 +4,7 @@
 // loop (text items, real font names, the operator list), so it runs in Bun and in a Web Worker.
 // Rules ported from the 2026-11-07 formula spike (OpenStax University Physics 1, arXiv 1706.03762).
 import type { PageBox } from "../types.ts";
-import { apply, areaOf, bbOf, grow, inter, mul, overlapX, Sets, touching, union, type BB } from "./geometry.ts";
+import { apply, areaOf, bbOf, clip, grow, inter, mul, overlapX, Sets, touching, union, type BB } from "./geometry.ts";
 
 /** A raw pdf.js getTextContent() item; itemIndexes point into the array of these. */
 export interface MathTextItem {
@@ -154,8 +154,10 @@ function graphicsOf(p: MathPage, pw: number, ph: number): { paths: Path[]; image
       stack.push(ctm);
       if (Array.isArray(a?.[0])) ctm = mul(a[0] as number[], ctm);
     } else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() ?? ctm;
-    else if (image.has(fn)) images.push(bbOf([apply(ctm, 0, 0), apply(ctm, 1, 0), apply(ctm, 0, 1), apply(ctm, 1, 1)]));
-    else if (fn === OPS.constructPath && a && paint.has(a[0] as number)) {
+    else if (image.has(fn)) {
+      const im = clip(bbOf([apply(ctm, 0, 0), apply(ctm, 1, 0), apply(ctm, 0, 1), apply(ctm, 1, 1)]), p.view);
+      if (im) images.push(im);
+    } else if (fn === OPS.constructPath && a && paint.has(a[0] as number)) {
       // pdf.js 5: [paintOp, [path], minMax]; path ops 0 moveTo, 1 lineTo, 2 curveTo, 3 quadratic, 4 close
       const d = (a[1] as ArrayLike<number>[] | undefined)?.[0];
       if (!d) return;
@@ -174,9 +176,11 @@ function graphicsOf(p: MathPage, pw: number, ph: number): { paths: Path[]; image
         i += n;
       }
       if (!pts.length) return;
-      const bb = bbOf(pts);
-      const [w, h] = [bb[2] - bb[0], bb[3] - bb[1]];
+      const raw = bbOf(pts);
+      const [w, h] = [raw[2] - raw[0], raw[3] - raw[1]];
       if (w > pw * 0.95 && h > ph * 0.95) return;
+      const bb = clip(raw, p.view);
+      if (!bb) return;
       paths.push({ bb, rule: bent ? "shape" : h <= 1.6 && w >= 3 ? "h" : w <= 1.6 && h >= 3 ? "v" : "rect" });
     }
   });

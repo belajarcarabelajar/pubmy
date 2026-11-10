@@ -134,10 +134,24 @@ function shrink(p: Pixels, maxWidth: number): Pixels {
   return { w, h, ch: p.ch, data: out };
 }
 
+/** Images kept per page, in drawing order; a page that draws more is a tiling or a hostile file. */
+const MAX_IMAGES = 100;
+
+type Encoded = Pick<PageImage, "png" | "width" | "height">;
+
+/** The PNG of one decoded image, or null when it is decorative (MIN_PX) or its pixels are unusable. */
+function encode(img: RawImage | null, kinds: Kinds, maxWidth: number): Encoded | null {
+  if (!img || img.width < MIN_PX || img.height < MIN_PX) return null;
+  const px = pixelsOf(img, kinds);
+  if (!px) return null;
+  const small = shrink(compact(px), maxWidth);
+  return { png: encodePng(small), width: small.w, height: small.h };
+}
+
 /**
  * The raster images (image XObjects and inline images) drawn on a page, as PNGs ordered top to
- * bottom; decorative ones (see MIN_AREA, MIN_PX) are left out. Call page.cleanup() afterwards to
- * free the decoded pixels pdf.js keeps.
+ * bottom; decorative ones (see MIN_AREA, MIN_PX) are left out and at most MAX_IMAGES are kept.
+ * Call page.cleanup() afterwards to free the decoded pixels pdf.js keeps.
  */
 export async function extractPageImages(page: ImagePage, opts: PageImageOptions = {}): Promise<PageImage[]> {
   const { OPS, ImageKind } = await getResolvedPDFJS();
@@ -145,6 +159,7 @@ export async function extractPageImages(page: ImagePage, opts: PageImageOptions 
   const [vx0, vy0, vx1, vy1] = page.view;
   const pageArea = (vx1 - vx0) * (vy1 - vy0);
   const out: PageImage[] = [];
+  const encoded = new Map<string, Encoded | null>();
   const stack: Matrix[] = [];
   const groups: boolean[] = [];
   let ctm: Matrix = [1, 0, 0, 1, 0, 0];
@@ -176,12 +191,15 @@ export async function extractPageImages(page: ImagePage, opts: PageImageOptions 
       const [x0, x1] = [Math.max(Math.min(...xs), vx0), Math.min(Math.max(...xs), vx1)];
       const [y0, y1] = [Math.max(Math.min(...ys), vy0), Math.min(Math.max(...ys), vy1)];
       if (x1 <= x0 || y1 <= y0 || ((x1 - x0) * (y1 - y0)) / pageArea < MIN_AREA) continue;
-      const img = fn === OPS.paintInlineImageXObject ? (args[0] as RawImage) : await objectOf(page, args[0] as string);
-      if (!img || img.width < MIN_PX || img.height < MIN_PX) continue;
-      const px = pixelsOf(img, ImageKind);
-      if (!px) continue;
-      const small = shrink(compact(px), opts.maxWidth ?? 1600);
-      out.push({ png: encodePng(small), width: small.w, height: small.h, top: vy1 - y1, bottom: vy1 - y0 });
+      if (out.length >= MAX_IMAGES) break;
+      // an image object drawn again (a tiled background, a repeated stamp) reuses its first PNG
+      const id = fn === OPS.paintImageXObject ? (args[0] as string) : null;
+      let enc = id === null ? undefined : encoded.get(id);
+      if (enc === undefined) {
+        enc = encode(id === null ? (args[0] as RawImage) : await objectOf(page, id), ImageKind, opts.maxWidth ?? 1600);
+        if (id !== null) encoded.set(id, enc);
+      }
+      if (enc) out.push({ ...enc, top: vy1 - y1, bottom: vy1 - y0 });
     }
   }
   return out.sort((a, b) => a.top - b.top);
