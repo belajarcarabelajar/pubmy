@@ -28,6 +28,16 @@ export function skipAfterNull<T>(load: () => Promise<T | null>): () => Promise<T
   };
 }
 
+declare const __PUBMY_DIR__: string | undefined;
+
+/**
+ * The skill bundle (apps/cli/build.ts) defines __PUBMY_DIR__ and ships the language data in tesseract-lang/ beside
+ * pubmy.js. Run from source, the name is undeclared, so typeof is "undefined" and tesseract.js uses its CDN.
+ */
+function bundledLangPath(): string | undefined {
+  return typeof __PUBMY_DIR__ === "string" ? join(__PUBMY_DIR__, "tesseract-lang") : undefined;
+}
+
 async function coreConvert(): Promise<ConvertFn> {
   // Loaded lazily so tests with an injected convert never pull in the DOM and EPUB stack.
   const core = await import("@pubmy/core");
@@ -38,7 +48,7 @@ async function coreConvert(): Promise<ConvertFn> {
     core.convert(f, {
       dom,
       // The scan code terminates each engine it gets, so every call loads a fresh one.
-      loadOcr: async () => (await import("@pubmy/core/ocr")).loadOcrBun(),
+      loadOcr: async () => (await import("@pubmy/core/ocr")).loadOcrBun({ langPath: bundledLangPath() }),
       loadRenderer,
       progress: () => {},
       signal: new AbortController().signal,

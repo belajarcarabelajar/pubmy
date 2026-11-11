@@ -28,7 +28,7 @@ bun <skill-dir>/scripts/pubmy.js <folder> [--force] [--rtl]
 - `--force` reconverts files whose EPUB is already newer than the source. Use it only when the user asks.
 - `--rtl` sets right-to-left page order for comics (manga) and reconverts every file, as `--force` does. Use it only when the user asks.
 
-Output goes to `<folder>/pubmy-epub/` with the same subfolders, for example `<folder>/sub/book.pdf` becomes `<folder>/pubmy-epub/sub/book.pdf.epub`. A rerun skips files already converted. Scanned PDFs are read with OCR (Indonesian and English); the OCR data is cached in `~/.cache/pubmy`.
+Output goes to `<folder>/pubmy-epub/` with the same subfolders, for example `<folder>/sub/book.pdf` becomes `<folder>/pubmy-epub/sub/book.pdf.epub`. A rerun skips files already converted. Scanned PDFs are read with OCR (Indonesian and English); the OCR language data ships inside the skill, so nothing is downloaded.
 
 ## 3. Report
 
