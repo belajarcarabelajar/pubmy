@@ -45,7 +45,7 @@ const EXT: Record<string, string> = {
 const OBSOLETE: Record<string, string> = { font: "span", center: "div", big: "span", tt: "code", strike: "s", blink: "span", basefont: "span" };
 const VOID = new Set(["area", "br", "col", "hr", "img", "wbr", "link"]);
 const KEEP_ATTRS = new Set(["id", "class", "href", "src", "alt", "title", "lang", "dir", "colspan", "rowspan", "style", "rel", "type"]);
-const DROP = new Set(["script", "guide", "reference", "head", "style", "meta", "title", "link"]);
+const DROP = new Set(["script", "guide", "reference", "head", "style", "meta", "title", "link", "iframe", "object", "embed", "form", "input"]);
 const SVG_NS = "http://www.w3.org/2000/svg";
 const XLINK_NS = "http://www.w3.org/1999/xlink";
 // An HTML-mode parse lower-cases SVG attribute names; these are the ones wrappers use.
@@ -54,6 +54,12 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const escAttr = (s: string) => esc(s).replace(/"/g, "&quot;");
 const isLocal = (href: string) => /^s\d{4}\.xhtml(#.*)?$/.test(href);
 const isExternal = (href: string) => /^(https?:|mailto:)/i.test(href);
+// The name addResource gives a kindle:embed resource; the only src a chapter may carry.
+const isResource = (src: string) => /^res\d{4,}\.(jpg|png|gif|otf|ttf|woff)$/.test(src);
+// SVG elements whose href opens on a tap; on any other element (image, use) an http(s) href would be fetched on render.
+const SVG_LINK = new Set(["a"]);
+const svgHrefOk = (el: string, href: string) =>
+  href.startsWith("#") || isResource(href) || isLocal(href) || (SVG_LINK.has(el) && /^https?:/i.test(href));
 
 function svgToXhtml(node: Node, root: boolean): string {
   if (node.nodeType === 3) return esc(node.nodeValue ?? "");
@@ -66,6 +72,7 @@ function svgToXhtml(node: Node, root: boolean): string {
     const n = SVG_CASE[a.name] ?? a.name;
     if (/^on/i.test(n) || n === "xmlns" || n.startsWith("xmlns:")) continue;
     if (n.includes(":") && n !== "xlink:href" && n !== "xml:lang") continue;
+    if ((n === "href" || n === "xlink:href") && !svgHrefOk(name, a.value)) continue;
     attrs += ` ${n}="${escAttr(a.value)}"`;
   }
   return `<${name}${attrs}>${Array.from(el.childNodes).map((c) => svgToXhtml(c, false)).join("")}</${name}>`;
@@ -87,12 +94,14 @@ export function nodeToXhtml(node: Node, swap: Map<Node, Node> = new Map()): stri
   if (DROP.has(tag)) return "";
   if (tag.includes(":") || tag === "html" || tag === "body") return kids();
   const out = OBSOLETE[tag] ?? tag;
+  // An img without a book resource has nothing to show, and one without src is invalid XHTML.
+  if (out === "img" && !isResource(el.getAttribute("src") ?? "")) return "";
   let attrs = "";
   for (const a of Array.from(el.attributes)) {
     const name = a.name.toLowerCase();
     if (!KEEP_ATTRS.has(name)) continue;
     if (name === "href" && !(isLocal(a.value) || isExternal(a.value))) continue;
-    if (name === "src" && (!a.value || a.value.startsWith("kindle:"))) continue;
+    if (name === "src" && !isResource(a.value)) continue;
     attrs += ` ${name}="${escAttr(a.value)}"`;
   }
   if (out === "img" && !el.hasAttribute("alt")) attrs += ` alt=""`;

@@ -2,7 +2,7 @@ import mammoth from "mammoth";
 import { PubmyError } from "../errors.ts";
 import type { Adapter, Asset, Book, Chapter, InputFile } from "../types.ts";
 import { decode } from "../xml.ts";
-import { checkZipCaps } from "../zip-caps.ts";
+import { unzipBounded } from "../zip-caps.ts";
 
 // Word saves a password-protected document as an encrypted CFB container instead of a ZIP.
 const CFB_MAGIC = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
@@ -66,11 +66,13 @@ function relinkAnchors(chapters: Chapter[]): void {
 
 export const docxAdapter: Adapter = {
   id: "docx",
-  accepts: (s) => s.ext === "docx",
+  // The extension still counts: an encrypted DOCX is a CFB container, which detect() cannot name as docx.
+  accepts: (s) => s.format === "docx" || s.ext === "docx",
   async read(f: InputFile): Promise<Book> {
     if (isCfb(f.bytes)) throw new PubmyError("READ_FAILED", "encrypted-office");
-    // mammoth inflates every part itself, so the declared sizes are checked before it sees the bytes.
-    checkZipCaps(f.bytes);
+    // mammoth inflates every part itself with no bound, so a bounded unzip runs first only to refuse an archive
+    // whose entries are larger than they declare; its output is not used.
+    unzipBounded(f.bytes);
     const assets: Asset[] = [];
     let imageCount = 0;
     const arrayBuffer = f.bytes.buffer.slice(f.bytes.byteOffset, f.bytes.byteOffset + f.bytes.byteLength) as ArrayBuffer;

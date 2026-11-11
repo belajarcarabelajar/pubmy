@@ -19,6 +19,25 @@ const ctx: Ctx = {
   signal: new AbortController().signal,
 };
 
+/** Rewrites the uncompressed-size field of the central directory record named `name` (the fixture zip has no comment, so the EOCD is the last 22 bytes). */
+function declareSize(zip: Uint8Array, name: string, size: number): Uint8Array {
+  const out = zip.slice();
+  const v = new DataView(out.buffer);
+  const eocd = out.length - 22;
+  let at = v.getUint32(eocd + 16, true);
+  let patched = 0;
+  for (let i = 0; i < v.getUint16(eocd + 10, true); i++) {
+    const nameLen = v.getUint16(at + 28, true);
+    if (strFromU8(out.subarray(at + 46, at + 46 + nameLen)) === name) {
+      v.setUint32(at + 24, size, true);
+      patched++;
+    }
+    at += 46 + nameLen + v.getUint16(at + 30, true) + v.getUint16(at + 32, true);
+  }
+  if (patched !== 1) throw new Error(`declareSize: ${patched} records named ${name}`);
+  return out;
+}
+
 const read = (name: string, bytes: Uint8Array) => docxAdapter.read({ name, bytes }, ctx);
 const allBodies = (b: Book) => b.chapters.map((c) => c.body).join("\n");
 
@@ -98,6 +117,14 @@ describe("docx adapter: convert()", () => {
   test("a DOCX with 6,000 extra entries is READ_FAILED with archive-too-large", async () => {
     const extra = Object.fromEntries(Array.from({ length: 6000 }, (_, i) => [`junk/${i}.txt`, new Uint8Array()]));
     const r = await convert({ name: "bomb.docx", bytes: makeDocxWithEntries(extra) }, ctx);
+    expect(r).toEqual({ ok: false, code: "READ_FAILED", message: "archive-too-large" });
+  });
+
+  test("a DOCX whose entry inflates past its declared size is READ_FAILED with archive-too-large", async () => {
+    const big = new Uint8Array(200_000).fill(0x61);
+    const honest = makeDocxWithEntries({ "junk/big.bin": big });
+    expectOk(await convert({ name: "honest.docx", bytes: honest }, ctx));
+    const r = await convert({ name: "lying.docx", bytes: declareSize(honest, "junk/big.bin", 1024) }, ctx);
     expect(r).toEqual({ ok: false, code: "READ_FAILED", message: "archive-too-large" });
   });
 

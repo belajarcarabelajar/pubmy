@@ -37,6 +37,16 @@ export class Sets {
 const CELL = 32;
 
 /**
+ * `a` cut down to `view` widened by one grid cell, or null when nothing of it is left (a box off
+ * the page, a coordinate that is not a number). A PDF may draw a path out to 1e12; unclipped, such
+ * a box would make touching() walk billions of cells.
+ */
+export function clip(a: BB, view: number[]): BB | null {
+  const b: BB = [Math.max(a[0], view[0] - CELL), Math.max(a[1], view[1] - CELL), Math.min(a[2], view[2] + CELL), Math.min(a[3], view[3] + CELL)];
+  return b[2] >= b[0] && b[3] >= b[1] ? b : null;
+}
+
+/**
  * Calls join(a, b) for each pair of boxes within `gap` of each other. Boxes are bucketed on a grid
  * of CELL points, so a page of 20,000 scattered strokes (a plot, a map) is not compared pair by pair.
  */

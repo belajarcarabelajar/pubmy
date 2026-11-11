@@ -32,6 +32,12 @@ describe("built-in adapters load on their first file", () => {
     expect(wrong).toEqual([]);
   });
 
+  test("a DOCX named laporan, without an extension, goes to the docx adapter", () => {
+    const s: Sniff = { format: "docx", ext: "" };
+    expect(builtinAdapters.find((a) => a.accepts(s))?.id).toBe("docx");
+    expect(REAL.find((a) => a.accepts(s))?.id).toBe("docx");
+  });
+
   test("reading through the stand-in gives the real adapter's book", async () => {
     const file = { name: "note.txt", bytes: new TextEncoder().encode("Hello\n\nA second paragraph.") };
     const lazy = builtinAdapters.find((a) => a.id === textAdapter.id)!;

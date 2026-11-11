@@ -31,23 +31,28 @@ export async function ocrScan(pdf: Uint8Array, pageNumbers: number[], ctx: Ctx):
   if (pageNumbers.length === 0) return { chapters: [], pages: 0, meanConfidence: Number.NaN };
   // verbosity 0: pdf.js warnings stay out of the CLI output
   const doc = await getDocumentProxy(copy(pdf), { verbosity: 0 });
-  const ocr: Ocr = await ctx.loadOcr();
   const chapters: Chapter[] = [];
   const confidences: number[] = [];
   try {
-    for (const n of pageNumbers) {
-      ctx.signal.throwIfAborted();
-      const png = await pageImage(doc, n);
-      let text = "";
-      if (png) {
-        const r = await ocr.recognize(png, ctx.signal);
-        text = r.text;
-        confidences.push(r.confidence);
+    const ocr: Ocr = await ctx.loadOcr();
+    try {
+      for (const n of pageNumbers) {
+        ctx.signal.throwIfAborted();
+        const png = await pageImage(doc, n);
+        let text = "";
+        if (png) {
+          const r = await ocr.recognize(png, ctx.signal);
+          text = r.text;
+          confidences.push(r.confidence);
+        }
+        chapters.push({ href: `scan-${String(n).padStart(3, "0")}.xhtml`, title: `Page ${n}`, body: toBody(text) });
       }
-      chapters.push({ href: `scan-${String(n).padStart(3, "0")}.xhtml`, title: `Page ${n}`, body: toBody(text) });
+    } finally {
+      await ocr.terminate();
     }
   } finally {
-    await ocr.terminate();
+    // pdf.js holds the parsed document until destroy(); a batch would keep every one of them
+    await doc.loadingTask.destroy().catch(() => {});
   }
   const meanConfidence = confidences.length ? confidences.reduce((a, b) => a + b, 0) / confidences.length : Number.NaN;
   return { chapters, pages: chapters.length, meanConfidence };

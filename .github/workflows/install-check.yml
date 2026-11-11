@@ -16,12 +16,12 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.4
       # the skills CLI needs Node 22.20 or newer
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
       - run: bun install --frozen-lockfile
@@ -42,12 +42,12 @@ jobs:
   dev-setup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.4
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
-      - run: bun test apps/cli/test/cli.test.ts
+      - run: bun test apps/cli/test/cli.test.ts apps/cli/test/cli-run.test.ts scripts/workflow-pins.test.ts
       # release guard, workflow shape, ZIP packing and plugin manifest (the plugin install case skips without the claude CLI)
       - run: bun test scripts/release-check.test.ts scripts/workflows.test.ts scripts/pack-skill.test.ts scripts/plugin-manifest.test.ts

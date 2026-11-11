@@ -26,7 +26,7 @@ bun <skill-dir>/scripts/pubmy.js <folder> [--force] [--rtl]
 - `<skill-dir>` is the folder that holds this `SKILL.md`.
 - `<folder>` is the folder the user named. Pass a folder, not a single file; for one file, pass the folder that contains it.
 - `--force` reconverts files whose EPUB is already newer than the source. Use it only when the user asks.
-- `--rtl` sets right-to-left page order for comics (manga). Use it only when the user asks.
+- `--rtl` sets right-to-left page order for comics (manga) and reconverts every file, as `--force` does. Use it only when the user asks.
 
 Output goes to `<folder>/pubmy-epub/` with the same subfolders, for example `<folder>/sub/book.pdf` becomes `<folder>/pubmy-epub/sub/book.pdf.epub`. A rerun skips files already converted. Scanned PDFs are read with OCR (Indonesian and English); the OCR data is cached in `~/.cache/pubmy`.
 

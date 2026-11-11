@@ -1,7 +1,7 @@
 import { strFromU8 } from "fflate";
 import type { Adapter, Asset } from "../types.ts";
 import { escText as esc, decode, escAttr } from "../xml.ts";
-import { unzipCapped } from "../zip-caps.ts";
+import { unzipBounded } from "../zip-caps.ts";
 import { htmlBook } from "./rtf.ts";
 
 export interface OdtDoc {
@@ -61,8 +61,11 @@ const IMAGE_TYPES: Record<string, string> = {
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", svg: "image/svg+xml", webp: "image/webp",
 };
 
+// text:c is attacker-controlled and one element can ask for billions of spaces; no honest run is this long.
+const MAX_SPACES = 1000;
+
 export function readOdt(bytes: Uint8Array): OdtDoc {
-  const zip = unzipCapped(bytes);
+  const zip = unzipBounded(bytes);
   if (!zip["content.xml"]) throw new Error("ODT has no content.xml");
   const body = find(parseXml(strFromU8(zip["content.xml"])), "office:text");
   const assets: Asset[] = [];
@@ -97,7 +100,7 @@ export function readOdt(bytes: Uint8Array): OdtDoc {
         const c = inner(n).trim();
         return c ? `<p>${c}</p>` : "";
       }
-      case "text:s": return " ".repeat(Math.max(Number(a["text:c"]) || 1, 1));
+      case "text:s": return " ".repeat(Math.min(Math.max(Number(a["text:c"]) || 1, 1), MAX_SPACES));
       case "text:tab": return "\t";
       case "text:line-break": return "<br/>";
       case "text:a": {

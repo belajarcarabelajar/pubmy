@@ -32,6 +32,8 @@ interface State {
   b: boolean;
   i: boolean;
   uc: number;
+  /** Inside \v (hidden) or \deleted (tracked deletion) text, which a word processor does not show. */
+  hidden: boolean;
   dest: Dest;
 }
 
@@ -49,7 +51,7 @@ export function readRtf(bytes: Uint8Array): RtfDoc {
   const blocks: string[] = [];
   const assets: Asset[] = [];
   let title = "";
-  let st: State = { b: false, i: false, uc: 1, dest: "text" };
+  let st: State = { b: false, i: false, uc: 1, hidden: false, dest: "text" };
   const stack: State[] = [];
   let ucSkip = 0;
   let star = false;
@@ -83,7 +85,7 @@ export function readRtf(bytes: Uint8Array): RtfDoc {
     }
     if (st.dest === "title") title += t;
     else if (st.dest === "pict") pict!.hex += /[0-9a-f]/i.test(t) ? t : "";
-    else if (st.dest === "text") emitRaw(esc(t));
+    else if (st.dest === "text" && !st.hidden) emitRaw(esc(t));
   };
   const endPara = () => {
     closeTags();
@@ -116,7 +118,8 @@ export function readRtf(bytes: Uint8Array): RtfDoc {
     const starred = star;
     star = false;
     if (w === "bin") {
-      i += param ?? 0;
+      // A negative count would send the reader back to bytes it has already read, without end.
+      if (param && param > 0) i = Math.min(n, i + param);
       return;
     }
     if (ucSkip > 0) {
@@ -145,7 +148,8 @@ export function readRtf(bytes: Uint8Array): RtfDoc {
       case "pard": outline = -1; listItem = false; break;
       case "outlinelevel": outline = param ?? -1; break;
       case "ls": listItem = true; break;
-      case "plain": st.b = false; st.i = false; break;
+      case "plain": st.b = false; st.i = false; st.hidden = false; break;
+      case "v": case "deleted": st.hidden = on; break;
       case "b": st.b = on; break;
       case "i": st.i = on; break;
       case "uc": st.uc = param ?? 1; break;

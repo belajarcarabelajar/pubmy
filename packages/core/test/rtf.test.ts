@@ -71,6 +71,40 @@ describe("RTF reader", () => {
     expect(r.html).toBe(`<p><img src="${r.assets[0].href}" alt=""/></p>`);
   });
 
+  test("a \\bin with a negative count does not move the reader backwards", () => {
+    // Before the fix the count sent the reader back to "bc", so it read the same \bin again without end and the
+    // paragraph grew until memory ran out; the `timeout` in front of the test command is what ends that run.
+    const start = performance.now();
+    const out = html(String.raw`abc \bin-11 x\par`);
+    expect(out).toBe("<p>abc x</p>");
+    expect(performance.now() - start).toBeLessThan(1500);
+  });
+
+  test("a \\bin with a positive count skips that many raw bytes, and stops at the end of the file", () => {
+    expect(html(String.raw`a\bin2 }}b\par`)).toBe("<p>ab</p>");
+    expect(html(String.raw`a\par\bin999 x`)).toBe("<p>a</p>");
+  });
+
+  test("leaves out hidden text marked \\v inside a group", () => {
+    expect(html(String.raw`a {\v rahasia} b\par`)).toBe("<p>a  b</p>");
+  });
+
+  test("shows text again after \\v0", () => {
+    expect(html(String.raw`a \v rahasia\v0 b\par`)).toBe("<p>a b</p>");
+  });
+
+  test("leaves out tracked deletions marked \\deleted, and shows text again after \\deleted0", () => {
+    expect(html(String.raw`a \deleted gone\deleted0 b\par`)).toBe("<p>a b</p>");
+  });
+
+  test("shows text again after \\plain", () => {
+    expect(html(String.raw`a \v rahasia\plain b\par`)).toBe("<p>a b</p>");
+  });
+
+  test("leaves out hidden \\u and \\'hh characters and hidden symbols", () => {
+    expect(html(String.raw`a {\v 荤?\'e9\emdash\tab} b\par`)).toBe("<p>a  b</p>");
+  });
+
   test("reads the title from the info group", () => {
     expect(rtf(String.raw`{\info{\title My Book}}x\par`).title).toBe("My Book");
   });

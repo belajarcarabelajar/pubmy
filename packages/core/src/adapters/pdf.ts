@@ -12,7 +12,7 @@ import { findMathAreas, realFontNames, type MathAreas, type MathTextItem } from 
 import { rotatedTable, tableHtml } from "../pdf/rotated.ts";
 import { bookTitle } from "../pdf/title.ts";
 import { stripRunning } from "../pdf/running.ts";
-import type { Adapter, Asset, Book, Chapter, Ctx, InputFile } from "../types.ts";
+import type { Adapter, Asset, Book, Chapter, Ctx, InputFile, PageBox } from "../types.ts";
 import { escAttr } from "../xml.ts";
 import { isScannedPage, ocrScan } from "./scan.ts";
 
@@ -36,13 +36,14 @@ async function open(bytes: Uint8Array): Promise<Doc> {
   }
 }
 
-function toItem(r: RawItem): TextItem | null {
+/** A layout item measured from the page view's corner (x0, y0), the origin image tops and the page height use too. */
+function toItem(r: RawItem, x0: number, y0: number): TextItem | null {
   const t = r.transform;
   if (typeof r.str !== "string" || !t) return null;
   return {
     str: ownText(r.str),
-    x: t[4],
-    y: t[5],
+    x: t[4] - x0,
+    y: t[5] - y0,
     width: r.width ?? 0,
     fontSize: Math.hypot(t[2], t[3]),
     rotated: Math.abs(t[1]) > 1e-6 || Math.abs(t[2]) > 1e-6,
@@ -122,13 +123,22 @@ function render(blocks: Block[], headAt: number, inline: Map<string, string>): s
     .join("\n");
 }
 
-/** Renders every crop in one call; a null entry (no renderer, render failed) keeps that area as text. */
+const CROP_DPI = 300;
+/** The renderer draws a crop on a canvas of its own size (4 bytes a pixel); a larger one stays text. A Letter page is 8.4 million pixels. */
+const MAX_CROP_PIXELS = 25e6;
+const fits = (b: PageBox) => (b.x1 - b.x0) * (b.y1 - b.y0) * (CROP_DPI / 72) ** 2 <= MAX_CROP_PIXELS;
+
+/** Renders every crop in one call; a null entry (no renderer, render failed, crop too large) keeps that area as text. */
 async function renderCrops(f: InputFile, ctx: Ctx, crops: Crop[]): Promise<(Uint8Array | null)[]> {
-  if (crops.length === 0) return [];
+  const out: (Uint8Array | null)[] = crops.map(() => null);
+  const wanted = crops.flatMap((c, i) => (fits(c.area.box) ? [i] : []));
+  if (wanted.length === 0) return out;
   const renderer = await (ctx.loadRenderer?.() ?? Promise.resolve(null)).catch(() => null);
-  if (!renderer) return crops.map(() => null);
+  if (!renderer) return out;
   try {
-    return await renderer.renderBoxes(f.bytes, crops.map((c) => c.area.box), 300, ctx.signal);
+    const pngs = await renderer.renderBoxes(f.bytes, wanted.map((i) => crops[i].area.box), CROP_DPI, ctx.signal);
+    wanted.forEach((i, k) => (out[i] = pngs[k] ?? null));
+    return out;
   } catch (e) {
     // a cancelled conversion stops; any other render failure leaves the formulas as text
     if (ctx.signal.aborted) throw e;
@@ -140,6 +150,15 @@ async function renderCrops(f: InputFile, ctx: Ctx, crops: Crop[]): Promise<(Uint
 
 async function read(f: InputFile, ctx: Ctx): Promise<Book> {
   const doc = await open(f.bytes);
+  try {
+    return await bookOf(doc, f, ctx);
+  } finally {
+    // pdf.js holds the parsed document until destroy(); a batch would keep every one of them
+    await doc.loadingTask.destroy().catch(() => {});
+  }
+}
+
+async function bookOf(doc: Doc, f: InputFile, ctx: Ctx): Promise<Book> {
   const { pages } = await inspectPages(doc);
   // scanned pages have no text items, so the text pass below yields nothing for them
   const scanned = pages.flatMap((p, i) => (isScannedPage(p) ? [i + 1] : []));
@@ -152,7 +171,7 @@ async function read(f: InputFile, ctx: Ctx): Promise<Book> {
     const page = await doc.getPage(n);
     const [x0, y0, x1, y1] = page.view;
     const raw = (await page.getTextContent()).items as RawItem[];
-    const items = raw.map(toItem);
+    const items = raw.map((r) => toItem(r, x0, y0));
     const text = items.filter((i): i is TextItem => i !== null);
     const figures: PageFigure[] = [];
     let math: MathAreas | null = null;

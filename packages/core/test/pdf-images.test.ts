@@ -1,8 +1,8 @@
 import { beforeAll, expect, test } from "bun:test";
 import { unzlibSync } from "fflate";
-import { getDocumentProxy } from "unpdf";
+import { getDocumentProxy, getResolvedPDFJS } from "unpdf";
 import { BITONAL, FIGURE, makeFiguresPdf, makeImageKindsPdf } from "../../../fixtures/make-pdf-figures.ts";
-import { extractPageImages, type PageImage } from "../src/pdf/images.ts";
+import { extractPageImages, type ImagePage, type PageImage } from "../src/pdf/images.ts";
 
 // The options the PDF adapter must pass too: without them a browser gets ImageBitmaps, not pixels.
 const open = (bytes: Uint8Array) => getDocumentProxy(bytes, { isOffscreenCanvasSupported: false, isImageDecoderSupported: false });
@@ -103,4 +103,41 @@ test("an image wider than 1600 px is scaled down to 1600 px wide, keeping its ha
   expect([png.width, png.height, kindsPage[2]?.width, kindsPage[2]?.height]).toEqual([1600, 32, 1600, 32]);
   const row = (x: number) => [...png.px.subarray(x * 3, x * 3 + 3)];
   expect([row(0), row(799), row(800), row(1599)]).toEqual([[255, 0, 0], [255, 0, 0], [0, 0, 255], [0, 0, 255]]);
+});
+
+/** A hand-built page whose operator list draws the image objects `ids` in order, each over a quarter of the page. */
+async function drawsPage(ids: string[]) {
+  const { OPS, ImageKind } = await getResolvedPDFJS();
+  const fetched: string[] = [];
+  const page: ImagePage = {
+    view: [0, 0, 612, 792],
+    objs: {
+      get: (id, callback) => {
+        fetched.push(id);
+        callback({ width: 64, height: 64, kind: ImageKind.RGB_24BPP, data: new Uint8Array(64 * 64 * 3).fill(ids.indexOf(id) % 256) });
+      },
+    },
+    commonObjs: { get: () => {} },
+    getOperatorList: async () => ({
+      fnArray: ids.flatMap(() => [OPS.save, OPS.transform, OPS.paintImageXObject, OPS.restore]),
+      argsArray: ids.flatMap((id) => [[], [400, 0, 0, 300, 100, 200], [id, 64, 64], []]),
+    }),
+  };
+  return { page, fetched };
+}
+
+test("one image drawn 500 times on a page is decoded and encoded once, and the page keeps 100 images", async () => {
+  const { page, fetched } = await drawsPage(Array<string>(500).fill("img_p0_1"));
+  const out = await extractPageImages(page);
+  expect(out.length).toBe(100);
+  expect(new Set(out.map((i) => i.png)).size).toBe(1);
+  expect(fetched).toEqual(["img_p0_1"]);
+});
+
+test("a page that draws 150 different images keeps the first 100 and decodes no more", async () => {
+  const { page, fetched } = await drawsPage(Array.from({ length: 150 }, (_v, k) => `img_p0_${k + 1}`));
+  const out = await extractPageImages(page);
+  expect(out.length).toBe(100);
+  expect(fetched.length).toBe(100);
+  expect(fetched.at(-1)).toBe("img_p0_100");
 });

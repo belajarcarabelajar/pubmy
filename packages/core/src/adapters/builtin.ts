@@ -22,7 +22,7 @@ export function lazyAdapter(id: string, accepts: (s: Sniff) => boolean, load: ()
 
 // Each accepts() repeats the real adapter's own; builtin-adapters.test.ts checks every format against it.
 export const builtinAdapters: Adapter[] = [
-  lazyAdapter("docx", (s) => s.ext === "docx", async () => (await import("./docx.ts")).docxAdapter),
+  lazyAdapter("docx", (s) => s.format === "docx" || s.ext === "docx", async () => (await import("./docx.ts")).docxAdapter),
   lazyAdapter("mobi", (s) => s.format === "mobi", async () => (await import("./mobi/index.ts")).mobiAdapter),
   lazyAdapter("odt", (s) => s.format === "odt", async () => (await import("./odt.ts")).odtAdapter),
   lazyAdapter("pdf", (s) => s.format === "pdf", async () => (await import("./pdf.ts")).pdfAdapter),

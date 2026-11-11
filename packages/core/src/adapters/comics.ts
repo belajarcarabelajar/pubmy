@@ -2,7 +2,7 @@
 // in natural filename order. CBZ is read with fflate, CBR with libarchive.js (WASM).
 import { PubmyError } from "../errors.ts";
 import type { Adapter, Asset, Book, Chapter } from "../types.ts";
-import { checkCaps, DEFAULT_LIMITS, isUnsafePath, type Limits, unzipCapped } from "../zip-caps.ts";
+import { checkCaps, DEFAULT_LIMITS, isUnsafePath, type Limits, unzipBounded } from "../zip-caps.ts";
 
 export { checkCaps, DEFAULT_LIMITS, type Limits };
 
@@ -30,7 +30,7 @@ const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })
 export const naturalCompare = (a: string, b: string): number => collator.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0);
 
 function readZip(bytes: Uint8Array, limits: Limits): Entry[] {
-  return Object.entries(unzipCapped(bytes, limits)).map(([path, data]) => ({ path, data }));
+  return Object.entries(unzipBounded(bytes, limits)).map(([path, data]) => ({ path, data }));
 }
 
 const isFile = (v: unknown): v is Blob => typeof (v as Blob | null)?.arrayBuffer === "function";
