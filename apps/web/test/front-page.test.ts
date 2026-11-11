@@ -51,8 +51,8 @@ describe("formats are listed once, by the chips", () => {
 
   test("the chips still list every format", () => {
     const chips = [...document.querySelectorAll(".chips .chip")].map((c) => (c.textContent ?? "").trim());
-    for (const w of ["TXT", "MD", "HTML", "DOCX", "ODT", "RTF", "PDF", "MOBI", "AZW3", "CBZ", "CBR"]) expect(chips).toContain(w);
-    expect(chips).toHaveLength(11);
+    for (const w of ["TXT", "MD", "HTML", "DOCX", "ODT", "RTF", "PDF", "MOBI", "AZW3", "CBZ", "CBR", "EPUB"]) expect(chips).toContain(w);
+    expect(chips).toHaveLength(12);
   });
 });
 
@@ -190,7 +190,8 @@ describe("the language toggle", () => {
   test("it is compact, framed and 1rem-iconed, and does not lower the 44px target", () => {
     const lang = rule("#lang");
     expect(lang["font-size"]).toBe(".9rem");
-    expect(lang["padding"]).toBe(".25rem .75rem");
+    expect(lang["padding-block"]).toBe(".25rem");
+    expect(lang["padding-inline"]).toBe(".75rem");
     expect(lang["gap"]).toBe(".4rem");
     expect(`${lang["border"] ?? ""} ${lang["border-color"] ?? ""}`).toContain("var(--border)");
     for (const p of ["min-height", "height", "max-height"]) expect(lang[p], p).toBeUndefined();

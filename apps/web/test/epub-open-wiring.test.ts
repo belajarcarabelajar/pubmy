@@ -299,6 +299,6 @@ describe("the page", () => {
 
   test("the static description says an EPUB can be opened to read", () => {
     const meta = /<meta name="description" content="([^"]*)">/.exec(html)?.[1];
-    expect(meta).toBe("Ubah TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR jadi EPUB 3 langsung di browser, atau buka EPUB untuk dibaca.");
+    expect(meta).toBe("Ubah dokumen, e-book, dan komik jadi EPUB 3 langsung di browser, atau buka EPUB untuk dibaca.");
   });
 });

@@ -4,7 +4,7 @@ export type Lang = "id" | "en";
 
 const id = {
   title: "pubmy: ubah file jadi EPUB",
-  tagline: "Ubah dokumen, e-book, dan komik jadi EPUB 3 yang lolos Send to Kindle. File EPUB dibuka untuk dibaca.",
+  tagline: "Ubah dokumen, e-book, dan komik jadi EPUB 3 yang lolos Send to Kindle.",
   "formats-label": "Format yang didukung",
   privacy: "Semua diproses di browser kamu. Tidak ada file yang diunggah.",
   "drop-hint": "Tarik file ke sini (maksimal 10 file, masing-masing 50 MB)",
@@ -61,7 +61,7 @@ export type Key = keyof typeof id;
 
 const en: Record<Key, string> = {
   title: "pubmy: turn files into EPUB",
-  tagline: "Turn documents, e-books and comics into EPUB 3 that passes Send to Kindle. EPUB files open for reading.",
+  tagline: "Turn documents, e-books and comics into EPUB 3 that passes Send to Kindle.",
   "formats-label": "Supported formats",
   privacy: "Everything runs in your browser. No file is uploaded.",
   "drop-hint": "Drop files here (up to 10 files, 50 MB each)",
