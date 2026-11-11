@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-09-pubmy-epub-opener
-status: InProgress
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -493,7 +493,7 @@ Items the owner did not select or that need a decision. Each has a `defer:` line
 
 ## Closeout status
 
-Open (the owner chose to keep it open at the `Close plan` question twice on 2026-11-09).
+Closed 2026-11-12 (owner decision, third `Close plan` question): PR #27 merged to `main` on 2026-11-09 (merge commit `69025e7`), so the opening work is delivered. T5 and F4 stay `UNPROVEN` exactly as recorded below: their evidence is a real-browser run in scratch, not a machine proof, and the owner accepted that gap rather than holding the issue open.
 
 - **Readiness at `aa6c9b1`, `bun scripts/plan-closeout.mjs --readiness`:** `NEEDS-HUMAN` (exit 3): every task `DONE` by its own `skip_if` except T5 and F4 `UNPROVEN` (no machine proof: the browser runs live in scratch); no open boxes, no open `NOW` follow-ups.
 - **What remains:** review of PR #27, then merge and deploy only on the owner's request; after a deploy re-read the live CSP with `curl -sI`, compare it with `public/_headers`, and drop the real and a hostile EPUB on the live page once. After the merge, from the main checkout: `graphify update .`, `bun ~/vivera/scripts/graphify-sync.mjs --root "$(pwd)"`, then `--check`.
