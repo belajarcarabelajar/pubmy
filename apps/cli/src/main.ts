@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { lstat, mkdir, open, readFile, realpath, stat } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type { InputFile, Result } from "@pubmy/core";
 import { exitCode, formatReport, type Row } from "./report.ts";
@@ -15,18 +15,31 @@ export interface Io {
   convert?: ConvertFn;
 }
 
-const USAGE = "usage: pubmy <folder> [--force] [--rtl]\n";
+const USAGE = "usage: pubmy <folder> [--force] [--rtl]\n  --force  reconvert every file\n  --rtl    right-to-left comics; reconverts every file, as --force does\n";
+
+/** Wraps a loader so that once it yields null, later calls return null without loading again. */
+export function skipAfterNull<T>(load: () => Promise<T | null>): () => Promise<T | null> {
+  let unavailable = false;
+  return async () => {
+    if (unavailable) return null;
+    const value = await load();
+    if (value === null) unavailable = true;
+    return value;
+  };
+}
 
 async function coreConvert(): Promise<ConvertFn> {
   // Loaded lazily so tests with an injected convert never pull in the DOM and EPUB stack.
   const core = await import("@pubmy/core");
   const dom = core.domFor("bun");
+  // A failed canvas download can take up to its 180 s timeout, so it is tried once per run, not per PDF.
+  const loadRenderer = skipAfterNull(async () => (await import("@pubmy/core/render-bun")).loadRendererBun());
   return (f) =>
     core.convert(f, {
       dom,
       // The scan code terminates each engine it gets, so every call loads a fresh one.
       loadOcr: async () => (await import("@pubmy/core/ocr")).loadOcrBun(),
-      loadRenderer: async () => (await import("@pubmy/core/render-bun")).loadRendererBun(),
+      loadRenderer,
       progress: () => {},
       signal: new AbortController().signal,
     });
@@ -57,16 +70,27 @@ async function outputIsSafe(root: string, rel: string): Promise<boolean> {
   return true;
 }
 
-async function writeOutput(root: string, out: string, bytes: Uint8Array): Promise<void> {
+/** Writes through a temporary file and a rename, so a failed write never leaves a truncated EPUB that looks fresh. */
+async function writeOutput(root: string, out: string, bytes: Uint8Array, srcTime: number | undefined): Promise<void> {
   await mkdir(dirname(out), { recursive: true });
   const [realBase, realDir] = await Promise.all([realpath(join(root, OUT_DIR)), realpath(dirname(out))]);
   if (!isInside(realBase, realDir)) throw new Error(`output escapes ${OUT_DIR}`);
-  // O_NOFOLLOW refuses a symlink planted at the target between the check and the write.
-  const fh = await open(out, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | (constants.O_NOFOLLOW ?? 0));
+  // The temporary file sits inside pubmy-epub, which walk never lists. O_EXCL and O_NOFOLLOW refuse a file
+  // or symlink planted at its name; the rename then replaces the target entry instead of following it.
+  const tmp = `${out}.tmp-${process.pid}-${Math.random().toString(36).slice(2)}`;
+  const fh = await open(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0));
   try {
-    await fh.writeFile(bytes);
-  } finally {
-    await fh.close();
+    try {
+      await fh.writeFile(bytes);
+      // The source time read before conversion, so a source edited meanwhile still counts as newer next run.
+      if (srcTime !== undefined) await fh.utimes(new Date(), new Date(srcTime));
+    } finally {
+      await fh.close();
+    }
+    await rename(tmp, out);
+  } catch (e) {
+    await rm(tmp, { force: true });
+    throw e;
   }
 }
 
@@ -76,7 +100,8 @@ async function convertOne(root: string, rel: string, force: boolean, convert: Co
   if (!(await outputIsSafe(root, rel))) return { rel, status: "failed", code: "WRITE_FAILED" };
   const outTime = await mtimeMs(out);
   const srcTime = await mtimeMs(src);
-  if (!force && outTime !== undefined && srcTime !== undefined && outTime >= srcTime) {
+  // Whole milliseconds: the output gets the source time through a Date, which drops the sub-millisecond part.
+  if (!force && outTime !== undefined && srcTime !== undefined && Math.trunc(outTime) >= Math.trunc(srcTime)) {
     return { rel, status: "skipped" };
   }
   let result: Result;
@@ -90,7 +115,7 @@ async function convertOne(root: string, rel: string, force: boolean, convert: Co
     return result.code === "UNSUPPORTED" ? { rel, status: "unsupported" } : { rel, status: "failed", code: result.code };
   }
   try {
-    await writeOutput(root, out, result.epub);
+    await writeOutput(root, out, result.epub, srcTime);
   } catch {
     return { rel, status: "failed", code: "WRITE_FAILED" };
   }
@@ -129,6 +154,8 @@ export async function run(argv: string[], io: Io): Promise<number> {
     return 2;
   }
 
+  // An earlier run may have written left-to-right comics that look up to date.
+  if (rtl) force = true;
   const convert = io.convert ?? (await coreConvert());
   const restore = rtl ? await useRtlComics() : () => {};
   const rows: Row[] = [];

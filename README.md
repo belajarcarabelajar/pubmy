@@ -218,9 +218,9 @@ bun skills/pubmy/scripts/pubmy.js <folder> [--force] [--rtl]
 ```
 
 - Every supported file under `<folder>` is converted into `<folder>/pubmy-epub/`, mirroring the subfolders: `<folder>/sub/book.pdf` becomes `<folder>/pubmy-epub/sub/book.pdf.epub`.
-- A file is skipped when its EPUB already exists and is newer than the source, so a rerun only converts new or changed files.
+- A file is skipped when its EPUB already exists and is not older than the source, so a rerun only converts new or changed files. Each EPUB takes the modification time of its source, and is written to a temporary file first, so an interrupted write never leaves a broken EPUB behind.
 - `--force` reconverts every file.
-- `--rtl` uses right-to-left page order for comics (manga).
+- `--rtl` uses right-to-left page order for comics (manga) and reconverts every file, as `--force` does.
 - It prints one row per file: `converted`, `skipped`, `unsupported`, or `failed <CODE>`.
 - Symlinks that resolve outside `<folder>` are skipped, and an output whose path inside `pubmy-epub/` is a symlink fails with `WRITE_FAILED`.
 
