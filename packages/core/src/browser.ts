@@ -20,15 +20,19 @@ const adapters: Adapter[] = [...builtinAdapters];
 
 /**
  * Adds an adapter ahead of the ones already registered (newest first, the built-in text adapter last),
- * or replaces the one with the same id in place. Returns a function that removes it again.
+ * or replaces the one with the same id in place. Returns a function that removes it again, putting the
+ * replaced adapter back: removing a replacement must not delete the built-in adapter below it.
  */
 export function registerAdapter(a: Adapter): () => void {
   const i = adapters.findIndex((x) => x.id === a.id);
+  const replaced = i >= 0 ? adapters[i] : undefined;
   if (i >= 0) adapters[i] = a;
   else adapters.unshift(a);
   return () => {
     const j = adapters.indexOf(a);
-    if (j >= 0) adapters.splice(j, 1);
+    if (j < 0) return;
+    if (replaced) adapters[j] = replaced;
+    else adapters.splice(j, 1);
   };
 }
 

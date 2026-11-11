@@ -63,4 +63,23 @@ describe("adapter order", () => {
     const after = await convert(file("note.txt", "plain words"), ctx);
     expect(after.ok).toBe(true);
   });
+
+  test("unregistering a replacement puts the built-in adapter it replaced back", async () => {
+    const unregister = registerAdapter({
+      id: "text",
+      accepts: (s) => s.format === "txt",
+      read: () => {
+        throw new PubmyError("UNSUPPORTED", "replacement-was-used");
+      },
+    });
+    try {
+      const r = await convert(file("note.txt", "plain words"), ctx);
+      expect(r).toEqual({ ok: false, code: "UNSUPPORTED", message: "replacement-was-used" });
+    } finally {
+      unregister();
+    }
+    // No validator: this asks only whether a text adapter is still registered after the replacement left.
+    const after = await convert(file("note.txt", "plain words"), ctx, { validate: async () => ({ errors: 0, warnings: 0, messages: [] }) });
+    expect(after.ok).toBe(true);
+  });
 });

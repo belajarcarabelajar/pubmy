@@ -80,7 +80,7 @@ describe("docx adapter: a DOCX named without its extension", () => {
 
   test("converts to an EPUB through convert()", async () => {
     const r = await convert({ name: "laporan", bytes: makeDocx() }, ctx);
-    expect(r.ok).toBe(true);
+    expect(r.ok, r.ok ? "" : `${r.code}: ${r.message}`).toBe(true);
   });
 
   test("a .docx name with a format other than docx is still accepted, so an encrypted file gets its own message", () => {
