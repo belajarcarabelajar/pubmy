@@ -27,6 +27,22 @@ describe("packSkill", () => {
     expect(zipped).toEqual([...entries].sort());
   }, 120_000);
 
+  // Pinned from @tesseract.js-data/{ind,eng}@1.0.0 4.0.0_best_int (bun.lock sha512 integrity). A changed
+  // file fails here, so new language data is a reviewed change, never a silent swap.
+  test("the zip carries ind and eng OCR language data with pinned sha256", async () => {
+    const out = join(await temp("out"), "pubmy-skill.zip");
+    await packSkill(out);
+    const zip = unzipSync(new Uint8Array(await readFile(out)));
+    const sha = (name: string) => {
+      const data = zip[name];
+      return data === undefined ? "missing" : new Bun.CryptoHasher("sha256").update(data).digest("hex");
+    };
+    expect({ ind: sha("pubmy/scripts/tesseract-lang/ind.traineddata.gz"), eng: sha("pubmy/scripts/tesseract-lang/eng.traineddata.gz") }).toEqual({
+      ind: "a8896d2f584a5baae73d658b86b765acc7b15b7ba05e014f62b1a2a23b699a91",
+      eng: "45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91",
+    });
+  }, 120_000);
+
   test("two packs of the same tree are byte-identical", async () => {
     const dir = await temp("det");
     const a = join(dir, "a.zip");

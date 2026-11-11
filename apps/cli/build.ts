@@ -1,7 +1,9 @@
-// Builds the self-contained skill: skills/pubmy/scripts/pubmy.js, tesseract-worker.js, and the OCR wasm files.
+// Builds the self-contained skill: skills/pubmy/scripts/pubmy.js, tesseract-worker.js, the OCR wasm files and
+// the ind+eng language data (tesseract-lang/).
 // Run: bun run --cwd apps/cli build   (or: bun apps/cli/build.ts)
 import { copyFile, mkdir, readdir, rm, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { OCR_FILES, ocrSource } from "../web/src/ocr-assets.ts";
 
 const repo = join(import.meta.dir, "../..");
 const outDir = join(repo, "skills/pubmy/scripts");
@@ -89,7 +91,14 @@ export async function build(): Promise<string[]> {
     await copyFile(join(coreDir, f), join(outDir, f));
   }
 
-  const files = (await readdir(outDir)).sort();
+  // Bundled so the skill never fetches language data from a CDN without a checksum; the same lockfile-pinned
+  // @tesseract.js-data files the web build serves. scripts/pack-skill.test.ts pins their sha256.
+  await mkdir(join(outDir, "tesseract-lang"), { recursive: true });
+  for (const f of OCR_FILES.filter((x) => x.to.startsWith("tesseract/lang/"))) {
+    await copyFile(ocrSource(f, join(repo, "apps/web")), join(outDir, "tesseract-lang", basename(f.to)));
+  }
+
+  const files = (await readdir(outDir, { recursive: true })).sort();
   for (const f of files) console.log(`${f}\t${(await stat(join(outDir, f))).size} B`);
   return files;
 }

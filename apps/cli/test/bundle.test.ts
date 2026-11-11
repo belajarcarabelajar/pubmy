@@ -141,7 +141,9 @@ describe("bundle", () => {
         expect(new TextDecoder().decode(bytes.subarray(30, 58))).toBe("mimetypeapplication/epub+zip");
       }
       expect(r.out).toMatch(/pdf\/scan\.pdf\s+converted \(OCR \d+ pages/m);
-      expect((await stat(join(work, "home/.cache/pubmy/tesseract"))).isDirectory()).toBe(true);
+      // OCR read the bundled language data, so nothing was fetched into the cache.
+      const cached = await readdir(join(work, "home/.cache/pubmy/tesseract")).catch(() => []);
+      expect(cached.filter((n) => n.includes("traineddata"))).toEqual([]);
     },
     300_000,
   );

@@ -49,14 +49,31 @@ async function start(options: Record<string, string>, load: () => Promise<Tesser
   }
 }
 
-/** Default Bun cache: ~/.cache/pubmy/tesseract (traineddata, about 7 MB, fetched once). */
+/** Default Bun cache: ~/.cache/pubmy/tesseract (traineddata fetched from the CDN when no langPath is given). */
 export async function defaultCachePath(): Promise<string> {
   const { homedir } = await import("node:os");
   return `${homedir()}/.cache/pubmy/tesseract`;
 }
 
-/** Bun/Node OCR: one ind+eng worker. Use as `ctx.loadOcr = () => loadOcrBun()`; the caller terminates it. */
-export async function loadOcrBun(opts: { cachePath?: string } = {}): Promise<Ocr> {
+/**
+ * Bun/Node OCR: one ind+eng worker. Use as `ctx.loadOcr = () => loadOcrBun()`; the caller terminates it.
+ * `langPath` is a local folder holding ind.traineddata.gz and eng.traineddata.gz (the skill bundles them).
+ */
+export async function loadOcrBun(opts: { cachePath?: string; langPath?: string } = {}): Promise<Ocr> {
+  if (opts.langPath !== undefined) {
+    // tesseract.js 7 never settles createWorker when a language file is missing (it throws inside its message
+    // handler), so the files are checked first.
+    const { access } = await import("node:fs/promises");
+    for (const lang of LANGS.split("+")) {
+      await access(`${opts.langPath}/${lang}.traineddata.gz`).catch(() => {
+        throw new PubmyError("READ_FAILED", "ocr-unavailable");
+      });
+    }
+    // The cache is read before langPath, so a copy fetched from the CDN by an older version would win;
+    // "none" neither reads nor writes it.
+    const worker = await start({ langPath: opts.langPath, cacheMethod: "none" }, importForNode);
+    return wrap(worker, (png) => Buffer.from(png));
+  }
   const cachePath = opts.cachePath ?? (await defaultCachePath());
   // tesseract.js silently re-downloads the language data when this folder is missing (spike P3).
   const { mkdir } = await import("node:fs/promises");
