@@ -22,7 +22,9 @@ const shown = (bar: BatchBar) => ({ batch: !bar.batch.hidden, downloadAll: !bar.
 describe("applyBatchBar visibility", () => {
   test.each([
     [0, 0, { batch: false, downloadAll: false, clearAll: false }],
-    [1, 0, { batch: true, downloadAll: false, clearAll: true }],
+    [1, 0, { batch: false, downloadAll: false, clearAll: false }],
+    [1, 1, { batch: false, downloadAll: false, clearAll: false }],
+    [2, 0, { batch: true, downloadAll: false, clearAll: true }],
     [2, 1, { batch: true, downloadAll: false, clearAll: true }],
     [2, 2, { batch: true, downloadAll: true, clearAll: true }],
     [10, 10, { batch: true, downloadAll: true, clearAll: true }],
@@ -43,7 +45,7 @@ describe("applyBatchBar visibility", () => {
 describe("applyBatchBar focus", () => {
   test("Clear all hiding while focused hands focus to Choose", () => {
     const { document, bar, focused, setActive } = setup();
-    applyBatchBar(document, bar, 1, 0);
+    applyBatchBar(document, bar, 2, 0);
     setActive(bar.clearAll);
     applyBatchBar(document, bar, 0, 0);
     expect(focused).toEqual(["choose"]);
@@ -59,7 +61,7 @@ describe("applyBatchBar focus", () => {
 
   test("Clear all staying visible keeps its focus", () => {
     const { document, bar, focused, setActive } = setup();
-    applyBatchBar(document, bar, 1, 0);
+    applyBatchBar(document, bar, 2, 0);
     setActive(bar.clearAll);
     applyBatchBar(document, bar, 2, 2);
     expect(focused).toEqual([]);

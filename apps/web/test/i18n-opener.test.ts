@@ -28,11 +28,11 @@ describe("the opener strings", () => {
 });
 
 describe("the tagline", () => {
-  test("keeps the old text and ends with the opener sentence", () => {
-    expect(t("tagline", "id")).toContain("TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR ke EPUB 3 yang lolos Send to Kindle.");
-    expect(t("tagline", "id").endsWith(" File EPUB dibuka untuk dibaca.")).toBe(true);
-    expect(t("tagline", "en")).toContain("TXT, Markdown, HTML, DOCX, PDF, MOBI/AZW3, CBZ/CBR to EPUB 3 that passes Send to Kindle.");
-    expect(t("tagline", "en").endsWith(" EPUB files open for reading.")).toBe(true);
+  test("the tagline names no format; the opener sentence lives in the static description", () => {
+    expect(t("tagline", "id")).toBe("Ubah dokumen, e-book, dan komik jadi EPUB 3 yang lolos Send to Kindle.");
+    expect(t("tagline", "en")).toBe("Turn documents, e-books and comics into EPUB 3 that passes Send to Kindle.");
+    expect(t("tagline", "id")).not.toMatch(/TXT|Markdown|MOBI|CBZ/);
+    expect(t("tagline", "en")).not.toMatch(/TXT|Markdown|MOBI|CBZ/);
   });
 
   test("stays plain text, because build.ts writes it into the HTML", () => {

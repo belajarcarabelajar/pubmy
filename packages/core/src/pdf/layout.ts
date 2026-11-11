@@ -47,6 +47,8 @@ export interface PageText {
 /** A block with the 1-based page it starts on. */
 export interface PageBlock extends Block {
   page: number;
+  /** Font size of a heading's first line; absent on other blocks. */
+  size?: number;
 }
 
 interface Line {
@@ -344,7 +346,7 @@ export function layoutPages(pages: PageText[], doc: { bodySize: number; titleSiz
   let tail: Sized[] = [];
   pages.forEach((p, k) => {
     const { blocks, sizes, tops } = build(p.items, { width: p.width, height: p.height, ...doc });
-    const next: Sized[] = blocks.map((b, i) => ({ block: { ...b, page: k + 1 }, size: sizes[i], top: tops[i] }));
+    const next: Sized[] = blocks.map((b, i) => ({ block: { ...b, page: k + 1, ...(b.kind === "heading" ? { size: sizes[i] } : {}) }, size: sizes[i], top: tops[i] }));
     for (const f of [...(p.figures ?? [])].sort((a, b) => a.top - b.top)) {
       const below = next.findIndex((n) => n.size > 0 && n.top > f.top);
       next.splice(below < 0 ? next.length : below, 0, { block: { kind: "html", text: f.html, page: k + 1 }, size: 0, top: f.top });

@@ -414,6 +414,8 @@ function applyLang() {
   for (const el of document.querySelectorAll<HTMLElement>("[data-i18n]")) el.textContent = t(el.dataset.i18n as Key, lang);
   for (const el of document.querySelectorAll<HTMLElement>("[data-i18n-label]")) el.setAttribute("aria-label", t(el.dataset.i18nLabel as Key, lang));
   const toggle = $<HTMLButtonElement>("lang");
+  // The label is its own span: writing the button's textContent would erase the globe icon.
+  $("lang-label").textContent = t("lang-toggle", lang);
   toggle.setAttribute("aria-label", t("lang-toggle-label", lang));
   toggle.lang = lang === "id" ? "en" : "id";
   document.title = t("title", lang);

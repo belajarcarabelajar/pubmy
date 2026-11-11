@@ -24,7 +24,7 @@ export interface RowActions {
 
 const clockText = (remaining: number, lang: Lang) => `${t("expires-in", lang)} ${formatClock(remaining)}`;
 
-const GLYPHS: Record<string, string> = { waiting: "o", converting: "~", ready: "+", failed: "x", deleted: "-" };
+const GLYPHS: Record<string, string> = { waiting: "o", converting: "~", ready: "✓", failed: "x", deleted: "-" };
 
 /** Determinate when progress is above 0; otherwise no `value`, which makes the bar indeterminate. */
 function progressBar(doc: Document, v: RowView): HTMLProgressElement {

@@ -57,7 +57,7 @@ describe("the built page hides its content without waiting for a second file", (
 // If main.js never runs, the 1.5 s timer shows the static page. It must not look broken: the language button had no text.
 describe("the static page is complete when the script never runs", () => {
   test("the language button ships its label in Indonesian", () => {
-    expect(built).toMatch(/<button[^>]*\sid="lang"[^>]*>English<\/button>/);
+    expect(built).toMatch(/<button[^>]*\sid="lang"[^>]*>[\s\S]*?<span[^>]*\sid="lang-label"[^>]*>English<\/span>[\s\S]*?<\/button>/);
   });
 
   test("every element labelled by data-i18n-label ships its aria-label in Indonesian", () => {

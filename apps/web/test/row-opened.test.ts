@@ -68,7 +68,7 @@ describe("an opened row", () => {
   test("keeps the clock, the More actions button, the Extend entry and Remove", () => {
     const row = li();
     renderRow(row, opened(), "en", actions);
-    expect(row.querySelector(".clock")?.textContent).toBe("Auto-deleted in 03:00");
+    expect(row.querySelector(".clock")?.textContent).toBe("Cleared from memory in 03:00");
     expect(control(row, "more").getAttribute("aria-label")).toBe("More actions buku.epub");
     expect(control(row, "extend").closest(".menu") !== null).toBe(true);
     expect(control(row, "extend").getAttribute("aria-label")).toBe("Extend buku.epub");
@@ -81,7 +81,7 @@ describe("an opened row", () => {
     const row = li();
     renderRow(row, opened(), "en", actions);
     expect(row.className).toBe("ready");
-    expect(row.querySelector(".badge")?.textContent).toBe("+Ready to read");
+    expect(row.querySelector(".badge")?.textContent).toBe("✓Ready to read");
   });
 
   test("the countdown tick updates only the clock text", () => {
@@ -91,7 +91,7 @@ describe("an opened row", () => {
     expect(updateClock(row, 59_000, "en")).toBe(true);
     const after = [...row.querySelectorAll("*")];
     expect(after.length === before.length && after.every((e, i) => e === before[i])).toBe(true);
-    expect(row.querySelector(".clock")?.textContent).toBe("Auto-deleted in 00:59");
+    expect(row.querySelector(".clock")?.textContent).toBe("Cleared from memory in 00:59");
   });
 });
 

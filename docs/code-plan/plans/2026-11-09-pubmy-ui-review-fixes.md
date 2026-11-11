@@ -1,0 +1,442 @@
+---
+schema: ultra-plan/v1
+plan_id: 2026-11-09-pubmy-ui-review-fixes
+status: Complete
+version: 1
+runner_contract: true
+defaults:
+  retry_transient_max: 1
+  step_timeout_s: 180
+  on_precondition_fail: stop-task-continue-independent
+  allow_loose_skip_if: []
+  require_impacts: true
+  allow_no_impacts: []
+  require_traceability: true
+  retry_if: any
+tasks:
+  - id: T1
+    depends_on: []
+    impacts: ["build.ts fills empty data-i18n elements by regex over index.html, so a label inside a button needs its own span - bun test apps/web/test/build-output.test.ts", "applyLang sets textContent on the language toggle and would erase a globe icon placed inside it - bun test apps/web/test/wiring.test.ts", "id/en key parity and required keys - bun test apps/web/test/i18n.test.ts", "light and dark token contrast and the chip set equal to the accept list - bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts"]
+    files: { create: [apps/web/test/front-page.test.ts], modify: [apps/web/index.html, apps/web/src/i18n.ts, apps/web/src/main.ts], test: [apps/web/test/theme.test.ts, apps/web/test/theme-dark.test.ts, apps/web/test/theme-tints.test.ts, apps/web/test/i18n.test.ts, apps/web/test/build-output.test.ts, apps/web/test/wiring.test.ts] }
+    idempotency_key: "T1:front-page-copy-and-layout"
+    skip_if: "bun test apps/web/test/front-page.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/front-page.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test apps/web/test/front-page.test.ts apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/i18n.test.ts apps/web/test/build-output.test.ts apps/web/test/wiring.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: T2
+    depends_on: [T1]
+    impacts: ["main.ts passes RowView to renderRow, restores focus from its return value and announces the countdown copy - bun run typecheck", "row tests assert the clock text, the badge glyph and the focus contract - bun test apps/web/test/row.test.ts apps/web/test/row-progress.test.ts apps/web/test/row-menu.test.ts", "refusal rows reuse the badge glyphs - bun test apps/web/test/refusal-row.test.ts", "batch bar thresholds are asserted in two files and used by main.ts - bun test apps/web/test/batch.test.ts apps/web/test/batch-bar.test.ts", "README says the website downloads all files as a ZIP and must stay true - bun test apps/web/test/readme-web.test.ts"]
+    files: { create: [apps/web/test/result-card.test.ts], modify: [apps/web/index.html, apps/web/src/row.ts, apps/web/src/i18n.ts, apps/web/src/batch.ts, apps/web/test/row.test.ts, apps/web/test/row-menu.test.ts, apps/web/test/row-progress.test.ts, apps/web/test/batch.test.ts, apps/web/test/batch-bar.test.ts], test: [apps/web/test/refusal-row.test.ts, apps/web/test/theme.test.ts, apps/web/test/theme-dark.test.ts, apps/web/test/theme-tints.test.ts, apps/web/test/i18n.test.ts, apps/web/test/wiring.test.ts, apps/web/test/readme-web.test.ts] }
+    idempotency_key: "T2:result-card-actions-glyph-copy"
+    skip_if: "bun test apps/web/test/result-card.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/result-card.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test apps/web/test/result-card.test.ts apps/web/test/row.test.ts apps/web/test/row-progress.test.ts apps/web/test/row-menu.test.ts apps/web/test/refusal-row.test.ts apps/web/test/batch.test.ts apps/web/test/batch-bar.test.ts apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/i18n.test.ts apps/web/test/wiring.test.ts apps/web/test/readme-web.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: T4
+    depends_on: []
+    impacts: ["read() in the PDF adapter feeds every page's items to stripRunning and layoutPages, so an item dropped there changes every PDF - bun test packages/core/test/pdf.test.ts", "layout tests build TextItem lists by hand and must see no change - bun test packages/core/test/pdf-layout.test.ts", "the browser build bundles the adapter - bun test apps/web/test/build-output.test.ts"]
+    files: { create: [packages/core/src/pdf/overprint.ts, packages/core/test/pdf-overprint.test.ts], modify: [packages/core/src/adapters/pdf.ts], test: [packages/core/test/pdf.test.ts, packages/core/test/pdf-layout.test.ts, packages/core/test/pdf-running.test.ts] }
+    idempotency_key: "T4:drop-overprinted-text-items"
+    skip_if: "bun test packages/core/test/pdf-overprint.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test packages/core/test/pdf-overprint.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test packages/core/test/pdf-overprint.test.ts packages/core/test/pdf.test.ts packages/core/test/pdf-layout.test.ts packages/core/test/pdf-running.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: T5
+    depends_on: []
+    impacts: ["stripRunning runs on every PDF before layout; a wider rule must keep body text that repeats by accident - bun test packages/core/test/pdf-running.test.ts", "title detection reads page 1 items after stripping - bun test packages/core/test/pdf-title.test.ts", "end-to-end PDF conversions on the generated fixtures and on arXiv 2302.13971 - bun test packages/core/test/pdf.test.ts"]
+    files: { create: [packages/core/test/pdf-running-block.test.ts], modify: [packages/core/src/pdf/running.ts], test: [packages/core/test/pdf-running.test.ts, packages/core/test/pdf-title.test.ts, packages/core/test/pdf.test.ts] }
+    idempotency_key: "T5:strip-header-block-below-band"
+    skip_if: "bun test packages/core/test/pdf-running-block.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test packages/core/test/pdf-running-block.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test packages/core/test/pdf-running-block.test.ts packages/core/test/pdf-running.test.ts packages/core/test/pdf-title.test.ts packages/core/test/pdf.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: T6
+    depends_on: [T4]
+    impacts: ["boundaries() and render() in the PDF adapter decide the chapters and the nav of every PDF without an outline - bun test packages/core/test/pdf.test.ts", "layoutPages output shape is asserted block by block in 40 places - bun test packages/core/test/pdf-layout.test.ts", "the packager lists book.toc when it is not empty and writes nested NCX and nav entries - bun test packages/core/test/packager.test.ts", "the web preview shows nested nav entries as sub-items - bun test apps/web/test/preview-session.test.ts"]
+    files: { create: [packages/core/test/pdf-chapters.test.ts], modify: [packages/core/src/adapters/pdf.ts, packages/core/src/pdf/layout.ts], test: [packages/core/test/pdf.test.ts, packages/core/test/pdf-layout.test.ts, packages/core/test/packager.test.ts, apps/web/test/preview-session.test.ts] }
+    idempotency_key: "T6:small-unnumbered-headings-fold-into-chapter"
+    skip_if: "bun test packages/core/test/pdf-chapters.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test packages/core/test/pdf-chapters.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test packages/core/test/pdf-chapters.test.ts packages/core/test/pdf.test.ts packages/core/test/pdf-layout.test.ts packages/core/test/packager.test.ts apps/web/test/preview-session.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: T7
+    depends_on: [T5, T6]
+    impacts: ["the generated fixture is a new file under fixtures/ and must not be picked up as a book by the fixture build - bun test packages/core/test/pdf.test.ts", "the whole core suite after T4 to T6 - bun test packages/core/test"]
+    files: { create: [fixtures/make-pdf-header-block.ts, packages/core/test/pdf-header-block.test.ts], modify: [], test: [packages/core/test/pdf.test.ts] }
+    idempotency_key: "T7:header-block-end-to-end"
+    skip_if: "bun test packages/core/test/pdf-header-block.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test packages/core/test/pdf-header-block.test.ts"
+        expect_exit: 0
+        retry: 1
+      - cmd: "bun test packages/core/test"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 600
+  - id: F1
+    depends_on: [T2]
+    impacts: ["the preview chrome colours are literals in index.html and the dark block is the only :root override, theme tests read the first :root - bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts", "preview layout and wiring tests read the preview CSS and markup - bun test apps/web/test/preview-layout.test.ts apps/web/test/preview-wiring.test.ts", "the build extracts the style block to style.css - bun test apps/web/test/build-output.test.ts"]
+    files: { create: [apps/web/test/preview-stage.test.ts], modify: [apps/web/index.html], test: [apps/web/test/theme.test.ts, apps/web/test/theme-dark.test.ts, apps/web/test/theme-tints.test.ts, apps/web/test/preview-layout.test.ts, apps/web/test/preview-wiring.test.ts, apps/web/test/build-output.test.ts] }
+    idempotency_key: "F1:preview-stage-mid-tone"
+    skip_if: "bun test apps/web/test/preview-stage.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/preview-stage.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test apps/web/test/preview-stage.test.ts apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/preview-layout.test.ts apps/web/test/preview-wiring.test.ts apps/web/test/build-output.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: F2
+    depends_on: [T7]
+    impacts: ["the two sources only gain comments, so behaviour must not change - bun test packages/core/test/pdf-overprint.test.ts packages/core/test/pdf-running-block.test.ts packages/core/test/pdf-running.test.ts packages/core/test/pdf.test.ts"]
+    files: { create: [packages/core/test/defer-markers.test.ts], modify: [packages/core/src/pdf/overprint.ts, packages/core/src/pdf/running.ts], test: [packages/core/test/pdf-overprint.test.ts, packages/core/test/pdf-running-block.test.ts, packages/core/test/pdf-running.test.ts, packages/core/test/pdf.test.ts] }
+    idempotency_key: "F2:defer-markers-in-source"
+    skip_if: "bun test packages/core/test/defer-markers.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test packages/core/test/defer-markers.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test packages/core/test/defer-markers.test.ts packages/core/test/pdf-overprint.test.ts packages/core/test/pdf-running-block.test.ts packages/core/test/pdf-running.test.ts packages/core/test/pdf.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: F3
+    depends_on: [F1]
+    impacts: ["the status badge colours use the tint tokens and theme tests compute their contrast - bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts", "row and refusal tests assert badge classes and glyphs - bun test apps/web/test/row-progress.test.ts apps/web/test/result-card.test.ts apps/web/test/refusal-row.test.ts", "the build extracts the style block to style.css - bun test apps/web/test/build-output.test.ts"]
+    files: { create: [apps/web/test/status-badge.test.ts], modify: [apps/web/index.html], test: [apps/web/test/theme.test.ts, apps/web/test/theme-dark.test.ts, apps/web/test/theme-tints.test.ts, apps/web/test/row-progress.test.ts, apps/web/test/result-card.test.ts, apps/web/test/refusal-row.test.ts, apps/web/test/build-output.test.ts] }
+    idempotency_key: "F3:flat-status-badges"
+    skip_if: "bun test apps/web/test/status-badge.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/status-badge.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test apps/web/test/status-badge.test.ts apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/row-progress.test.ts apps/web/test/result-card.test.ts apps/web/test/refusal-row.test.ts apps/web/test/build-output.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+      - cmd: "bun run typecheck"
+        expect_exit: 0
+        retry: 0
+  - id: F4
+    depends_on: [T6]
+    impacts: ["README table rows are asserted by the README tests and must stay true - bun test apps/web/test/readme-web.test.ts scripts/readme-install.test.ts"]
+    files: { create: [apps/web/test/readme-pdf-toc.test.ts], modify: [README.md], test: [apps/web/test/readme-web.test.ts, scripts/readme-install.test.ts] }
+    idempotency_key: "F4:readme-nested-toc"
+    skip_if: "bun test apps/web/test/readme-pdf-toc.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "bun test apps/web/test/readme-pdf-toc.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "bun test apps/web/test/readme-pdf-toc.test.ts apps/web/test/readme-web.test.ts scripts/readme-install.test.ts"
+        expect_exit: 0
+        retry: 1
+        timeout_s: 300
+---
+# pubmy UI review fixes Implementation Plan
+
+> For agentic workers: REQUIRED EXECUTION METHOD: delegated task execution. Steps use checkbox syntax.
+
+**Goal:** Fix what is true in two owner-pasted UI reviews of the pubmy web page (front page, result card) and the PDF conversion defects the second review exposed; the preview dialog waited for the other live session's PR and is done later as F1 (debt sweep).
+
+**Architecture:** Two independent lanes. Web lane (T1, T2) is sequential because both edit `apps/web/index.html` and `apps/web/src/i18n.ts`. The preview dialog (review point C) is not in this plan: live session `pubmy-d5` owns it in `/mnt/belajarcarabelajar/pubmy-wt/pubmy-web-preview-immersive` (plan 2026-11-09-pubmy-web-preview-immersive, uncommitted edits to the same preview CSS and the Contents button), so it is a follow-up here (A30). Core lane: T4 (overprinted duplicate text items) and T5 (running header block that sits just below the 10 percent band) are independent; T6 (chapters and nested TOC) follows T4 because both edit `packages/core/src/adapters/pdf.ts`; T7 proves the lane end to end on a generated mimic of the sample PDF.
+
+**Tech Stack:** Bun 1.4.4 (`bun:test`, linkedom), TypeScript 7, pdf.js through unpdf, pdf-lib for fixtures, fflate. No UI framework, no new dependency.
+
+**Active Project Profile:** repo `/home/belajarcarabelajar/Proyek/pubmy`, `main` clean at `021b213` (PR #18 merged). Bun monorepo (`packages/core`, `apps/cli`, `apps/web`). Verified from files read: `apps/web/{index.html,build.ts,src/{row,main,reader,countdown,batch,i18n}.ts}`, `packages/core/src/{adapters/pdf.ts,pdf/{layout,running}.ts,types.ts,packager.ts}`, `test/{theme,wiring,row-progress,batch,batch-bar,pdf-running}.test.ts`, `GLOSSARY.md`, `MEMORY.md` (M1 to M16). Tests run through `colab-test -C ~/Proyek/pubmy -- <cmd>` (A47); local fallback is targeted (A12).
+
+**Project Commands:** `bun test <files>`, `bun run typecheck`, `bun run --cwd apps/web build`, `bun ~/vivera/scripts/check-copy-rules.mjs --diff origin/main`.
+
+**Protected Boundaries:** `skills/pubmy/scripts/*` (generated), `apps/web/vendor/foliate`, the live deploy (out of scope), the original sample PDF in `~/Unduhan` (copy it, never edit it), and the user's PDF never enters the repo.
+
+**Spec:** none (Bounded path); decisions recorded below.
+
+**Scope:** (A) front page: formats listed once, chips as passive text, privacy badge as wide as the drop zone, thinner dashed border, language button with globe icon, logo aligned to the top; (B) result card: tick glyph for Ready, framed Preview and menu buttons with the menu last in the row, countdown wording, Clear all as a small muted button shown from 2 rows; (D) PDF adapter: overprinted duplicate text dropped, header rows just below the band stripped, unnumbered headings smaller than the numbered ones folded into their chapter and listed as nested TOC entries.
+
+**Non-Goals:** the preview dialog (Contents button icon, mid-tone stage between the dark chrome and the white page; moved out at approval because session `pubmy-d5` was editing the same lines; the mid-tone stage is done as F1 after PR #20 merged, the Contents icon landed in PR #20), reading themes (sepia or dark page), wider page arrows, any change to the 180 s retention or what is deleted, e2e or browser runs (A42), deploy, a nested TOC for numbered sub-sections (arXiv keeps its flat list), OCR, math crops.
+
+**Visual Map:**
+
+```mermaid
+flowchart TD
+    accTitle: pubmy UI review fixes task map
+    accDescr: The web lane T1, T2 runs in sequence; the core lane runs T4 and T5 in parallel, then T6 after T4, then T7 after T5 and T6. The debt sweep added F1 and F3 (web, after T2, in sequence), F2 (after T7) and F4 (after T6); all lanes meet at verification and the pull request.
+    G0{{"Design approval"}} --> T1["T1 front page"]
+    G0 --> T4["T4 drop overprinted text"]
+    G0 --> T5["T5 strip header block"]
+    T1 --> T2["T2 result card"]
+    T4 --> T6["T6 chapters and nested TOC"]
+    T5 --> T7["T7 end to end on header-block fixture"]
+    T6 --> T7
+    T2 --> F1["F1 preview stage mid-tone"]
+    F1 --> F3["F3 flat status badges"]
+    T7 --> F2["F2 defer markers in source"]
+    T6 --> F4["F4 README nested TOC line"]
+    F3 --> V["Verify: typecheck, bun test apps/web/test packages/core/test, build, real sample PDF"]
+    F2 --> V
+    F4 --> V
+    V --> D(["Done: PR, debt sweep"])
+```
+
+**Reasoning Lenses:** intent, investigative (root causes measured on the real PDF), user-centered and accessibility (44 px targets, icons aria-hidden, labels in spans), systems (index.html and i18n.ts shared across web tasks, pdf.ts shared across core tasks), test-first, verification (real-file proof, M6).
+
+**Acceptance Criteria:**
+- [x] AC-1: the `tagline` strings (id and en) and the `<meta name="description">` name no document format; the chips are the only format list and still equal the `accept` extensions (11 chips). (evidence: `bun test apps/web/test/front-page.test.ts apps/web/test/theme.test.ts` exit 0)
+- [x] AC-2: chips read as passive text (no pill border, no button-like background) under a visible "supported formats" label with an id and en string; the privacy badge is a full-width block with centred text; the drop zone border is `1px dashed`; the logo is top-aligned with the title block. (evidence: `bun test apps/web/test/front-page.test.ts` exit 0)
+- [x] AC-3: the language toggle holds a globe icon beside a label span, the icon survives `applyLang`, the toggle stays at least 44 px tall and keeps its `aria-label`. (evidence: `bun test apps/web/test/front-page.test.ts apps/web/test/wiring.test.ts` exit 0)
+- [x] AC-4: a ready row's badge glyph is a tick, not `+`; Preview and the menu trigger have a visible frame (no underline link look); the menu trigger is the last control in the row and the countdown sits before it; the countdown copy says the result is cleared from memory (id and en), never "deleted" or "Auto-deleted". (evidence: `bun test apps/web/test/result-card.test.ts apps/web/test/row-progress.test.ts apps/web/test/row.test.ts apps/web/test/row-menu.test.ts` exit 0)
+- [x] AC-5: Clear all is a small muted button (not the accent colour) and is hidden below 2 rows; Download all is unchanged (shown from 2 ready rows). (evidence: `bun test apps/web/test/result-card.test.ts apps/web/test/batch.test.ts apps/web/test/batch-bar.test.ts` exit 0)
+- [x] AC-7: `dropOverprints` removes a text item that another item overprints (same size, same baseline within 0.5 pt, start within 1 pt, its text equal to or a prefix of the other's) and keeps the longer one, and the adapter applies it before running-line stripping. (evidence: `bun test packages/core/test/pdf-overprint.test.ts packages/core/test/pdf.test.ts` exit 0)
+- [x] AC-8: (narrowed after review round 1, finding R1) `stripRunning` also removes an item only as a continuation of the header or footer block its band rule already removed on that side of that page: unrotated, in the top or bottom 15 percent, within 5 percent of the page height of that block, containing a letter, and repeating at the same position (2 pt) with the same digit-normalised text on at least `max(3, floor(pages / 2))` pages. Per-page data rows and repeated text in the middle of a page stay. (evidence: `bun test packages/core/test/pdf-running-block.test.ts packages/core/test/pdf-running.test.ts` exit 0)
+- [x] AC-9: in a PDF without an outline whose numbered headings share one size, an unnumbered heading set smaller than that size stays inside the preceding chapter as a sub-heading with an anchor and is a nested `children` entry of that chapter in the TOC; unnumbered headings at the numbered size stay chapters; documents without numbered headings and the arXiv fixture are unchanged. (evidence: `bun test packages/core/test/pdf-chapters.test.ts packages/core/test/pdf.test.ts` exit 0)
+- [x] AC-10: the generated mimic of the sample (header block drawn on pages 2 to N, page 2 drawn twice, three heading sizes) converts to an EPUB with no doubled token, no `dari N` text and a nav of the numbered chapters plus the trailing large unnumbered one, each demoted heading nested; the real sample PDF, converted from a scratch copy, shows the same, and the arXiv fixture (the only other real PDF the repo uses) converts with identical chapter parts, nav titles and, after normalising the random uid, `toc.ncx`. (evidence: `bun test packages/core/test/pdf-header-block.test.ts` exit 0, plus the real-file log under Session checklist)
+- [x] AC-11: (follow-up F1, review point C) the preview `.pv-stage` has a mid-tone background token `--pv-stage` whose luminance lies between the preview bar and the white page, the white page against it has a lower contrast ratio than against the bar and still at least 3:1, and the arrow glyph colour on it is at least 4.5:1; the token exists in both theme blocks. (evidence: `bun test apps/web/test/preview-stage.test.ts apps/web/test/preview-layout.test.ts apps/web/test/theme.test.ts` exit 0)
+- [x] AC-12: (follow-up F2) `overprint.ts` and `running.ts` carry `// defer: <ceiling>, <upgrade-trigger>` comments for the O(n squared) pass, the glyph-split edge, the 2 pt rounding edge and the foot-table label edge, so `git grep -nE '(#|//|/[*]) ?defer:'` finds them, and no behaviour changes. (evidence: `bun test packages/core/test/defer-markers.test.ts` exit 0 and the four PDF test files exit 0)
+- [x] AC-13: (follow-up F3, same class as the chips) the queue status `.badge` is plain text with its glyph (no pill radius, no tinted background), the status colours keep at least 4.5:1 on `--surface` in both themes, and the status is still told by text and glyph, not by colour alone. (evidence: `bun test apps/web/test/status-badge.test.ts apps/web/test/theme-tints.test.ts` exit 0)
+- [x] AC-14: (follow-up F4) the README PDF row says that, without a PDF outline, an unnumbered heading set smaller than the numbered ones stays inside its chapter and is listed under it in the contents, and the row still says running headers, footers and page numbers are removed. (evidence: `bun test apps/web/test/readme-pdf-toc.test.ts` exit 0)
+
+**Traceability:**
+
+| AC | Task | Check | Evidence |
+|---|---|---|---|
+| AC-1 | T1 | `bun test apps/web/test/front-page.test.ts apps/web/test/theme.test.ts` | exit 0 |
+| AC-2 | T1 | `bun test apps/web/test/front-page.test.ts` | exit 0 |
+| AC-3 | T1 | `bun test apps/web/test/front-page.test.ts apps/web/test/wiring.test.ts` | exit 0 |
+| AC-4 | T2 | `bun test apps/web/test/result-card.test.ts apps/web/test/row-progress.test.ts apps/web/test/row.test.ts apps/web/test/row-menu.test.ts` | exit 0 |
+| AC-5 | T2 | `bun test apps/web/test/result-card.test.ts apps/web/test/batch.test.ts apps/web/test/batch-bar.test.ts` | exit 0 |
+| AC-7 | T4 | `bun test packages/core/test/pdf-overprint.test.ts packages/core/test/pdf.test.ts` | exit 0 |
+| AC-8 | T5 | `bun test packages/core/test/pdf-running-block.test.ts packages/core/test/pdf-running.test.ts` | exit 0 |
+| AC-9 | T6 | `bun test packages/core/test/pdf-chapters.test.ts packages/core/test/pdf.test.ts` | exit 0 |
+| AC-10 | T7 | `bun test packages/core/test/pdf-header-block.test.ts` and the real-file log | exit 0 |
+| AC-11 | F1 | `bun test apps/web/test/preview-stage.test.ts apps/web/test/preview-layout.test.ts apps/web/test/theme.test.ts` | exit 0 |
+| AC-12 | F2 | `bun test packages/core/test/defer-markers.test.ts` | exit 0 |
+| AC-13 | F3 | `bun test apps/web/test/status-badge.test.ts apps/web/test/theme-tints.test.ts` | exit 0 |
+| AC-14 | F4 | `bun test apps/web/test/readme-pdf-toc.test.ts` | exit 0 |
+
+**Assumptions & Open Questions:**
+- Owner approved scope A to D and unit-test-only verification in chat on 2026-11-09 (after a triage table of both reviews).
+- Correction to the triage, measured afterwards on the real sample: the doubled text is not faux bold. Page 2 of the PDF draws its header table twice at identical positions (14 exact-duplicate item keys); pages 3 to 9 draw it once. The leaked `: N dari 9` and `(DTD)` come from the last header row, which sits at y 751 to 753 on a 841.89 pt page, 4 to 6 pt below the 10 percent band that `stripRunning` reads (`BAND = 0.1`). The monospace claim of the first review is wrong (system-ui since the first commit).
+- Assumption (my judgment): Clear all hides below 2 rows, because with one row the row's own Remove does the same; this reverses AC-6 of plan 2026-11-09-pubmy-web-ui-polish on purpose. The owner can veto at the Design gate.
+- Assumption (my judgment): only the Ready glyph changes (`+` to a tick); the other glyphs are not criticised and stay.
+- Found at approval time: live session `pubmy-d5` (plan 2026-11-09-pubmy-web-preview-immersive, worktree `pubmy-web-preview-immersive`, uncommitted) already gives the preview Contents button an icon and rewrites the preview CSS. T3 (Contents icon and mid-tone stage) is therefore out of this plan; the owner approved A to D before this was known.
+- Unresolved on purpose: why page 6's header block reached the book as a chapter in the full adapter run while a direct `stripRunning` probe stripped it. T5 and T7 settle it on the real sample; if T5 and T4 do not remove it, T7 stops and records the cause instead of guessing.
+- The sample PDF is the owner's own university document; it is read from a scratch copy and never committed. Regression against the repo's real PDFs (arXiv 2302.13971 from `fixtures/sources/arxiv.json`, converted by `bun scripts/build-fixture-outputs.ts`) compares chapter text before and after.
+
+**Dependencies & Impact:** `row.test.ts` and `row-menu.test.ts` assert the countdown text, `row-progress.test.ts` the glyph, `batch.test.ts` and `batch-bar.test.ts` the Clear all thresholds: T2 updates exactly those assertions and nothing else. `layout.ts` output is asserted block by block, so T6 adds its data without changing the shape existing assertions compare (T6 chooses between an optional field and a parallel list, and proves the 40 layout assertions unchanged).
+
+**Risks & Rollback:** web lane is visual only; rollback = revert the PR. Core lane changes what every PDF conversion drops or splits: an over-eager rule would delete real text (mitigated by T4 equal-or-prefix match at one baseline and T5 repetition-by-position on at least half the pages, both with keep-tests) or merge real chapters (mitigated by T6 demoting only unnumbered headings smaller than every numbered one). Rollback = revert the PR; no data migration.
+
+**Security & Compatibility:** no new network use; icons are inline SVG covered by `img-src 'self' data:` and the existing no-inline-style rule; EPUB output stays valid for Kindle (anchors on `h2` ids are plain XHTML; EPUBCheck Java cross-check M3 is run on the real sample output).
+
+**Operations & Rollout:** PR, CI, merge by owner. Deploy was out of scope at approval; the owner then asked for it in chat on 2026-11-09 ("when it is done, deploy right away"), so it runs after the owner merges PR #22: build, `wrangler deploy --dry-run`, then `wrangler deploy` from `apps/web` on `main`, followed by a header and content check of the live page.
+
+**CI/Review Gate:** parent diff audit and an independent reviewer before the PR.
+
+**Documentation:** README checked for UI or format claims at T1 (`rg -n -i 'tagline|TXT, Markdown' README.md`); MEMORY.md lesson at the debt sweep.
+
+**Definition of Done:** AC-1 to AC-5 and AC-7 to AC-10 checked with evidence, typecheck exit 0, `bun test apps/web/test packages/core/test` exit 0, web build exit 0, copy rules exit 0, real-file log recorded, PR opened, debt sweep run.
+
+**Plan Status & Version:** Complete (owner, 2026-11-09, at the debt sweep; approved earlier the same day with T3 moved to the follow-up backlog and then done as F1), v1.
+
+**Reproducibility:** Bun 1.4.4; tests through `colab-test` (A47). Real-file proof: copy `~/Unduhan/User_Manual_SATU_Certificate_Mahasiswa.pdf` into `~/.cache/tmp/pubmy-ui-review-<session>/in/` and run `bun apps/cli/src/main.ts <that dir>`.
+
+**Test Reliability:** DOM tests use linkedom, CSS rules are read from the shipped `index.html` as text; PDF tests build their input with pdf-lib, so no network (the existing `pdf.test.ts` fetches arXiv as before).
+
+**Privacy & Data Governance:** the page still uploads nothing; the retention copy now says so. The sample PDF stays local and out of git.
+
+**Dependencies & Supply Chain:** no new package.
+
+**UX States:** empty, waiting, converting, ready, failed, expired (Deleted), refused, batch bar hidden below its thresholds, narrow screens (the header stacks).
+
+**Persistent State & Artifact Storage:** none.
+
+**Entity & Sourcing Verification:** item positions and the header block layout were read from pdf.js on the real sample (`getTextContent`, 9 pages, view 595.28 x 841.89); WCAG contrast is computed in the tests from the CSS values.
+
+**Verification:** `bun run typecheck`; `bun test apps/web/test packages/core/test`; `bun run --cwd apps/web build`; the real-file log.
+
+## Global Constraints
+
+- No em dash in new copy or code comments.
+- Git is parent-only; subagents edit files and run tests only.
+- Labelled elements stay empty in `index.html` (the build fills `data-i18n`); an icon is a sibling of the label span.
+- Every new colour or key exists in both the light and the dark token blocks and in id and en.
+- New tests live in NEW files for the first RED (M15); existing assertions change only where listed under each task.
+- No e2e or browser runs unless the owner asks (A42).
+- Commit messages conventional, no attribution lines.
+
+## Session checklist
+
+- [x] Plan validated (`ultra-plan-runner.mjs` exit 0, Validation: OK) and Design approved (owner)
+- [x] Worktree claimed with `wt-new` on `/mnt/belajarcarabelajar/pubmy-wt/`
+- [x] T1, T4, T5 dispatched in parallel (disjoint files); T2 after T1; T6 after T4; T7 after T5 and T6
+- [x] Parent diff audit per task; independent review before the PR (two rounds, final verdict `correct`; round 1 P1 fixed by narrowing AC-8)
+- [x] Real-file log, measured with one script on both EPUBs (sample PDF from a scratch copy; base = main at `7eb0883`, after = this branch): chapter files 10 to 8; nav entries 10 to 9 with one nested; doubled words 1 to 0; `(DTD)` 9 to 0; `USER MANUAL` 4 to 0; `Halaman :` 1 to 0; `dari <n>` 9 to 1 (genuine body text). arXiv 2302.13971: 14 chapter parts and nav titles identical to base, `toc.ncx` identical after uid normalisation. EPUBCheck Java 5.4.0 on the EPUB made from `makeHeaderBlockPdf()`: fatal 0, error 0, warning 0. Final run on `abb3851`: typecheck exit 0, `bun test packages/core/test apps/web/test` 702 pass, 1 skip, 0 fail, web build exit 0, copy-rules clean (1511 lines, 10 commit messages). Runner `--execute`: six tasks `SKIPPED-IDEMPOTENT`, exit 0
+- [x] PR opened (#22), plan synced to the vault and issue #19, learning ledger and rules M18 to M21 written
+- [x] Debt sweep follow-ups F1 to F4 (owner selected all four): F2 `14f584f`, F4 `8a82d62`, F1 and F3 `e684ef4`, each proving test rerun by the parent with exit 0 (F2 68 pass, F4 24 pass, F1 and F3 179 pass across 12 files, typecheck exit 0). Final run on `e684ef4`: `bun run typecheck && bun test packages/core/test apps/web/test && bun run --cwd apps/web build` exit 0, 734 pass, 1 skip, 0 fail, 67 files; copy-rules exit 0 (2115 added lines in 32 files, 17 commit messages); runner `--execute`: ten tasks `SKIPPED-IDEMPOTENT`, exit 0. Closeout record for plan 2026-11-07-pubmy-v1: `17559b5`
+- Outside the tasks and after this PR, at the owner's request: the merge is asked as its own question, then the deploy the owner asked for on 2026-11-09. Their results are reported in chat, because a plan change after the merge needs its own PR.
+
+## Task T1: front page
+
+**Files:** Create `apps/web/test/front-page.test.ts`; Modify `apps/web/index.html`, `apps/web/src/i18n.ts`, `apps/web/src/main.ts`.
+**Interfaces:** i18n gains `formats-label` (id "Format yang didukung", en "Supported formats"); `tagline` becomes format-free (id "Ubah dokumen, e-book, dan komik jadi EPUB 3 yang lolos Send to Kindle.", en "Turn documents, e-books and comics into EPUB 3 that passes Send to Kindle."); the meta description loses its list the same way. The language toggle becomes `<button id="lang"><svg aria-hidden/><span id="lang-label"></span></button>`; `applyLang` sets the span's text, the button's `aria-label` and `lang`.
+**Behavior & Acceptance:** AC-1 to AC-3. `front-page.test.ts` asserts: no document-format word (TXT, MD, Markdown, HTML, DOCX, ODT, RTF, PDF, MOBI, AZW3, CBZ, CBR) in either tagline or in the meta description (the output format EPUB stays: both say "EPUB 3"); the chips list has a label element tied by `aria-labelledby`; `.chip` has no `border` and no pill radius in the CSS; `.privacy-badge` is `display:flex`; `.drop` border is `1px dashed`; `#lang` has an `svg[aria-hidden]` sibling of the label span and `min-height:44px` (from the shared button rule); `main.ts` writes the label through the span and never `textContent` on the button.
+**Edge Cases:** the label span is empty in source (the toggle text is set by JS, as today, so no-JS shows only the icon); `.brand` aligns to the top; the narrow-screen rule that stacks the header keeps working.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** `index.html`, `i18n.ts` and `main.ts` read as text, linkedom for the DOM.
+
+## Task T2: result card
+
+**Files:** Create `apps/web/test/result-card.test.ts`; Modify `apps/web/index.html`, `apps/web/src/row.ts`, `apps/web/src/i18n.ts`, `apps/web/src/batch.ts`, `apps/web/test/row.test.ts`, `apps/web/test/row-menu.test.ts`, `apps/web/test/row-progress.test.ts`, `apps/web/test/batch.test.ts`, `apps/web/test/batch-bar.test.ts`.
+**Interfaces:** `GLYPHS.ready` becomes a tick (U+2713); `expires-in` becomes id "Hasil dihapus dari memori dalam" and en "Cleared from memory in"; `batchView(rows, ready).clearAll` is `rows >= 2`; row order is Download, Preview, countdown, menu trigger, with the countdown taking the free space so the trigger sits at the right end.
+**Behavior & Acceptance:** AC-4, AC-5. Preview and the menu trigger get a 1px frame (`.row-actions button.ghost` loses the underline); `#clear-all` is muted (`--muted` text, `--border` frame, smaller padding); focus restoration and file-named `aria-label`s unchanged.
+**Edge Cases:** an expired row keeps no countdown and no menu; the Clear all focus fallback to Choose still works when it hides at 1 row.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** linkedom document as in `row.test.ts`; CSS rules from `index.html`.
+
+## Task T4: drop overprinted text
+
+**Files:** Create `packages/core/src/pdf/overprint.ts`, `packages/core/test/pdf-overprint.test.ts`; Modify `packages/core/src/adapters/pdf.ts`.
+**Interfaces:** `dropOverprints(items: TextItem[]): TextItem[]` (pure): an item is dropped when another item has the same font size (0.1 pt), a baseline within 0.5 pt, a start x within 1 pt, and its trimmed text equals or is a prefix of the other's; for equal text the first stays. `read()` applies it where `found` is built, after the crop and script marking that rely on item indices.
+**Behavior & Acceptance:** AC-7. Tests: exact duplicate collapses; `":"` under `": 2 dari 9"` is dropped and the longer stays; a faux-bold copy 0.4 pt to the right collapses; the same word 10 pt apart on one line stays; two equal short items at different baselines stay; order of the survivors unchanged.
+**Edge Cases:** an item with empty text is left to the existing filters; rotated items are compared like the rest.
+**Deliberate Shortcuts:** `defer: O(n squared) comparison per page (a page has at most a few thousand items), a bucket by rounded baseline when a measured page is slow`.
+**Test Data & Determinism:** hand-made `TextItem` lists.
+
+## Task T5: strip the header block below the band
+
+**Files:** Create `packages/core/test/pdf-running-block.test.ts`; Modify `packages/core/src/pdf/running.ts`.
+**Interfaces:** `stripRunning` keeps its signature. New rule beside the line rule, as shipped after review round 1 (finding R1): `continuation()` removes an unrotated item that contains a letter, lies in the top or bottom 15 percent, is within 5 percent of the page height of the block the line rule already removed on that side of that page (no detected block on a side means no extension), and whose key (digit-normalised lower-case text + x and y rounded to 2 pt) is present on at least `max(3, floor(pages / 2))` pages. The page-count guard (fewer than 3 pages unchanged) stays. The first version worked on the whole zone and deleted per-page data rows; it was replaced.
+**Behavior & Acceptance:** AC-8. Tests: a header table whose last row sits 5 pt below the 10 percent band goes on every page, page number included; a line repeated in the middle of the page stays; the same text at a different y on each page stays; the existing five `pdf-running.test.ts` cases stay green unchanged.
+**Edge Cases:** a per-page data row near the page foot (a totals table) stays, because it is not within reach of a detected block and values without letters never go; the residual cases (foot-table labels stripped while values stay, a digit-only page cell) are in the follow-up backlog.
+**Deliberate Shortcuts:** `defer: 2 pt rounding can split a key across a rounding edge, a neighbour-bucket lookup when a real PDF shows it`.
+**Test Data & Determinism:** hand-made pages, 600 x 800 as in the existing running tests.
+
+## Task T6: chapters and nested TOC
+
+**Files:** Create `packages/core/test/pdf-chapters.test.ts`; Modify `packages/core/src/adapters/pdf.ts`, `packages/core/src/pdf/layout.ts`.
+**Interfaces:** the layout step also reports each heading block's font size (an optional field on `PageBlock`, or a parallel array; T6 picks the one that leaves the 40 layout assertions unchanged and says which). `boundaries()`, with no PDF outline: among headings from the first numbered one on, an unnumbered heading whose size is below the smallest numbered heading size minus 0.5 pt is not a chapter start. `render()` gives such a heading `<h2 id="s<k>">`; `read()` sets `book.toc` to chapters with `children: [{ title, href: "<chapter>#s<k>" }]` only when at least one heading was demoted, else leaves `toc: []`.
+**Behavior & Acceptance:** AC-9. Tests (generated PDFs): numbered 13 pt headings plus an 11 pt unnumbered heading between sections 3 and 4 give chapters 1 to N without it and one nested child under 3; a trailing unnumbered heading at 13 pt stays a chapter; the arXiv-like case (numbered sub-sections smaller than numbered sections) is unchanged; a PDF with an outline is unchanged; no numbered headings is unchanged.
+**Edge Cases:** a demoted heading before any chapter heading opens chapter 1 as before; the nav and NCX of the packager already nest `children`.
+**Deliberate Shortcuts:** `defer: nested TOC for numbered sub-sections, when the owner asks for it (arXiv keeps its flat list)`.
+**Test Data & Determinism:** pdf-lib generated pages with explicit font sizes.
+
+## Task T7: end to end on the header-block fixture
+
+**Files:** Create `fixtures/make-pdf-header-block.ts`, `packages/core/test/pdf-header-block.test.ts`.
+**Interfaces:** `makeHeaderBlockPdf(): Promise<Uint8Array>` builds a 9-page A4 PDF: page 1 a cover without the header, pages 2 to 9 a header table (rows at y 814, 798, 783, 767, 752, 751 on 841.89) with a page number row "Halaman : N dari 9", page 2 drawing the whole header twice (the second time with the page number), numbered 13 pt headings, one 11 pt unnumbered heading and one trailing 13 pt unnumbered heading.
+**Behavior & Acceptance:** AC-10. The test converts it with the PDF adapter and asserts: no doubled token, no `dari`, no header words in any chapter, and the nav equals the numbered chapters plus the trailing chapter with the 11 pt heading nested.
+**Edge Cases:** none beyond the fixture.
+**Deliberate Shortcuts:** None. RED is shown by running the new test against a scratch checkout of `main` (it fails there), not by a RED step in `run[]`, because it is written last.
+**Test Data & Determinism:** generated, no network.
+
+## Task F1: preview stage mid-tone (debt sweep follow-up, review point C)
+
+**Files:** Create `apps/web/test/preview-stage.test.ts`; Modify `apps/web/index.html` (the preview CSS block and both theme blocks only).
+**Interfaces:** a custom property `--pv-stage` in the first `:root` and in the dark `:root` override; `.pv-stage{background:var(--pv-stage)}`. The Contents toggle already carries the list icon (PR #20), so no markup changes.
+**Behavior & Acceptance:** AC-11. `preview-stage.test.ts` reads the CSS as text and computes WCAG luminance itself: the stage is between the preview bar colour and white, white against the stage is lower contrast than white against the bar and at least 3:1, the arrow colour `#ececf1` on the stage is at least 4.5:1, and the token exists in both blocks.
+**Edge Cases:** the narrow-screen rule that slides the contents drawer over the stage keeps its own background; the focused-page outline stays visible on the new stage.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** `index.html` read as text.
+
+## Task F2: defer markers in source (debt sweep follow-up)
+
+**Files:** Create `packages/core/test/defer-markers.test.ts`; Modify `packages/core/src/pdf/overprint.ts`, `packages/core/src/pdf/running.ts` (comments only).
+**Interfaces:** none. Markers follow `// defer: <ceiling>, <upgrade-trigger>`: overprint O(n squared) per page (trigger: bucket by rounded baseline when a measured page is slow); overprint glyph-split items of one word at about 3 pt (trigger: scale the start tolerance with the font size when a real file shows it); running 2 pt rounding edge (trigger: neighbour-bucket lookup when a real PDF shows it); running foot-table labels stripped while their values stay when a true footer sits close below (trigger: limit the reach to rows touching the dropped block when a real PDF shows it).
+**Behavior & Acceptance:** AC-12. `defer-markers.test.ts` reads both files and asserts the four markers exist, each with a comma and a trigger after it. No code line changes.
+**Edge Cases:** the marker text contains no em dash.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** the two source files read as text.
+
+## Task F3: flat status badges (debt sweep follow-up)
+
+**Files:** Create `apps/web/test/status-badge.test.ts`; Modify `apps/web/index.html` (the `.badge` rules only); existing theme and row tests change only where they pin the pill or the tint backgrounds.
+**Interfaces:** `li .badge` loses `border-radius:999px`, the pill padding and the tinted `background`; the per-status colours stay as text colours with the glyph. Tint tokens that no rule uses any more are removed only if the theme tests allow it; otherwise left and reported.
+**Behavior & Acceptance:** AC-13. `status-badge.test.ts` asserts the `.badge` rules have no `border-radius` pill and no `background` for any status, and the status text colours (`--ok`, `--err`, `--muted`, `--accent-ink`) keep at least 4.5:1 on `--surface` in both blocks.
+**Edge Cases:** refusal rows reuse the badge glyphs and stay readable; the expired row still reads "Deleted" in muted colour.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** `index.html` read as text.
+
+## Task F4: README nested TOC line (debt sweep follow-up)
+
+**Files:** Create `apps/web/test/readme-pdf-toc.test.ts`; Modify `README.md` (the PDF row only).
+**Interfaces:** one sentence added to the "PDF with text" row: without a PDF outline, a smaller unnumbered heading stays inside its chapter and is listed under it in the table of contents.
+**Behavior & Acceptance:** AC-14. The test reads the PDF row and asserts the new sentence and the existing "Running headers, footers and page numbers are removed" sentence.
+**Edge Cases:** no em dash; the row stays one table row.
+**Deliberate Shortcuts:** None.
+**Test Data & Determinism:** `README.md` read as text.
+
+## Follow-up backlog
+
+- Review point C (preview stage mid-tone): done as F1 in this plan (PR #20 landed the Contents icon and merged, session `pubmy-d5` is idle with a clean tree).
+- `defer:` items LATER (also marked in the source by F2): the O(n squared) overprint pass, `defer: a page has at most a few thousand items, bucket by rounded baseline when a measured page is slow`; glyph-split items of one word at about 3 pt, `defer: only a tiny font can trigger it, scale the start tolerance with the font size when a real file shows it`; the 2 pt rounding edge in the header position key, `defer: a key can split across a rounding edge, neighbour-bucket lookup when a real PDF shows it`; foot-table labels stripped while their values stay (review residual R4) and a digit-only page cell of a continued header row left as a stray number (R5), `defer: both need a real PDF that shows them, limit the reach to rows touching the dropped block`.
+- Sweep re-pass (after F1 to F4, one round, no new question): `apps/web/test/theme-tints.test.ts` now measures the badge colours on `--surface` and has no tint left, so its file name is out of date, `defer: rename it to theme-badge-colours.test.ts the next time a theme test is edited, the contents are right and only the name misleads`.
+- Not exercised: a mixed scanned and text PDF, and math-dense or two-column PDFs beyond the generated fixtures and arXiv 2302.13971, `defer: no sample at hand, add a fixture when one fails in the field`.
+- Not looked at in a browser (owner chose unit tests only, A42): chip wrapping at 320 px, the new framing, the flat badges and the preview stage in light and dark, `defer: owner opt-in, check at 320 and 1280 px in both themes when asked`.
+- Owner request 2026-11-09 (mid-session): deploy after the work is done. Deploy is `bun run --cwd apps/web build` then `bunx wrangler deploy` from `apps/web` (Worker `pubmy`, `pubmy.belajarcarabelajar.com`), from `main` after the owner merges PR #22.
+- Merge note: this branch edits `apps/web/index.html` (header, chips, row and batch CSS), `apps/web/src/i18n.ts` (tagline, new `formats-label`, `expires-in`) and `apps/web/src/main.ts` (`applyLang`); the other branch edits the preview CSS, the preview keys and `main.ts` lines 98 to 135. Different hunks; whichever merges second rebases and re-runs `bun test apps/web/test`.
+
+## Closeout status
+
+Marked Complete on 2026-11-09 at the owner's choice at the debt sweep (`Mark Complete`), after a readiness re-run that followed the follow-ups. The status change ships in PR #22; after the merge only `plan-sync.mjs` remains (published copy and issue #19).
+
+- **Readiness:** `bun ~/vivera/scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-09-pubmy-ui-review-fixes.md --cwd <worktree>` gave `READY`, exit 0 (2026-11-09, on `e684ef4`). Tasks T1, T2, T4 to T7 and F1 to F4 are `DONE`; open `NOW` follow-ups 0, open step boxes 0, other open boxes 0.
+- **Tick evidence:** `ultra-plan-runner.mjs --execute` exit 0 with ten tasks `SKIPPED-IDEMPOTENT`; `plan-mark-done.mjs --from <runner log>` exit 0, nothing left to tick.
+- **Cost estimate:** `bun ~/vivera/scripts/plan-cost.mjs --plan 2026-11-09-pubmy-ui-review-fixes` printed `usd: 30.2921 (estimate)`, 1 main transcript, 7 subagent runs. Its caveats: a session that continued the plan without running the registry claim is not counted; other work done in a claiming session, before or after the claim, is also counted; a claim behind an env prefix, inside `bash -c` or a subshell, or split by a backslash line continuation is not counted.
+- **Not part of the tasks:** the merge (asked as its own question) and the deploy the owner requested on 2026-11-09. Their results are reported in chat.
+- **Still open, as `defer:` lines in the follow-up backlog above:** the O(n squared) overprint pass, the 3 pt glyph-split edge, the 2 pt rounding edge, review residuals R4 and R5, the unexercised mixed and math-dense PDFs, the browser check the owner chose to skip, and the `theme-tints.test.ts` file name.
