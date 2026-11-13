@@ -15,7 +15,7 @@
     "./render-browser": "./src/render/browser.ts"
   },
   "dependencies": {
-    "@likecoin/epubcheck-ts": "0.7.0",
+    "@likecoin/epubcheck-ts": "0.7.1",
     "fflate": "0.8",
     "linkedom": "0.18",
     "markdown-it": "14",
@@ -26,6 +26,6 @@
   },
   "devDependencies": {
     "pdf-lib": "1.17.1",
-    "@napi-rs/canvas": "1.1.0"
+    "@napi-rs/canvas": "1.1.1"
   }
 }
