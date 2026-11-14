@@ -1,0 +1,271 @@
+{
+ "plan_id": "2026-11-11-audit-tuntas-pubmy",
+ "repo": "pubmy",
+ "sumber": "~/Dokumen/audit-batch-2026-11-09/ (audit Batch API 2026-11-09), dicek ulang di kode 2026-11-11",
+ "tugas": [
+  {
+   "kelompok": "adapter-input-guards",
+   "sesi": "at-pubmy",
+   "sev": "sedang",
+   "n": 8,
+   "berkas": [
+    "packages/core/src/adapters/builtin.ts",
+    "packages/core/src/adapters/comics.ts",
+    "packages/core/src/adapters/docx.ts",
+    "packages/core/src/adapters/mobi/kf8.ts",
+    "packages/core/src/adapters/odt.ts",
+    "packages/core/src/adapters/rtf.ts",
+    "packages/core/test/builtin-adapters.test.ts",
+    "packages/core/test/comics.test.ts",
+    "packages/core/test/docx.test.ts",
+    "packages/core/test/mobi-kf8.test.ts",
+    "packages/core/test/odt.test.ts",
+    "packages/core/test/rtf.test.ts",
+    "packages/core/test/zip-caps.test.ts"
+   ],
+   "temuan": [
+    {
+     "uid": "l2:pubmy-1--dos-biaya-2",
+     "sev": "sedang",
+     "judul": "Elemen ODT `<text:s text:c=\"…\">` memicu alokasi string bergigabyte dari beberapa byte masukan",
+     "alasan": "odt.ts:100 repeat(Number(text:c)) tanpa batas atas.",
+     "rencana": "Batasi text:c ke Math.min(n,1000) di odt.ts case text:s.",
+     "tes": "packages/core/test/odt.test.ts: ODT dengan <text:s text:c=\"1000000000\"/> selesai cepat dan menghasilkan paling banyak 1000 spasi.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "r1:pubmy-1--masukan-1",
+     "sev": "sedang",
+     "judul": "RTF dengan \\bin bernilai negatif membuat parser berputar tanpa henti dan memori terus membengkak",
+     "alasan": "rtf.ts:118-120 `i += param ?? 0` menerima param negatif (regex rtf.ts:177 `-?\\d+`), loop tak berujung.",
+     "rencana": "Di word(): untuk bin, `if (param && param > 0) i = Math.min(n, i+param); return;`.",
+     "tes": "packages/core/test/rtf.test.ts: `{\\rtf1 abc \\bin-20 x}` selesai (bukan hang) dalam timeout.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "r1:pubmy-1--logika-1",
+     "sev": "sedang",
+     "judul": "RTF dengan \\bin bernilai negatif membuat parser berputar tanpa henti dan memori terus membengkak",
+     "alasan": "Duplikat r1:pubmy-1--masukan-1 (rtf.ts:118-120).",
+     "rencana": "Sama dengan masukan-1, satu perubahan menutup keduanya.",
+     "tes": "Sama dengan masukan-1.",
+     "catatan_pemilik": "duplikat masukan-1"
+    },
+    {
+     "uid": "l2:pubmy-1--kontrak-2",
+     "sev": "rendah",
+     "judul": "detect() mengenali DOCX dari isi, tetapi adapter DOCX hanya menerima ekstensi .docx",
+     "alasan": "builtin.ts:25 dan docx.ts:69 memakai s.ext==='docx' sementara detect.ts:38 memberi format 'docx' dari isi zip.",
+     "rencana": "Ubah accepts di builtin.ts dan docx.ts menjadi s.format==='docx' || s.ext==='docx' (ext tetap untuk CFB terenkripsi).",
+     "tes": "packages/core/test/builtin-adapters.test.ts: berkas docx bernama 'laporan' tanpa ekstensi dipilih adapter docx.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "r1:pubmy-1--masukan-3",
+     "sev": "rendah",
+     "judul": "Penjaga bom zip DOCX (dan RAR) hanya memeriksa ukuran yang dideklarasikan sebelum pustaka pihak ketiga mengekstrak semuanya",
+     "alasan": "docx.ts:73 checkZipCaps hanya ukuran deklarasi (zip-caps.ts:28-32), lalu mammoth menginflate bebas; unzipBounded (zip-caps.ts:131) sudah ada tapi hanya dipakai web epub-loader.ts:18.",
+     "rencana": "DOCX: panggil unzipBounded(f.bytes) sebagai validator sebelum mammoth (buang hasil). CBZ/ZIP: comics.ts:33 ganti unzipCapped dengan unzipBounded; ODT: odt.ts:65 ganti unzipCapped dengan unzipBounded. RAR (comics.ts:51-53) dibiarkan: berjalan di WASM libarchive, tidak ada API batas yang jelas.",
+     "tes": "docx.test.ts dan odt.test.ts: zip yang mendeklarasikan 1 KB tetapi menginflate jauh lebih besar ditolak dengan READ_FAILED archive-too-large; comics.test.ts untuk CBZ serupa.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "r1:pubmy-1--logika-5",
+     "sev": "rendah",
+     "judul": "Pemeriksaan zip-bomb DOCX dan CBR hanya memakai ukuran yang dideklarasikan; ukuran hasil ekstraksi sebenarnya tidak dibatasi",
+     "alasan": "Duplikat masukan-3 (docx.ts:73, comics.ts:51-65).",
+     "rencana": "Ditutup oleh perubahan masukan-3 (bagian DOCX/CBZ/ODT).",
+     "tes": "Sama dengan masukan-3.",
+     "catatan_pemilik": "duplikat masukan-3"
+    },
+    {
+     "uid": "r1:pubmy-1--masukan-2",
+     "sev": "rendah",
+     "judul": "Adapter KF8/AZW3 meneruskan URL src dan href SVG tanpa saringan skema ke EPUB keluaran",
+     "alasan": "kf8.ts:48 DROP tanpa iframe/embed/object; kf8.ts:95 src hanya dibuang bila kosong atau kindle:; svgToXhtml kf8.ts:65-69 meneruskan href/xlink:href apa pun.",
+     "rencana": "Tambah iframe, object, embed, form, input ke DROP; terima src hanya jika lokal (^res\\d{4}\\. atau s\\d{4}.xhtml) ; di svgToXhtml buang href/xlink:href yang bukan #id, lokal, atau http(s). Cek dulu bagaimana src kindle: diganti ke res####.ext sebelum nodeToXhtml.",
+     "tes": "packages/core/test/mobi-kf8.test.ts: nodeToXhtml dengan <iframe src=javascript:..>, <img src=https://x>, <svg><a xlink:href=javascript:..> tidak memuat URL itu.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "l2:pubmy-1--privasi-1",
+     "sev": "rendah",
+     "judul": "Teks tersembunyi dan teks hapusan (revisi) di RTF/ODT muncul terbuka di EPUB",
+     "alasan": "rtf.ts:160 default hanya memetakan SYMBOLS; \\v dan \\deleted tak dikenali sehingga teks tetap keluar. Bagian ODT dibiarkan (text:hidden-text/-paragraph bergantung pada kondisi yang tak dievaluasi, menyembunyikan buta bisa membuang teks tampak).",
+     "rencana": "Di rtf.ts tambah st.hidden: \\v dan \\deleted menyalakan (param 0 mematikan), \\plain mematikan; emitText tidak mengeluarkan teks saat hidden. Hanya RTF.",
+     "tes": "packages/core/test/rtf.test.ts: `{\\rtf1 a {\\v rahasia} b}` tidak memuat 'rahasia'; `\\v0` memulihkan.",
+     "catatan_pemilik": ""
+    }
+   ]
+  },
+  {
+   "kelompok": "pdf-pipeline",
+   "sesi": "at-pubmy",
+   "sev": "sedang",
+   "n": 5,
+   "berkas": [
+    "packages/core/src/adapters/pdf.ts",
+    "packages/core/src/adapters/scan.ts",
+    "packages/core/src/pdf/geometry.ts",
+    "packages/core/src/pdf/images.ts",
+    "packages/core/src/pdf/math.ts",
+    "packages/core/test/pdf-images.test.ts",
+    "packages/core/test/pdf-math.test.ts",
+    "packages/core/test/pdf.test.ts"
+   ],
+   "temuan": [
+    {
+     "uid": "l2:pubmy-1--dos-biaya-1",
+     "sev": "sedang",
+     "judul": "Kotak path PDF yang tidak dipangkas ke halaman membuat grid `touching()` berputar hampir tanpa batas dan menghabiskan memori",
+     "alasan": "math.ts:177-180 bbox path tak dipangkas ke page.view; geometry.ts:46-48 iterasi semua sel kotak.",
+     "rencana": "Di graphicsOf (beri parameter view) pangkas bbox ke page.view diperlebar CELL dan buang path di luar; juga pangkas bbox gambar.",
+     "tes": "packages/core/test/pdf-math.test.ts: halaman dengan path ber-titik kontrol 1e12 selesai < 2 detik dan kotak kecil tetap terdeteksi.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "r1:pubmy-1--logika-6",
+     "sev": "rendah",
+     "judul": "Dokumen pdf.js tidak pernah di-destroy, sehingga memori menumpuk sepanjang batch",
+     "alasan": "pdf.ts:142 dan scan.ts:33 membuka getDocumentProxy tanpa destroy (hanya page.cleanup, pdf.ts:174).",
+     "rencana": "Bungkus read() dan ocrScan dengan try/finally `await doc.destroy().catch(()=>{})`.",
+     "tes": "tanpa-tes: `bun test packages/core/test/pdf.test.ts packages/core/test/scan.test.ts` tetap hijau + `bun run typecheck`.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "l2:pubmy-1--kontrak-1",
+     "sev": "rendah",
+     "judul": "Koordinat 'top' teks dan gambar PDF memakai titik acuan berbeda saat page.view tidak berawal di 0",
+     "alasan": "pdf.ts:155 toItem memakai t[4],t[5] absolut, sementara height=y1-y0 (pdf.ts:175) dan images.ts:184 top=vy1-y; selisih y0 saat view tak berawal 0. Crop memakai indeks plus box absolut dan pageTop=y1, jadi tidak ikut terpengaruh.",
+     "rencana": "Normalisasi item teks di pdf.ts: toItem(r,x0,y0) mengurangi x0 dan y0 dari x,y (hanya untuk TextItem layout; raw untuk findMathAreas tetap).",
+     "tes": "packages/core/test/pdf.test.ts: PDF buatan pdf-lib dengan CropBox [0,100,612,892]; urutan gambar dan teks serta pembuangan nomor halaman sama dengan versi CropBox berawal 0.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "l2:pubmy-1--dos-biaya-3",
+     "sev": "rendah",
+     "judul": "Satu gambar PDF yang digambar berulang kali di-encode ulang menjadi PNG dan aset baru setiap kali (tanpa dedup atau batas)",
+     "alasan": "images.ts:173-184 encodePng per paintImageXObject tanpa cache atau batas, pdf.ts:161-164 menambah aset tiap kali.",
+     "rencana": "Cache hasil PNG per id objek (args[0]) dan batasi jumlah gambar per halaman (mis. 100); gambar ke-101+ dilewati.",
+     "tes": "packages/core/test/pdf-images.test.ts: operator list yang memanggil gambar sama 500 kali menghasilkan <= batas gambar dan encodePng dipanggil sekali per objek.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "l2:pubmy-1--dos-biaya-4",
+     "sev": "rendah",
+     "judul": "Ukuran kanvas crop rumus/diagram tidak dibatasi; MediaBox besar pada 300 dpi menghabiskan memori",
+     "alasan": "bun.ts:154-160 dan browser.ts:65-68 membuat kanvas w*h tanpa batas (300 dpi).",
+     "rencana": "Cegah di satu tempat: pdf.ts renderCrops memberi null (tetap teks) untuk box yang pikselnya pada 300 dpi > ~25 juta, tanpa mengubah bun.ts/browser.ts.",
+     "tes": "packages/core/test/pdf.test.ts: renderer palsu tidak dipanggil untuk box berukuran 5000x5000 pt dan area lain tetap dirender.",
+     "catatan_pemilik": ""
+    }
+   ]
+  },
+  {
+   "kelompok": "cli-run",
+   "sesi": "at-pubmy",
+   "sev": "rendah",
+   "n": 4,
+   "berkas": [
+    "README.md",
+    "apps/cli/src/main.ts",
+    "apps/cli/test/cli.test.ts"
+   ],
+   "temuan": [
+    {
+     "uid": "r1:pubmy-1--logika-2",
+     "sev": "rendah",
+     "judul": "Penulisan EPUB tidak atomik; file terpotong dianggap mutakhir dan dilewati pada run berikutnya",
+     "alasan": "main.ts:65-67 menulis dengan O_TRUNC langsung ke target; main.ts:94-95 tidak menghapus sisa.",
+     "rencana": "writeOutput: tulis ke `${out}.tmp-${pid}` (O_EXCL|O_NOFOLLOW), lalu rename ke out; hapus tmp bila gagal. Pertahankan penolakan symlink yang ada.",
+     "tes": "apps/cli/test/cli.test.ts: write gagal tidak meninggalkan berkas target terpotong dan output lama utuh; tes symlink yang ada tetap lulus.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "r1:pubmy-1--logika-3",
+     "sev": "rendah",
+     "judul": "Opsi --rtl tidak ikut menentukan kesegaran output, sehingga komik yang sudah dikonversi tetap LTR",
+     "alasan": "main.ts:79 keputusan skip tak melihat rtl (main.ts:133 hanya mengganti adapter).",
+     "rencana": "Jadikan --rtl berarti force (`force = force || rtl`) dan catat di USAGE/README.",
+     "tes": "apps/cli/test/cli.test.ts: jalankan tanpa lalu dengan --rtl pada komik yang sudah dikonversi; run kedua tidak 'skipped'.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "l2:pubmy-1--konkurensi-1",
+     "sev": "rendah",
+     "judul": "Sumber yang diubah selama konversi tidak pernah dikonversi ulang karena mtime output lebih baru",
+     "alasan": "main.ts:78-93 mtime sumber diambil sebelum konversi tetapi output baru lebih baru sesudahnya.",
+     "rencana": "Setelah rename, utimes(out, now, srcTime yang diambil sebelum readFile) sehingga sumber yang berubah saat konversi tetap dianggap lebih baru.",
+     "tes": "apps/cli/test/cli.test.ts: sumber di-touch di dalam convert palsu; run berikutnya mengonversi ulang.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "r1:pubmy-1--logika-4",
+     "sev": "rendah",
+     "judul": "Unduhan renderer kanvas tanpa cache kegagalan: setiap PDF berformula bisa menunggu hingga 180 detik",
+     "alasan": "main.ts:29 loadRendererBun dipanggil tiap PDF; bun.ts:67 penanda unloadable hanya untuk library tak termuat, bukan unduhan gagal (fetch-canvas.ts:154 timeout 180 s).",
+     "rencana": "Di main.ts coreConvert: memo di closure; setelah loadRendererBun mengembalikan null sekali, kembalikan null untuk sisa run.",
+     "tes": "apps/cli/test/cli.test.ts: tidak mudah tanpa renderer palsu; tanpa-tes: `bun test apps/cli/test/cli.test.ts` plus `bun run typecheck`.",
+     "catatan_pemilik": ""
+    }
+   ]
+  },
+  {
+   "kelompok": "ci-workflows",
+   "sesi": "at-pubmy",
+   "sev": "rendah",
+   "n": 2,
+   "berkas": [
+    ".github/workflows/install-check.yml",
+    ".github/workflows/release-skill.yml",
+    "scripts/workflows.test.ts"
+   ],
+   "temuan": [
+    {
+     "uid": "l2:pubmy-1--rantai-pasok-1",
+     "sev": "rendah",
+     "judul": "Workflow rilis berizin contents: write memakai action yang di-pin ke tag yang bisa digeser, bukan ke SHA",
+     "alasan": "release-skill.yml:14-15 memakai actions/checkout@v7 dan oven-sh/setup-bun@v2 (tag), contents:write global, tanpa persist-credentials:false.",
+     "rencana": "Pin semua uses: di kedua workflow ke SHA penuh dengan komentar versi (cari lewat gh api repos/<o>/<r>/git/ref/tags/<tag>), tambah `with: persist-credentials: false` pada checkout rilis. Izin tetap contents:write (workflows.test.ts mengunci toEqual).",
+     "tes": "scripts/workflows.test.ts: tambah asersi uses memakai SHA 40 hex dan checkout rilis persist-credentials false; `bun test scripts/workflows.test.ts`.",
+     "catatan_pemilik": ""
+    },
+    {
+     "uid": "l2:pubmy-1--rantai-pasok-2",
+     "sev": "rendah",
+     "judul": "Rilis mengemas bundle pubmy.js yang sudah ter-commit tanpa membangun ulang atau memverifikasinya terhadap sumber",
+     "alasan": "release-skill.yml:18-19 dan install-check.yml hanya pack bundle yang ter-commit, tidak pernah membangun ulang (apps/cli/build.ts menulis skills/pubmy/scripts).",
+     "rencana": "Tambah langkah di job dev-setup install-check: `bun apps/cli/build.ts && git diff --exit-code -- skills/pubmy/scripts`. Jalankan lokal dulu dua kali; bila build tidak deterministik, batalkan langkah ini dan lapor.",
+     "tes": "tanpa-tes: `bun apps/cli/build.ts && git diff --exit-code -- skills/pubmy/scripts` (exit 0) plus `bun test scripts/workflows.test.ts`.",
+     "catatan_pemilik": "Hasil build harus deterministik di runner ubuntu; belum dibuktikan."
+    }
+   ]
+  }
+ ],
+ "ditutup": [
+  {
+   "uid": "l2:pubmy-1--privasi-2",
+   "sev": "rendah",
+   "judul": "Blob ZIP 'Unduh semua' bertahan melewati jendela hapus 3 menit dan tidak ikut dihapus oleh Hapus semua",
+   "vonis": "bukan-masalah",
+   "alasan": "main.ts:258 blob ZIP dicabut 30 detik; pengguna sudah mengunduh ZIP itu ke disk lewat a.click() sehingga salinan di memori tab bukan kebocoran tambahan."
+  },
+  {
+   "uid": "l2:pubmy-1--konkurensi-2",
+   "sev": "rendah",
+   "judul": "Cache traineddata OCR yang tertulis setengah (proses mati atau dua run paralel) bisa membuat OCR gagal permanen",
+   "vonis": "bukan-masalah",
+   "alasan": "load.ts:63-64 menyerahkan cache ke tesseract.js; butuh proses mati di tengah tulis 7 MB, perilaku pustaka tak terverifikasi (tesseract.js tidak terpasang lokal), obatnya menghapus ~/.cache/pubmy/tesseract."
+  }
+ ],
+ "butuh_pemilik": [
+  {
+   "uid": "l2:pubmy-1--rantai-pasok-3",
+   "sev": "rendah",
+   "judul": "Data bahasa OCR diunduh dari CDN tanpa verifikasi checksum, berbeda dengan renderer kanvas",
+   "alasan": "ocr/load.ts:64 tidak memberi langPath; unduhan traineddata oleh tesseract.js tanpa hash.",
+   "catatan": "Putuskan: sertakan ind+eng traineddata di zip skill (zip membesar ~10 MB, web sudah menyajikannya) atau tetap percaya CDN. Perbaikan butuh keputusan produk."
+  }
+ ],
+ "belum_dicek": []
+}
