@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { copyFile, cp, mkdir, readdir, rm, stat } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, posix, resolve } from "node:path";
 import { t, type Key } from "./src/i18n.ts";
 import { LIBARCHIVE_FILES } from "./src/libarchive-loader.ts";
 import { OCR_FILES, ocrSource } from "./src/ocr-assets.ts";
@@ -37,7 +38,17 @@ const filled = html
   .replace(/(<(\w+)[^>]*\sdata-i18n="([^"]+)"[^>]*>)<\/\2>/g, (_, open: string, tag: string, key: string) => `${open}${escape(t(key as Key, "id"))}</${tag}>`)
   // The same for accessible names, so the page is complete in the 1.5 s fallback state where main.js never ran.
   .replace(/\sdata-i18n-label="([^"]+)"/g, (attr: string, key: string) => `${attr} aria-label="${escape(t(key as Key, "id"))}"`);
-await Bun.write(join(out, "index.html"), filled);
+// main.js imports chunks that import further chunks, and the browser finds each level only once the one before it has
+// arrived: three round trips on the live page, which put a slow first visit past the 1.5 s reveal timer (2026-11-14,
+// about 1.6 s from the HTML to ready at 400 ms latency). Preload hints for every chunk main.js imports statically, at
+// any depth, let the browser fetch them all alongside main.js. Chunks reached only by import() stay on demand.
+const preload = staticImports(out, "main.js");
+const html2 = filled.replace(
+  '<script type="module" src="./main.js"></script>',
+  () => preload.map((f) => `<link rel="modulepreload" href="./${f}">\n`).join("") + '<script type="module" src="./main.js"></script>',
+);
+if (preload.length && html2 === filled) throw new Error("build: index.html has no main.js script tag to put the preload hints before");
+await Bun.write(join(out, "index.html"), html2);
 
 // public/ holds files served as-is, such as the Workers _headers file.
 await cp(join(root, "public"), out, { recursive: true }).catch((e: NodeJS.ErrnoException) => {
@@ -66,3 +77,20 @@ for (const name of await readdir(out, { recursive: true })) {
   console.log(`${String(s.size).padStart(10)}  ${name}`);
 }
 console.log(`${String(total).padStart(10)}  total bytes`);
+
+/** Every file `entry` imports with a static import statement, directly or through other chunks, in discovery order. */
+function staticImports(dir: string, entry: string): string[] {
+  const found: string[] = [];
+  const visit = (file: string) => {
+    let code = readFileSync(join(dir, file), "utf8");
+    // Bun's minified output puts its static imports first: import{a as b}from"./x.js"; or import"./x.js";
+    for (let m; (m = /^import(?:[\w\s{},*$]*from)?\s*"([^"]+)";?/.exec(code)); code = code.slice(m[0].length)) {
+      const dep = posix.normalize(posix.join(posix.dirname(file), m[1]!));
+      if (found.includes(dep)) continue;
+      found.push(dep);
+      visit(dep);
+    }
+  };
+  visit(entry);
+  return found;
+}
