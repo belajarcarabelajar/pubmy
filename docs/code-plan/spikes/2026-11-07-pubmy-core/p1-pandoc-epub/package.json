@@ -13,7 +13,7 @@
     "typescript": "^7"
   },
   "dependencies": {
-    "@likecoin/epubcheck-ts": "0.7.0",
+    "@likecoin/epubcheck-ts": "0.7.1",
     "pandoc-wasm": "^1.1.0"
   }
 }

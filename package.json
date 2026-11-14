@@ -18,6 +18,6 @@
     "@pubmy/core": "workspace:*",
     "fflate": "0.8",
     "pdf-lib": "1.17.1",
-    "@napi-rs/canvas": "1.1.0"
+    "@napi-rs/canvas": "1.1.1"
   }
 }

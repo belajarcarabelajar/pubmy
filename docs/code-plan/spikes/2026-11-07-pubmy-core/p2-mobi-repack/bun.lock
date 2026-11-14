@@ -4,14 +4,14 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@likecoin/epubcheck-ts": "^0.7.0",
+        "@likecoin/epubcheck-ts": "^0.7.1",
         "fflate": "^0.8.3",
         "linkedom": "^0.18.15",
       },
     },
   },
   "packages": {
-    "@likecoin/epubcheck-ts": ["@likecoin/epubcheck-ts@0.7.0", "", { "dependencies": { "css-tree": "^3.0.1", "fflate": "^0.8.2", "libxml2-wasm": "^0.6.0" }, "bin": { "epubcheck-ts": "bin/epubcheck.js" } }, "sha512-i1c9Eqa6ioJQ3ahOaKTKDsOuTqdsHkpjuXKJD3RmjSMsUpuq+lgmtGhQoKueuE8v0mGpRDbXTvUYcHgSuRXsCw=="],
+    "@likecoin/epubcheck-ts": ["@likecoin/epubcheck-ts@0.7.1", "", { "dependencies": { "css-tree": "^3.0.1", "fflate": "^0.8.2", "libxml2-wasm": "^0.6.0" }, "bin": { "epubcheck-ts": "bin/epubcheck.js" } }, "sha512-+G6O5i4xN4AU9CCKDOF1KPMZYVwfXYhMxTlAYcQ+C9KKGALzSxj/ezYRSPpNo9L4ZYyIEgFFD5nEqK0YyRi94g=="],
 
     "boolbase": ["boolbase@2.0.0", "", {}, "sha512-DkVaaQHymRhpYEYo9x1oo7Q7B0Y6KJUsjm3c9eTyFDby4MHLBTwZ6ZDWBel5zrYxj1WsZgC5oLpiz+93MluXeA=="],
 

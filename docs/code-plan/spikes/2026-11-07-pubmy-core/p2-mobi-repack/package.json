@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@likecoin/epubcheck-ts": "^0.7.0",
+    "@likecoin/epubcheck-ts": "^0.7.1",
     "fflate": "^0.8.3",
     "linkedom": "^0.18.15"
   }
