@@ -7,6 +7,8 @@ pubmy turns your documents, ebooks, and comics into EPUB files that Kindle accep
 
 Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB validator before it is written.
 
+![The pubmy website: drop files to convert them to EPUB in the browser](assets/screenshot.png)
+
 ## Supported formats
 
 | Input | Extensions | Notes |
