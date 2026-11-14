@@ -15,7 +15,7 @@
     },
     "apps/cli": {
       "name": "@pubmy/cli",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "pubmy": "src/main.ts",
       },
@@ -25,7 +25,7 @@
     },
     "apps/web": {
       "name": "@pubmy/web",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@pubmy/core": "workspace:*",
         "fflate": "0.8",
@@ -40,7 +40,7 @@
     },
     "packages/core": {
       "name": "@pubmy/core",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@likecoin/epubcheck-ts": "0.7.1",
         "fflate": "0.8",
