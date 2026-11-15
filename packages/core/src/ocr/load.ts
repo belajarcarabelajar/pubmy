@@ -82,8 +82,12 @@ export async function loadOcrBun(opts: { cachePath?: string; langPath?: string }
   return wrap(worker, (png) => Buffer.from(png));
 }
 
-/** Browser OCR: worker script, wasm core and language data all served from the same origin. */
-export async function loadOcrBrowser(opts: { workerPath: string; corePath: string; langPath: string }): Promise<Ocr> {
-  const worker = await start({ workerPath: opts.workerPath, corePath: opts.corePath, langPath: opts.langPath });
+/**
+ * Browser OCR: worker script, wasm core and language data all served from the same origin. "none" keeps tesseract.js
+ * from caching the language data in IndexedDB: the website stores nothing in the browser but the language choice.
+ * `load` lets a test see the options without starting a worker.
+ */
+export async function loadOcrBrowser(opts: { workerPath: string; corePath: string; langPath: string }, load?: () => Promise<Tesseract>): Promise<Ocr> {
+  const worker = await start({ workerPath: opts.workerPath, corePath: opts.corePath, langPath: opts.langPath, cacheMethod: "none" }, load);
   return wrap(worker, (png) => new Blob([new Uint8Array(png)], { type: "image/png" }));
 }

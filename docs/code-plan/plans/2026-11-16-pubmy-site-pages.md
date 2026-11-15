@@ -424,8 +424,8 @@ Note: the T2 content writers were dispatched in parallel with T1 because their f
 
 ## Follow-up backlog
 
-- OCR language cache: decide whether tesseract.js may keep `ind`/`eng` data in IndexedDB (`packages/core/src/ocr/load.ts:86-87`, no `cacheMethod`) or set `cacheMethod: "none"` and update the privacy page. defer: the privacy page states the current behaviour accurately, upgrade when the owner wants a "nothing stored" claim or OCR start-up time is measured.
-- Production deploy of the new pages: `bun run --cwd apps/web build`, `bunx wrangler deploy --dry-run`, `bunx wrangler deploy` from `apps/web`, then `curl -sI` on `/panduan/`, `/en/guide/` and an unknown path. defer: deploy runs only on the owner's explicit request (AGENTS.md section 1), upgrade when PR #39 is merged and the owner asks.
+- Done 2026-11-16 (owner: turn it off): OCR language cache. `loadOcrBrowser` passes `cacheMethod: "none"` (session pubmy-ocr-no-cache, test in `packages/core/test/ocr-load.test.ts`), and the privacy page now says the language data is not saved in browser storage.
+- Done 2026-11-16 (owner approved): production deploy of main 66dc94c. `bunx wrangler deploy` exit 0, Worker version `ae1843df-73e6-49bc-a084-de2ae97f8817` (rollback point `6209cf96-ddb7-437b-9de8-d4c51c81e69e`); live `/`, `/panduan/`, `/en/guide/`, `/format/`, `/en/releases/`, `/privasi/`, `/site.js`, `/sitemap.xml` 200, unknown paths 404 with the new page; `PUBMY_LIVE=1 bun test apps/web/test/headers.test.ts` exit 0.
 
 ## Closeout status
 

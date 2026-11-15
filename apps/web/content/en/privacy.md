@@ -14,7 +14,7 @@ How to use the converter is in the [Guide](/en/guide/).
 
 pubmy's own code stores one thing in your browser: your language choice, in localStorage under the key `pubmy.lang`. pubmy's own code sets no cookies.
 
-When you convert a scanned PDF, the OCR library (tesseract.js) keeps its Indonesian and English language data in the browser's storage (IndexedDB), so it does not have to load it again next time. Only that language data is kept, not your file or its text.
+The OCR library (tesseract.js) that reads scanned PDFs is set not to save its Indonesian and English language data in your browser's storage, so it loads that data from pubmy again each time OCR starts. Like any website, your browser may still keep the site's own files, such as scripts and that language data, in its normal download cache. Your files and their text are never stored.
 
 ## Scripts inside books
 
