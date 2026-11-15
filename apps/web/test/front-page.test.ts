@@ -145,12 +145,24 @@ describe("the drop zone border", () => {
 });
 
 describe("the hero", () => {
-  test("the logo is top-aligned with the title block by a small top margin", () => {
-    expect(rule(".hero")["align-items"]).toBe("flex-start");
-    const top = /^([\d.]+)rem$/.exec(rule(".logo")["margin-top"] ?? "");
-    expect(top).not.toBeNull();
-    expect(Number(top![1])).toBeGreaterThan(0);
-    expect(Number(top![1])).toBeLessThanOrEqual(0.5);
+  // The site header brand already shows the logo, so a second copy in the hero repeated it.
+  test("main shows no logo image", () => {
+    const icons = [...document.querySelectorAll("main img")].filter((img) => /(?:^|\/)icon\.svg$/.test(img.getAttribute("src") ?? ""));
+    expect(icons).toHaveLength(0);
+  });
+
+  test("the hero is the single h1 followed by the tagline and nothing else", () => {
+    expect(document.querySelectorAll("h1")).toHaveLength(1);
+    const kids = [...(document.querySelector(".hero")?.children ?? [])];
+    expect(kids.map((el) => el.tagName.toLowerCase())).toEqual(["h1", "p"]);
+    expect(kids[0]!.getAttribute("data-i18n")).toBe("title");
+    expect(kids[1]!.getAttribute("data-i18n")).toBe("tagline");
+  });
+
+  test("no rule is left for the logo or for a logo-beside-title row", () => {
+    expect(rule(".logo")).toEqual({});
+    expect(rule(".hero>div")).toEqual({});
+    expect(rule(".hero")["display"]).toBeUndefined();
   });
 
   // The toggle used to share the title row and a 40rem rule stacked it above the title. It now lives in the site
@@ -227,7 +239,7 @@ describe("the language toggle", () => {
 
 describe("colours come from the tokens", () => {
   test("none of the rules this page change touches hard-codes a colour", () => {
-    for (const sel of [".chip", ".chip+.chip::before", ".formats-label", ".privacy-badge", ".drop", ".hero", ".logo"]) {
+    for (const sel of [".chip", ".chip+.chip::before", ".formats-label", ".privacy-badge", ".drop", ".hero"]) {
       expect(flat(sel), sel).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
     }
     for (const sel of [".site-header .lang", ".site-header .lang svg"]) {

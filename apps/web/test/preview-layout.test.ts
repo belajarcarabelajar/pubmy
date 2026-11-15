@@ -87,29 +87,27 @@ describe("preview drawer breakpoint", () => {
   });
 
   test("no hero or site header rule moves into the 60rem drawer query", () => {
-    for (const sel of [".hero", ".hero>div", ".logo", "#lang"]) expect(find(sel, DRAWER)).toHaveLength(0);
+    for (const sel of [".hero", "#lang"]) expect(find(sel, DRAWER)).toHaveLength(0);
     expect(siteRules.filter((r) => r.ctx.includes(DRAWER))).toEqual([]);
   });
 });
 
 describe("hero row", () => {
-  // Above 40rem main is 40rem with 1rem padding, so the hero row is 38rem (608 px). The language button moved to the
-  // site header, so the title column now has the whole row beside the logo.
-  const hero = find(".hero", "");
-
-  test("the hero is the logo beside a title column that may shrink", () => {
-    expect(hero).toHaveLength(1);
-    expect(declared(hero[0]!.body, "display")).toBe("flex");
-    expect(declared(find(".hero>div", "")[0]?.body ?? "", "min-width")).toBe("0");
+  // Above 40rem main is 40rem with 1rem padding, so the hero row is 38rem (608 px). The logo lives in the site header
+  // and the language button too, so the title has the whole row.
+  test("the hero is a plain block with no flex row and no logo column", () => {
+    expect(find(".hero", "")).toHaveLength(0);
+    expect(find(".hero>div", "")).toHaveLength(0);
+    expect(find(".logo", null)).toHaveLength(0);
   });
 
-  test("the longest title fits beside the logo with 8 px to spare, so a slightly wider font does not break it", () => {
+  test("the longest title fits across the hero row with 8 px to spare, so a slightly wider font does not break it", () => {
     const h1 = find("h1", "");
     expect(h1).toHaveLength(1);
     const longest = Math.max(t("title", "id").length, t("title", "en").length);
-    // monospace glyphs are 0.6em wide; the logo is 40 px wide (index.html width attribute)
+    // monospace glyphs are 0.6em wide
     const title = longest * 0.6 * rem(declared(h1[0]!.body, "font-size"));
-    const column = 38 * 16 - 40 - rem(declared(hero[0]!.body, "gap"));
+    const column = 38 * 16;
     expect(column - title).toBeGreaterThanOrEqual(8);
   });
 });

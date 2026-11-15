@@ -17,11 +17,6 @@ main{max-width:40rem;margin:0 auto;padding:1rem}
 /* The static text is Indonesian for a desktop pointer; main.js picks the visitor's language and touch wording first. The timer shows the page anyway if the script never runs. */
 html:not(.ready) main,html:not(.ready) .site-header,html:not(.ready) .site-footer{visibility:hidden;animation:reveal 0s 1.5s forwards}
 @keyframes reveal{to{visibility:visible}}
-/* The language button lives in the site header, so the hero is the logo beside the title block across the full 38rem of main. */
-.hero{display:flex;gap:.75rem;align-items:flex-start}
-.hero>div{min-width:0}
-/* The title block starts with the h1's .25rem top margin; the same offset puts the logo's top edge level with the title. */
-.logo{flex:none;border-radius:.5rem;margin-top:.25rem}
 h1{font-size:1.3rem;margin:.25rem 0}
 p{margin:.25rem 0 .75rem}
 .muted{color:var(--muted);font-size:.9rem}
@@ -108,11 +103,8 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
 <!--site-header-->
 <main id="content">
   <div class="hero">
-    <img class="logo" src="./icon.svg" alt="" width="40" height="40">
-    <div>
-      <h1 data-i18n="title">pubmy: ubah file jadi EPUB</h1>
-      <p class="muted" data-i18n="tagline"></p>
-    </div>
+    <h1 data-i18n="title">pubmy: ubah file jadi EPUB</h1>
+    <p class="muted" data-i18n="tagline"></p>
   </div>
   <p class="privacy-badge">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
