@@ -59,7 +59,7 @@ describe("site header", () => {
       expect(sw.getAttribute("href")).toBe(lang === "id" ? "/en/guide/" : "/panduan/");
       expect(sw.getAttribute("hreflang")).toBe(lang === "id" ? "en" : "id");
       expect(sw.getAttribute("lang")).toBe(lang === "id" ? "en" : "id");
-      expect(text(sw)).toBe(lang === "id" ? "English" : "Bahasa Indonesia");
+      expect(text(sw.querySelector(".lang-long"))).toBe(lang === "id" ? "English" : "Bahasa Indonesia");
       expect(sw.querySelector("svg")).not.toBeNull();
     });
 

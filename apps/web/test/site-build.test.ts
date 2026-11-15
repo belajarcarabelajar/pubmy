@@ -206,7 +206,7 @@ describe("renderContent", () => {
 
   test("wraps every table so it scrolls on a narrow screen", () => {
     const html = renderContent("| a | b |\n|---|---|\n| 1 | 2 |", {});
-    expect(html).toMatch(/^<div class="table-wrap"><table>[\s\S]*<\/table>\n?<\/div>/);
+    expect(html).toMatch(/^<div class="table-wrap"><table class="stack">[\s\S]*<\/table>\n?<\/div>/);
   });
 
   test("external links get rel noopener and internal links do not", () => {

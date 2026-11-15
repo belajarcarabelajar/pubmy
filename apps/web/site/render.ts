@@ -23,17 +23,43 @@ function slug(text: string): string {
 
 const md = new MarkdownIt({ html: false, linkify: false, typographer: false });
 
+type Tokens = ReturnType<typeof md.parse>;
+
+/** The plain text of the inline token after an opening token: text and code, without the Markdown marks. */
+function plainText(tokens: Tokens, i: number): string {
+  return (tokens[i + 1]?.children ?? []).filter((c) => c.type === "text" || c.type === "code_inline").map((c) => c.content).join("");
+}
+
 md.core.ruler.push("heading_ids", (state) => {
   const used = new Set<string>(LAYOUT_IDS);
   const tokens = state.tokens;
   for (let i = 0; i < tokens.length; i++) {
     if (tokens[i]!.type !== "heading_open") continue;
-    const text = (tokens[i + 1]?.children ?? []).filter((c) => c.type === "text" || c.type === "code_inline").map((c) => c.content).join("");
-    const base = slug(text) || "section";
+    const base = slug(plainText(tokens, i)) || "section";
     let id = base;
     for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
     used.add(id);
     tokens[i]!.attrSet("id", id);
+  }
+});
+
+// A phone shows a table with a header row as one block per row, each cell under its column name (SITE_CSS).
+md.core.ruler.push("table_labels", (state) => {
+  const tokens = state.tokens;
+  let table: Tokens[number] | undefined;
+  let heads: string[] = [];
+  let inHead = false;
+  let col = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i]!;
+    if (tok.type === "table_open") [table, heads] = [tok, []];
+    else if (tok.type === "thead_open") {
+      inHead = true;
+      table?.attrJoin("class", "stack");
+    } else if (tok.type === "thead_close") inHead = false;
+    else if (tok.type === "tr_open") col = 0;
+    else if (tok.type === "th_open" && inHead) heads.push(plainText(tokens, i));
+    else if (tok.type === "td_open" && heads.length) tok.attrSet("data-label", heads[col++] ?? "");
   }
 });
 

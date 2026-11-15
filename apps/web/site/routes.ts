@@ -1,4 +1,5 @@
 import type { Lang } from "../src/i18n.ts";
+import { NAV_LABELS } from "./labels.ts";
 
 export type RouteKey = "home" | "guide" | "formats" | "privacy" | "drm" | "cli" | "about" | "releases" | "notfound";
 
@@ -16,7 +17,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "home",
     path: { id: "/", en: "/" },
-    nav: { id: "Konversi", en: "Convert" },
+    nav: NAV_LABELS.home,
     title: { id: "Ubah file jadi EPUB", en: "Turn files into EPUB" },
     description: {
       id: "Ubah dokumen, e-book, dan komik jadi EPUB 3 langsung di browser, atau buka EPUB untuk dibaca.",
@@ -27,7 +28,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "guide",
     path: { id: "/panduan/", en: "/en/guide/" },
-    nav: { id: "Panduan", en: "Guide" },
+    nav: NAV_LABELS.guide,
     title: { id: "Panduan dan FAQ", en: "Guide and FAQ" },
     description: {
       id: "Cara memilih file, mengubahnya jadi EPUB, dan mengirim hasilnya ke Kindle, plus jawaban untuk pertanyaan yang sering muncul.",
@@ -38,7 +39,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "formats",
     path: { id: "/format/", en: "/en/formats/" },
-    nav: { id: "Format", en: "Formats" },
+    nav: NAV_LABELS.formats,
     title: { id: "Format yang didukung", en: "Supported formats" },
     description: {
       id: "Format apa saja yang bisa diubah pubmy jadi EPUB, dan apa yang terjadi pada kolom, PDF hasil pindaian, dan komik.",
@@ -49,7 +50,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "privacy",
     path: { id: "/privasi/", en: "/en/privacy/" },
-    nav: { id: "Privasi", en: "Privacy" },
+    nav: NAV_LABELS.privacy,
     title: { id: "Privasi", en: "Privacy" },
     description: {
       id: "File kamu diproses di browser dan tidak pernah diunggah. Hasilnya hanya disimpan sebentar di memori tab, lalu dihapus.",
@@ -60,7 +61,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "drm",
     path: { id: "/drm/", en: "/en/drm/" },
-    nav: { id: "DRM", en: "DRM" },
+    nav: NAV_LABELS.drm,
     title: { id: "Kebijakan DRM", en: "DRM policy" },
     description: {
       id: "Kenapa pubmy menolak e-book yang dilindungi DRM, dan file apa saja yang tetap bisa diubah.",
@@ -71,7 +72,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "cli",
     path: { id: "/cli/", en: "/en/cli/" },
-    nav: { id: "CLI", en: "CLI" },
+    nav: NAV_LABELS.cli,
     title: { id: "Skill & CLI", en: "Skill & CLI" },
     description: {
       id: "Pasang skill pubmy agar agen coding kamu bisa mengubah satu folder penuh jadi EPUB dengan struktur folder tetap.",
@@ -82,7 +83,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "about",
     path: { id: "/tentang/", en: "/en/about/" },
-    nav: { id: "Tentang", en: "About" },
+    nav: NAV_LABELS.about,
     title: { id: "Tentang dan lisensi", en: "About and licences" },
     description: {
       id: "Tentang pubmy, lisensi MIT-nya, dan lisensi pustaka pihak ketiga yang dipakai di dalamnya.",
@@ -93,7 +94,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "releases",
     path: { id: "/rilis/", en: "/en/releases/" },
-    nav: { id: "Rilis", en: "Releases" },
+    nav: NAV_LABELS.releases,
     title: { id: "Catatan rilis", en: "Release notes" },
     description: {
       id: "Apa saja yang berubah di tiap versi pubmy, dari situs web sampai skill untuk agen coding.",
@@ -104,7 +105,7 @@ export const ROUTES: readonly Route[] = [
   {
     key: "notfound",
     path: { id: "/404.html", en: "/en/404.html" },
-    nav: { id: "Tidak ditemukan", en: "Not found" },
+    nav: NAV_LABELS.notfound,
     title: { id: "Halaman tidak ditemukan", en: "Page not found" },
     description: {
       id: "Halaman yang kamu cari tidak ada. Kembali ke pengubah EPUB atau buka panduan.",

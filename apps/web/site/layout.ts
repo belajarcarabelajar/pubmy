@@ -1,37 +1,9 @@
 import type { Lang } from "../src/i18n.ts";
+import { SITE_LABELS } from "./labels.ts";
 import { ROUTES, type Route, type RouteKey } from "./routes.ts";
 import { SITE_CSS } from "./styles.ts";
 
-export const SITE_LABELS = {
-  id: {
-    skip: "Langsung ke konten",
-    menu: "Menu",
-    "nav-label": "Navigasi utama",
-    "footer-product": "Produk",
-    "footer-help": "Bantuan",
-    "footer-legal": "Legal",
-    "footer-cli": "Skill & CLI",
-    "footer-faq": "FAQ",
-    "footer-issues": "Laporkan masalah",
-    "footer-about": "Tentang & lisensi",
-    "footer-note": "Semua diproses di browser kamu.",
-    "footer-source": "Kode sumber",
-  },
-  en: {
-    skip: "Skip to content",
-    menu: "Menu",
-    "nav-label": "Main navigation",
-    "footer-product": "Product",
-    "footer-help": "Help",
-    "footer-legal": "Legal",
-    "footer-cli": "Skill & CLI",
-    "footer-faq": "FAQ",
-    "footer-issues": "Report an issue",
-    "footer-about": "About & licences",
-    "footer-note": "Everything runs in your browser.",
-    "footer-source": "Source code",
-  },
-} as const;
+export { SITE_LABELS };
 
 type LabelKey = keyof typeof SITE_LABELS.id;
 
@@ -42,7 +14,7 @@ const GLOBE =
 
 const other = (lang: Lang): Lang => (lang === "id" ? "en" : "id");
 // The language control names the other language, as the converter's "lang-toggle" text does. A local copy keeps
-// this module free of runtime imports from i18n.ts, which may later read SITE_LABELS from here.
+// this module free of runtime imports from i18n.ts, which reads SITE_LABELS from labels.ts.
 const OTHER_NAME: Record<Lang, string> = { id: "English", en: "Bahasa Indonesia" };
 
 function esc(s: string): string {
@@ -76,9 +48,11 @@ export function siteHeader(opts: { lang: Lang; current: RouteKey; converter: boo
     .map((r) => `<li>${routeLink({ lang, converter, key: r.key, label: r.nav[lang], labelKey: `nav-${r.key}`, current: r.key === current })}</li>`)
     .join("");
   const navLabel = converter ? ` data-i18n-label="nav-label"` : "";
+  // A phone shows only the code; the full name stays the accessible name, visually hidden by the CSS.
+  const short = `<span class="lang-short" aria-hidden="true"${i18n(converter, "lang-short")}>${label(lang, "lang-short")}</span>`;
   const switcher = converter
-    ? `<button type="button" id="lang" class="ghost lang">${GLOBE}<span id="lang-label" data-i18n="lang-toggle">${OTHER_NAME[lang]}</span></button>`
-    : `<a id="lang" class="lang" href="${esc(route(current).path[other(lang)])}" hreflang="${other(lang)}" lang="${other(lang)}">${GLOBE}<span>${OTHER_NAME[lang]}</span></a>`;
+    ? `<button type="button" id="lang" class="ghost lang">${GLOBE}<span id="lang-label" class="lang-long" data-i18n="lang-toggle">${OTHER_NAME[lang]}</span>${short}</button>`
+    : `<a id="lang" class="lang" href="${esc(route(current).path[other(lang)])}" hreflang="${other(lang)}" lang="${other(lang)}">${GLOBE}<span class="lang-long">${OTHER_NAME[lang]}</span>${short}</a>`;
   return (
     `<header class="site-header"><div class="site-header-inner">` +
     `<a class="skip" href="#content"${i18n(converter, "skip")}>${esc(label(lang, "skip"))}</a>` +
@@ -98,6 +72,8 @@ export function siteFooter(opts: { lang: Lang; version: string; converter: boole
     `<div><h2${i18n(converter, headKey)}>${esc(label(lang, headKey))}</h2><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`;
   return (
     `<footer class="site-footer"><div class="site-footer-inner"><div class="footer-cols">` +
+    `<div class="footer-brand"><p class="footer-name"><img src="/icon.svg" alt="" width="32" height="32"><span>pubmy</span></p>` +
+    `<p class="footer-tagline"${i18n(converter, "footer-tagline")}>${esc(label(lang, "footer-tagline"))}</p></div>` +
     col("footer-product", [nav("home"), nav("formats"), named("cli", "footer-cli"), nav("releases")]) +
     col("footer-help", [nav("guide"), named("guide", "footer-faq", "#faq"), external(`${REPO}/issues`, "footer-issues")]) +
     col("footer-legal", [nav("privacy"), nav("drm"), named("about", "footer-about")]) +
