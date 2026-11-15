@@ -1,7 +1,7 @@
 ---
 schema: ultra-plan/v1
 plan_id: 2026-11-16-pubmy-site-pages
-status: Approved
+status: Complete
 version: 1
 runner_contract: true
 defaults:
@@ -98,7 +98,7 @@ tasks:
     impacts: ["whole web app and its build - bun test apps/web/test", "core package untouched by this plan - git diff --stat origin/main -- packages apps/cli skills"]
     files: { create: [], modify: [], test: [] }
     idempotency_key: "TV:full-verification"
-    skip_if: "false"
+    skip_if: "HEAVY_LOCAL=pubmy-site-pages timeout 900 bun test apps/web/test && HEAVY_LOCAL=pubmy-site-pages timeout 300 bun run typecheck"
     verify_exit: 0
     run:
       - cmd: "HEAVY_LOCAL=pubmy-site-pages timeout 900 bun test apps/web/test"
@@ -139,8 +139,8 @@ tasks:
 - [x] TV verification: web suite, typecheck, build, asset check exit 0 (`ultra-plan-runner.mjs --execute` exit 0: T1-T5 SKIPPED-IDEMPOTENT on skip_if exit 0, TV PASSED; log kept as runner evidence)
 - [x] Visual check: headless Chromium screenshots of the built site at phone, tablet and desktop widths, viewed by the parent (owner opted in at the Plan gate, A42). Chromium 156 headless: guide 1280, formats 390, 404 1280, privacy 768, converter 1280 and 390, before and after T5; the T3 shots found the phone header wrap, squeezed table and floating footer that T5 fixed
 - [x] Parent diff audit and independent review (reviewer subagent report, findings resolved): staid verdict "correct", no blocking finding; should-fix (converter link did not carry the page language) and the CLI report nit fixed in fc8a754 with a RED test first (exit 1, then exit 0); whole web folder 864 tests, 1 skip, 0 fail, exit 0; typecheck exit 0; copy rules clean (exit 0, merge-base 5e5feb2); remaining nits go to the debt sweep
-- [ ] Commit on the session branch and PR opened (`Refs #<issue>`)
-- [ ] Session-close debt sweep
+- [x] Commit on the session branch and PR opened (`Refs #<issue>`): https://github.com/belajarcarabelajar/pubmy/pull/39 (Refs #38), branch pushed at 7b14f29
+- [x] Session-close debt sweep: 7 debts found; 1 closed in review (fc8a754), 5 selected by the owner and closed (b7579e9, c75abf8, 22e55ee, 423f0c0; whole web folder 869 pass, 1 skip, 0 fail, exit 0; typecheck exit 0), 2 deferred to the backlog below; learning harvest M25, M26 in MEMORY.md (58c2184)
 
 **Goal:** turn the pubmy website from one converter page into a multi-page site with seven bilingual support pages, 404 pages, and one site header and footer shared by every page.
 **Architecture:** a route table and a pure layout module render the site header, the site footer and each support page; `build.ts` renders every route in both languages from Markdown content, writes the 404 pages and a generated sitemap, and injects the same header and footer into the converter page, whose client-side language toggle switches them with the rest of the page.
@@ -189,17 +189,17 @@ sequenceDiagram
 
 **Acceptance Criteria:**
 
-- [ ] AC-1: every route exists in Indonesian and English with the paths in the spec table, and each path resolves to its twin.
-- [ ] AC-2: the site header (logo, name, navigation with `aria-current="page"`, language switch, skip link) and the site footer (product, help and legal columns, GitHub, licence, version) come from one layout module and appear on every built page.
-- [ ] AC-3: phone navigation is a native disclosure whose toggle is at least 44 px; no hover-only menu; the header is not sticky.
-- [ ] AC-4: every support page and 404 page is built to disk with a canonical link, `hreflang` alternates for both languages and `x-default`, no inline script, no stylesheet link, and every internal link in the built site resolves to a built file.
-- [ ] AC-5: content facts that live in code (file count, file size, retention minutes, version) are written as tokens and no unreplaced token remains in the build.
-- [ ] AC-6: `sitemap.xml` is generated from the route table and lists every support page in both languages plus the root, with `hreflang` links; `robots.txt` still points to it.
-- [ ] AC-7: `wrangler.jsonc` sets `not_found_handling` to `404-page`, and `404.html` and `en/404.html` ship with the header and footer.
-- [ ] AC-8: the converter page carries the same site header and footer; its first paint stays hidden until `main.js` applies the language, now including header and footer, and the static page is complete with Indonesian labels when the script never runs.
-- [ ] AC-9: the language switch on a support page links to the twin page and `site.js` stores the choice under `pubmy.lang`; on the converter page `applyLang` switches header and footer labels and link targets.
-- [ ] AC-11: on a phone the language control shares the header row with the menu button, tables stack into labelled rows, the footer sits at the bottom of short pages and carries the brand, and the converter bundle carries neither the site CSS nor the route descriptions.
-- [ ] AC-10: the whole web suite, typecheck, build and asset check exit 0, and `packages`, `apps/cli`, `skills` are unchanged.
+- [x] AC-1: every route exists in Indonesian and English with the paths in the spec table, and each path resolves to its twin. (evidence: site-routes.test.ts exit 0 (T1 parent run 77 pass with site-layout))
+- [x] AC-2: the site header (logo, name, navigation with `aria-current="page"`, language switch, skip link) and the site footer (product, help and legal columns, GitHub, licence, version) come from one layout module and appear on every built page. (evidence: site-layout.test.ts exit 0; reviewer crawl: one header, main, nav per page)
+- [x] AC-3: phone navigation is a native disclosure whose toggle is at least 44 px; no hover-only menu; the header is not sticky. (evidence: site-layout.test.ts + site-polish.test.ts exit 0 (44px summary, no sticky); screenshots 390 px)
+- [x] AC-4: every support page and 404 page is built to disk with a canonical link, `hreflang` alternates for both languages and `x-default`, no inline script, no stylesheet link, and every internal link in the built site resolves to a built file. (evidence: site-build.test.ts exit 0; reviewer crawl: 0 dead links, canonical and 3 hreflang per page)
+- [x] AC-5: content facts that live in code (file count, file size, retention minutes, version) are written as tokens and no unreplaced token remains in the build. (evidence: site-content.test.ts exit 0 (45 pass); build fails on a leftover token)
+- [x] AC-6: `sitemap.xml` is generated from the route table and lists every support page in both languages plus the root, with `hreflang` links; `robots.txt` still points to it. (evidence: sitemap.test.ts exit 0 (root plus 14 pages, alternates))
+- [x] AC-7: `wrangler.jsonc` sets `not_found_handling` to `404-page`, and `404.html` and `en/404.html` ship with the header and footer. (evidence: site-build.test.ts exit 0 (404.html, en/404.html, wrangler 404-page))
+- [x] AC-8: the converter page carries the same site header and footer; its first paint stays hidden until `main.js` applies the language, now including header and footer, and the static page is complete with Indonesian labels when the script never runs. (evidence: site-converter.test.ts and first-paint.test.ts exit 0)
+- [x] AC-9: the language switch on a support page links to the twin page and `site.js` stores the choice under `pubmy.lang`; on the converter page `applyLang` switches header and footer labels and link targets. (evidence: site-build.test.ts site.js behaviour exit 0 (switch and converter link store pubmy.lang); site-converter applySiteLinks exit 0)
+- [x] AC-11: on a phone the language control shares the header row with the menu button, tables stack into labelled rows, the footer sits at the bottom of short pages and carries the brand, and the converter bundle carries neither the site CSS nor the route descriptions. (evidence: site-polish.test.ts exit 0; main.js 23,380 bytes; screenshots after T5)
+- [x] AC-10: the whole web suite, typecheck, build and asset check exit 0, and `packages`, `apps/cli`, `skills` are unchanged. (evidence: bun test apps/web/test exit 0 (864 tests, 1 skip, 0 fail); typecheck exit 0; runner TV PASSED)
 
 **Traceability:**
 
@@ -225,7 +225,7 @@ sequenceDiagram
 **CI/Review Gate:** no web CI workflow exists (`install-check.yml` and `release-skill.yml` cover the skill); the gate is TV plus the reviewer subagent and the parent diff audit.
 **Documentation:** README "Website" bullet names the support pages; `GLOSSARY.md` gains four terms.
 **Definition of Done:** every AC checked with its command and exit code, PR open with `Refs` to the plan issue, debt sweep run.
-**Plan Status & Version:** Approved, version 1.
+**Plan Status & Version:** Complete, version 1.
 **Reproducibility:** Bun 1.4.4 (`packageManager`), `bun install --frozen-lockfile`; each build test builds into its own `mkdtemp` directory.
 **Test Reliability:** no network in the new tests; temporary directories are removed in `afterAll`; no clock dependence.
 **Privacy & Data Governance:** no new data collected; `localStorage` holds only `pubmy.lang`.
@@ -272,11 +272,11 @@ sequenceDiagram
 **Reasoning Output:** the route table is the only list of pages; header, footer, sitemap and twins derive from it, so a new page is one entry plus two Markdown files.
 **Test Data & Determinism:** pure functions, parsed with linkedom; no I/O.
 
-- [ ] Step 1: write `site-routes.test.ts` (every key has both paths, paths unique, English under `/en/`, `twinPath` round-trips, header order) and `site-layout.test.ts` (skip link targets `#content`, `nav` has `aria-label`, current link has `aria-current="page"`, disclosure is `<details>` with a `<summary>`, every header and footer href is a route path, an anchor of one, or https GitHub, external links have `rel="noopener"`, converter variant keeps `id="lang"`, `SITE_CSS` has no `position:sticky`, no `100vh`, `min-height:44px` on the summary)
-- [ ] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun test apps/web/test/site-routes.test.ts apps/web/test/site-layout.test.ts` | expect: exit 1 | retry: 0 | on_fail: n/a
-- [ ] Step 3: implement `routes.ts`, `layout.ts`, `styles.ts`; add the four terms to `GLOSSARY.md`
-- [ ] Step 4: Run GREEN | cmd: same as Step 2 | expect: exit 0 | retry: 1 | on_fail: FAILED, halt T2, T3, T4
-- [ ] Step 5: parent stages the T1 paths by name and commits `feat(web): route table and shared site header and footer`
+- [x] Step 1: write `site-routes.test.ts` (every key has both paths, paths unique, English under `/en/`, `twinPath` round-trips, header order) and `site-layout.test.ts` (skip link targets `#content`, `nav` has `aria-label`, current link has `aria-current="page"`, disclosure is `<details>` with a `<summary>`, every header and footer href is a route path, an anchor of one, or https GitHub, external links have `rel="noopener"`, converter variant keeps `id="lang"`, `SITE_CSS` has no `position:sticky`, no `100vh`, `min-height:44px` on the summary)
+- [x] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun test apps/web/test/site-routes.test.ts apps/web/test/site-layout.test.ts` | expect: exit 1 | retry: 0 | on_fail: n/a
+- [x] Step 3: implement `routes.ts`, `layout.ts`, `styles.ts`; add the four terms to `GLOSSARY.md`
+- [x] Step 4: Run GREEN | cmd: same as Step 2 | expect: exit 0 | retry: 1 | on_fail: FAILED, halt T2, T3, T4
+- [x] Step 5: parent stages the T1 paths by name and commits `feat(web): route table and shared site header and footer`
 
 ### Task T2: Content and limits
 
@@ -308,12 +308,12 @@ sequenceDiagram
 **Test Data & Determinism:** reads files from `apps/web/content`; no network.
 **Fan-out:** four content subagents with disjoint files: (a) guide, notfound; (b) formats, drm; (c) privacy, about; (d) cli, releases. The parent writes `limits.ts`, the `main.ts` import and `site-content.test.ts` first, so every subagent runs the same test.
 
-- [ ] Step 1: write `site-content.test.ts` (both files exist for every route key, non-empty, no `# ` heading, `##` count equal across languages, tokens only from the allowed set, `limits.ts` values 180000, 10, 52428800)
-- [ ] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun test apps/web/test/site-content.test.ts` | expect: exit 1 | retry: 0
-- [ ] Step 3: write `limits.ts`, change the `main.ts` import, dispatch the four content subagents
-- [ ] Step 4: Run GREEN | cmd: same as Step 2 | expect: exit 0 | retry: 1
-- [ ] Step 5: Run converter regression | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/wiring.test.ts apps/web/test/countdown.test.ts apps/web/test/queue.test.ts` | expect: exit 0 | retry: 1
-- [ ] Step 6: parent commits `feat(web): bilingual support page content and shared limits`
+- [x] Step 1: write `site-content.test.ts` (both files exist for every route key, non-empty, no `# ` heading, `##` count equal across languages, tokens only from the allowed set, `limits.ts` values 180000, 10, 52428800)
+- [x] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun test apps/web/test/site-content.test.ts` | expect: exit 1 | retry: 0
+- [x] Step 3: write `limits.ts`, change the `main.ts` import, dispatch the four content subagents
+- [x] Step 4: Run GREEN | cmd: same as Step 2 | expect: exit 0 | retry: 1
+- [x] Step 5: Run converter regression | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/wiring.test.ts apps/web/test/countdown.test.ts apps/web/test/queue.test.ts` | expect: exit 0 | retry: 1
+- [x] Step 6: parent commits `feat(web): bilingual support page content and shared limits`
 
 ### Task T3: Page renderer, 404 pages, sitemap, site script
 
@@ -334,12 +334,12 @@ sequenceDiagram
 **Reasoning Output:** the build owns every generated SEO file, so a page added to the route table appears in the sitemap with no second edit.
 **Test Data & Determinism:** one real build per test file into `mkdtemp`, removed in `afterAll`.
 
-- [ ] Step 1: write `site-build.test.ts` and update `sitemap.test.ts`
-- [ ] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-build.test.ts` | expect: exit 1 | retry: 0
-- [ ] Step 3: implement `render.ts`, `site.ts`, build changes, devDependency (`bun install` updates `bun.lock`), wrangler key, delete `public/sitemap.xml`
-- [ ] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-build.test.ts apps/web/test/sitemap.test.ts` | expect: exit 0 | retry: 1
-- [ ] Step 5: Run build regression | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/build-output.test.ts apps/web/test/headers.test.ts apps/web/test/modulepreload.test.ts apps/web/test/assets.test.ts` | expect: exit 0 | retry: 1
-- [ ] Step 6: parent commits `feat(web): render support pages, 404 pages and the sitemap at build time`
+- [x] Step 1: write `site-build.test.ts` and update `sitemap.test.ts`
+- [x] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-build.test.ts` | expect: exit 1 | retry: 0
+- [x] Step 3: implement `render.ts`, `site.ts`, build changes, devDependency (`bun install` updates `bun.lock`), wrangler key, delete `public/sitemap.xml`
+- [x] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-build.test.ts apps/web/test/sitemap.test.ts` | expect: exit 0 | retry: 1
+- [x] Step 5: Run build regression | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/build-output.test.ts apps/web/test/headers.test.ts apps/web/test/modulepreload.test.ts apps/web/test/assets.test.ts` | expect: exit 0 | retry: 1
+- [x] Step 6: parent commits `feat(web): render support pages, 404 pages and the sitemap at build time`
 
 ### Task T4: Converter page integration
 
@@ -358,12 +358,12 @@ sequenceDiagram
 **Reasoning Output:** one header source for all pages; the converter differs only in its language control and link targets.
 **Test Data & Determinism:** one real build into `mkdtemp`; `main.ts` read as text like the existing tests.
 
-- [ ] Step 1: write `site-converter.test.ts` (built `index.html` has `.site-header` and `.site-footer`, `#lang` inside the site header with the static label "English", every nav link has `data-href-id` and `data-href-en` that are route paths, hide rule names `.site-header` and `.site-footer`, `main.ts` `applyLang` reads `data-href-`)
-- [ ] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-converter.test.ts` | expect: exit 1 | retry: 0
-- [ ] Step 3: implement the changes listed under Files and update the three pinned tests
-- [ ] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-converter.test.ts apps/web/test/front-page.test.ts apps/web/test/first-paint.test.ts apps/web/test/preview-layout.test.ts` | expect: exit 0 | retry: 1
-- [ ] Step 5: Run regression | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/i18n.test.ts apps/web/test/readme-web.test.ts` | expect: exit 0 | retry: 1
-- [ ] Step 6: parent commits `feat(web): site header and footer on the converter page`
+- [x] Step 1: write `site-converter.test.ts` (built `index.html` has `.site-header` and `.site-footer`, `#lang` inside the site header with the static label "English", every nav link has `data-href-id` and `data-href-en` that are route paths, hide rule names `.site-header` and `.site-footer`, `main.ts` `applyLang` reads `data-href-`)
+- [x] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-converter.test.ts` | expect: exit 1 | retry: 0
+- [x] Step 3: implement the changes listed under Files and update the three pinned tests
+- [x] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-converter.test.ts apps/web/test/front-page.test.ts apps/web/test/first-paint.test.ts apps/web/test/preview-layout.test.ts` | expect: exit 0 | retry: 1
+- [x] Step 5: Run regression | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/i18n.test.ts apps/web/test/readme-web.test.ts` | expect: exit 0 | retry: 1
+- [x] Step 6: parent commits `feat(web): site header and footer on the converter page`
 
 ### Task T5: Phone polish and converter bundle weight
 
@@ -376,21 +376,21 @@ Added 2026-11-16 during execution: the parent's screenshot check of the T3 build
 **Edge Cases & Failure Behavior:** the language control keeps its full accessible name when its visible text is the short code; a table without a header row keeps its plain layout.
 **Deliberate Shortcuts & Deferrals:** None.
 **Review & Evidence:** polish test exit 0, the listed regression tests exit 0, built `main.js` size reported before and after, screenshots repeated by the parent.
-- [ ] Step 1: write `site-polish.test.ts`
-- [ ] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts` | expect: exit 1 | retry: 0
-- [ ] Step 3: implement
-- [ ] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts apps/web/test/site-layout.test.ts apps/web/test/site-build.test.ts apps/web/test/site-converter.test.ts apps/web/test/first-paint.test.ts apps/web/test/front-page.test.ts` | expect: exit 0 | retry: 1
-- [ ] Step 5: parent commits `fix(web): phone header, stacked tables, footer placement and converter bundle weight`
+- [x] Step 1: write `site-polish.test.ts`
+- [x] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts` | expect: exit 1 | retry: 0
+- [x] Step 3: implement
+- [x] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts apps/web/test/site-layout.test.ts apps/web/test/site-build.test.ts apps/web/test/site-converter.test.ts apps/web/test/first-paint.test.ts apps/web/test/front-page.test.ts` | expect: exit 0 | retry: 1
+- [x] Step 5: parent commits `fix(web): phone header, stacked tables, footer placement and converter bundle weight`
 
 ### Task TV: Full verification
 
 **Files:** none.
 **Behavior & Acceptance:** AC-10.
-- [ ] Step 1: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 900 bun test apps/web/test` | expect: exit 0 | retry: 1
-- [ ] Step 2: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun run typecheck` | expect: exit 0 | retry: 0
-- [ ] Step 3: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun run --cwd apps/web build` | expect: exit 0 | retry: 0
-- [ ] Step 4: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 120 bun run --cwd apps/web check:assets` | expect: exit 0 | retry: 0
-- [ ] Step 5: Run | cmd: `git diff --quiet origin/main -- packages apps/cli skills` | expect: exit 0 | retry: 0
+- [x] Step 1: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 900 bun test apps/web/test` | expect: exit 0 | retry: 1
+- [x] Step 2: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun run typecheck` | expect: exit 0 | retry: 0
+- [x] Step 3: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 300 bun run --cwd apps/web build` | expect: exit 0 | retry: 0
+- [x] Step 4: Run | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 120 bun run --cwd apps/web check:assets` | expect: exit 0 | retry: 0
+- [x] Step 5: Run | cmd: `git diff --quiet origin/main -- packages apps/cli skills` | expect: exit 0 | retry: 0
 
 ## Batch manifest
 
@@ -407,6 +407,15 @@ Added 2026-11-16 during execution: the parent's screenshot check of the T3 build
 
 Note: the T2 content writers were dispatched in parallel with T1 because their files are disjoint and the paths are fixed in Global Constraints; the T2 test still runs only after T1 is green, so the DAG's verification order holds.
 
+## Follow-up batch (debt sweep, owner selected all five, 2026-11-16)
+
+| Chunk | Owner | Target files | Check |
+|---|---|---|---|
+| F1 drop duplicate hero logo | chef subagent | `apps/web/index.html`, `apps/web/test/front-page.test.ts`, `apps/web/test/preview-layout.test.ts` | front-page, preview-layout, site-converter, first-paint, theme tests |
+| F2+F5 headings that repeat the title, extra extensions on the formats page | hoggy subagent | `apps/web/content/{id,en}/*.md`, `apps/web/test/site-content.test.ts` | site-content and site-build tests |
+| F3 phone header order matches the DOM | nappy subagent | `apps/web/site/styles.ts`, `apps/web/test/site-polish.test.ts` | site-polish and site-layout tests |
+| F4 ARIA roles on stacked tables | general-purpose subagent | `apps/web/site/render.ts`, `apps/web/test/site-build.test.ts` | site-build test |
+
 ## Approval
 
 - Intent: locked 2026-11-16 (owner: Lock intent; approach A; URL map as proposed).
@@ -415,4 +424,10 @@ Note: the T2 content writers were dispatched in parallel with T1 because their f
 
 ## Follow-up backlog
 
-(empty)
+- OCR language cache: decide whether tesseract.js may keep `ind`/`eng` data in IndexedDB (`packages/core/src/ocr/load.ts:86-87`, no `cacheMethod`) or set `cacheMethod: "none"` and update the privacy page. defer: the privacy page states the current behaviour accurately, upgrade when the owner wants a "nothing stored" claim or OCR start-up time is measured.
+- Production deploy of the new pages: `bun run --cwd apps/web build`, `bunx wrangler deploy --dry-run`, `bunx wrangler deploy` from `apps/web`, then `curl -sI` on `/panduan/`, `/en/guide/` and an unknown path. defer: deploy runs only on the owner's explicit request (AGENTS.md section 1), upgrade when PR #39 is merged and the owner asks.
+
+## Closeout status
+
+- 2026-11-16: `bun scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-16-pubmy-site-pages.md` → READY (T1-T5 and TV DONE, 0 open NOW follow-ups, 0 open step boxes). Owner chose "Mark Complete" at the Close plan gate; the readiness run after the follow-ups landed was still READY.
+- `bun scripts/plan-cost.mjs --plan 2026-11-16-pubmy-site-pages` → usd 26.7243 (estimate; 1 main transcript, 10 subagent runs; caveats as printed by the script).
