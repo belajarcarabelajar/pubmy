@@ -37,8 +37,9 @@ describe("opening an EPUB: the drop", () => {
   });
 
   test("the file and size limits are constants used by both the queue and splitDrop", () => {
-    expect(main).toContain("const MAX_FILES = 10;");
-    expect(main).toContain("const MAX_BYTES = 50 * 1024 * 1024;");
+    // The constants live in limits.ts, which the support pages also read through build-time tokens.
+    expect(main).toMatch(/^import \{ MAX_BYTES, MAX_FILES, RETENTION_MS \} from "\.\/limits\.ts";$/m);
+    expect(main).not.toMatch(/^const (MAX_FILES|MAX_BYTES|RETENTION_MS) =/m);
     expect(main).toMatch(/createQueue<File>\(\{ maxFiles: MAX_FILES, maxBytes: MAX_BYTES,/);
     expect(main).not.toMatch(/maxFiles: 10/);
   });

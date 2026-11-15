@@ -8,10 +8,8 @@ import { createQueue, type QueueItem, type Refusal } from "./queue.ts";
 import type { ReaderUi } from "./reader.ts";
 import { refusalRow, renderRow, updateClock } from "./row.ts";
 import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
+import { MAX_BYTES, MAX_FILES, RETENTION_MS } from "./limits.ts";
 
-const RETENTION_MS = 180_000;
-const MAX_FILES = 10;
-const MAX_BYTES = 50 * 1024 * 1024;
 const ZIP_NAME = "pubmy-epub.zip";
 // A variable keeps the bundler from trying to resolve the built worker file at build time.
 const WORKER_URL = "./worker.js";
