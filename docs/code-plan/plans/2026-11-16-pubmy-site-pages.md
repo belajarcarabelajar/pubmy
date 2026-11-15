@@ -430,4 +430,6 @@ Note: the T2 content writers were dispatched in parallel with T1 because their f
 ## Closeout status
 
 - 2026-11-16: `bun scripts/plan-closeout.mjs --readiness docs/code-plan/plans/2026-11-16-pubmy-site-pages.md` → READY (T1-T5 and TV DONE, 0 open NOW follow-ups, 0 open step boxes). Owner chose "Mark Complete" at the Close plan gate; the readiness run after the follow-ups landed was still READY.
+- Graph index: `bun ~/vivera/scripts/graphify-sync.mjs --root "$(pwd)"` in the worktree exit 2 (no `graphify-out/graph.json` there; the repository's graph lives in the main checkout, which is gitignored). Due after PR #39 merges: `graphify update .` then the same sync in `~/Proyek/pubmy`.
+- T4 impact closed after the sweep: `assets/screenshot.png` (README) replaced with the new converter page, 1280 x 480, English, headless Chromium 156; `readme-web.test.ts` and `pack-skill.test.ts` exit 0. Phone menu open and the desktop converter after F1 checked by screenshot.
 - `bun scripts/plan-cost.mjs --plan 2026-11-16-pubmy-site-pages` → usd 26.7243 (estimate; 1 main transcript, 10 subagent runs; caveats as printed by the script).
