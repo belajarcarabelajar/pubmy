@@ -77,7 +77,7 @@ Di perintah ini, `skills/pubmy` adalah folder skill di dalam salinan repositori.
 - File dilewati kalau EPUB-nya sudah ada dan tidak lebih lama dari file sumbernya, jadi menjalankan ulang hanya mengonversi file yang baru atau berubah.
 - `--force` mengonversi ulang semua file.
 - `--rtl` memakai urutan halaman kanan ke kiri untuk komik (manga) dan mengonversi ulang semua file, sama seperti `--force`.
-- Untuk setiap file dicetak satu baris: `converted`, `skipped`, `unsupported`, atau `failed <CODE>`.
+- Hasilnya dicetak sebagai tabel dengan judul kolom `file  status` dan satu baris untuk setiap file: `converted`, `skipped`, `unsupported`, atau `failed <CODE>`. Baris `converted` bisa diberi catatan dalam kurung, misalnya jumlah halaman OCR atau peringatan.
 - CLI hanya menulis ke `<folder>/pubmy-epub/` dan ke cache OCR di `~/.cache/pubmy`. File sumber kamu tidak pernah diubah, dipindah, dihapus, atau diunggah. Selengkapnya di [Privasi](/privasi/).
 
 | Kode keluar | Arti |

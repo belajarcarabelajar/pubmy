@@ -157,7 +157,8 @@ describe("site.js behaviour", () => {
     Object.assign(g, { document, localStorage: storage });
     try {
       new Function(code())();
-      document.querySelector("#lang")!.dispatchEvent(new window.Event("click"));
+      // A real click bubbles; site.js listens on the document.
+      document.querySelector("#lang")!.dispatchEvent(new window.Event("click", { bubbles: true }));
     } finally {
       Object.assign(g, saved);
     }
@@ -173,6 +174,23 @@ describe("site.js behaviour", () => {
     const set: [string, string][] = [];
     run("fr", { setItem: (k, v) => void set.push([k, v]) });
     expect(set).toEqual([]);
+  });
+
+  test("a click on a link to the converter stores the page's own language, so /en/ pages open the converter in English", () => {
+    const { window, document } = parseHTML(`<!doctype html><html lang="en"><body><a class="brand" href="/">pubmy</a><a href="/en/guide/">Guide</a></body></html>`);
+    const g = globalThis as Record<string, unknown>;
+    const saved = { document: g.document, localStorage: g.localStorage };
+    const set: [string, string][] = [];
+    Object.assign(g, { document, localStorage: { setItem: (k: string, v: string) => void set.push([k, v]) } });
+    try {
+      new Function(code())();
+      document.querySelector('a[href="/en/guide/"]')!.dispatchEvent(new window.Event("click", { bubbles: true }));
+      expect(set).toEqual([]);
+      document.querySelector('a[href="/"]')!.dispatchEvent(new window.Event("click", { bubbles: true }));
+      expect(set).toEqual([["pubmy.lang", "en"]]);
+    } finally {
+      Object.assign(g, saved);
+    }
   });
 
   test("blocked storage does not throw out of the click", () => {

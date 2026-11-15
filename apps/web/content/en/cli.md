@@ -77,7 +77,7 @@ In this command, `skills/pubmy` is the skill folder inside a copy of the reposit
 - A file is skipped when its EPUB already exists and is not older than the source, so a rerun only converts new or changed files.
 - `--force` reconverts every file.
 - `--rtl` uses right-to-left page order for comics (manga) and reconverts every file, as `--force` does.
-- It prints one row per file: `converted`, `skipped`, `unsupported`, or `failed <CODE>`.
+- It prints a table with a `file  status` header and one row per file: `converted`, `skipped`, `unsupported`, or `failed <CODE>`. A converted row can add notes in brackets, such as the OCR page count or a warning.
 - It writes only to `<folder>/pubmy-epub/` and to the OCR cache in `~/.cache/pubmy`. It never changes, moves, deletes or uploads your source files. More on [Privacy](/en/privacy/).
 
 | Exit code | Meaning |
