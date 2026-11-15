@@ -14,7 +14,7 @@ Cara memakai halaman konversi ada di [Panduan](/panduan/).
 
 Kode pubmy sendiri hanya menyimpan satu hal di browser kamu: pilihan bahasa, di localStorage dengan kunci `pubmy.lang`. Kode pubmy tidak memasang cookie.
 
-Saat kamu mengonversi PDF hasil pindaian, pustaka OCR (tesseract.js) menyimpan data bahasanya, Indonesia dan Inggris, di penyimpanan browser (IndexedDB) supaya tidak perlu dimuat ulang lain kali. Yang disimpan hanya data bahasa itu, bukan file kamu atau teksnya.
+Pustaka OCR (tesseract.js) yang membaca PDF hasil pindaian diatur supaya tidak menyimpan data bahasa Indonesia dan Inggrisnya di penyimpanan browser kamu, jadi data itu dimuat lagi dari pubmy setiap kali OCR dimulai. Seperti situs lain, browser kamu tetap bisa menyimpan file situs, misalnya skrip dan data bahasa itu, di cache unduhan biasanya. File kamu dan teksnya tidak pernah disimpan.
 
 ## Skrip di dalam buku
 
