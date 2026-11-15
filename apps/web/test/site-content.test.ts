@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MAX_BYTES, MAX_FILES, RETENTION_MS } from "../src/limits.ts";
+import { ROUTES } from "../site/routes.ts";
 
 // Support page content: one Markdown file per route key and language. The title and description live in the route
 // table, so a body has no level-one heading. Facts that live in code are tokens the build replaces, so a page cannot
@@ -76,5 +77,32 @@ describe("page-specific content", () => {
 
   test("releases: the current version comes from the {{VERSION}} token", () => {
     for (const lang of LANGS) expect(read(lang, "releases")).toContain("{{VERSION}}");
+  });
+});
+
+describe("headings under the page title", () => {
+  test("no section heading repeats the page's own title", () => {
+    for (const key of KEYS) {
+      const route = ROUTES.find((r) => r.key === key)!;
+      for (const lang of LANGS) {
+        const title = route.title[lang].trim().toLowerCase();
+        const same = headings(read(lang, key), 2).filter((h) => h.slice(3).trim().toLowerCase() === title);
+        expect({ key, lang, same }).toEqual({ key, lang, same: [] });
+      }
+    }
+  });
+});
+
+describe("formats page and the converter's file picker", () => {
+  test("every extension the picker accepts is named on the formats page in both languages", () => {
+    const html = readFileSync(join(import.meta.dir, "..", "index.html"), "utf8");
+    const accept = /accept="([^"]*\.epub[^"]*)"/.exec(html)?.[1];
+    expect(accept).toBeDefined();
+    const exts = accept!.split(",").map((e) => e.trim());
+    expect(exts.length).toBeGreaterThan(10);
+    for (const lang of LANGS) {
+      const md = read(lang, "formats");
+      expect({ lang, missing: exts.filter((e) => !md.includes("`" + e + "`")) }).toEqual({ lang, missing: [] });
+    }
   });
 });

@@ -1,14 +1,14 @@
 Setiap file yang kamu konversi dengan pubmy menjadi EPUB 3 lengkap dengan daftar isi. Sebelum kamu menerimanya, EPUB itu diperiksa dengan validator EPUB. EPUB yang tidak lolos pemeriksaan tidak diberikan. Halaman ini menjelaskan file apa saja yang bisa kamu masukkan dan apa hasilnya.
 
-## Format yang didukung
+## File masukan dan hasilnya
 
 | Input | Ekstensi | Hasilnya |
 |---|---|---|
 | PDF berteks | `.pdf` | Kolom dan judul dikenali dari tata letak teks. Header, footer, dan nomor halaman yang berulang di setiap halaman dibuang. Kalau PDF tidak punya outline, judul tanpa nomor yang ukurannya lebih kecil dari judul bernomor tetap berada di dalam babnya dan tercantum di bawah bab itu di daftar isi. Gambar tetap menjadi gambar, dan tabel yang dicetak menyamping disusun ulang menjadi tabel. Rumus dan diagram garis disimpan sebagai gambar dari bagian halamannya, jadi tampil persis seperti cetakannya. |
 | PDF hasil pindaian | `.pdf` | Teksnya dibaca dengan OCR dalam bahasa Indonesia dan Inggris. |
-| Dokumen pengolah kata dan teks | `.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.md`, `.txt` | Judul di dalam dokumen menjadi bab. |
-| E-book Kindle tanpa DRM | `.mobi`, `.azw3` | Dikonversi menjadi EPUB. File yang dilindungi DRM ditolak, lihat [kebijakan DRM](/drm/). |
-| Komik | `.cbz`, `.cbr` | Tata letak tetap, satu gambar per halaman. Urutan halaman dari kanan ke kiri untuk manga tersedia di [CLI](/cli/) lewat opsi `--rtl`. |
+| Dokumen pengolah kata dan teks | `.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.md`, `.markdown`, `.txt` | Judul di dalam dokumen menjadi bab. |
+| E-book Kindle tanpa DRM | `.mobi`, `.azw3`, `.azw` | Dikonversi menjadi EPUB. File yang dilindungi DRM ditolak, lihat [kebijakan DRM](/drm/). |
+| Komik | `.cbz`, `.cbr`, `.zip`, `.rar` | Tata letak tetap, satu gambar per halaman. File `.zip` dibaca sebagai komik hanya kalau semua file di dalamnya berupa gambar. Urutan halaman dari kanan ke kiri untuk manga tersedia di [CLI](/cli/) lewat opsi `--rtl`. |
 
 ## File EPUB
 

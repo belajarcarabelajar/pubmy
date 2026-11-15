@@ -1,14 +1,14 @@
 Every file you convert with pubmy becomes an EPUB 3 with a table of contents. Before you get it, the EPUB is checked with an EPUB validator. An EPUB that fails the check is withheld. This page lists the files you can put in and what you get back.
 
-## Supported formats
+## Input files and results
 
 | Input | Extensions | What you get |
 |---|---|---|
 | PDF with text | `.pdf` | Columns and headings are detected from the text layout. Running headers, footers and page numbers are removed. When the PDF has no outline, an unnumbered heading set smaller than the numbered ones stays inside its chapter and is listed under it in the table of contents. Figures are kept as images, and a table printed sideways is rebuilt as a table. Formulas and line diagrams are kept as pictures of their area of the page, so they look exactly as printed. |
 | Scanned PDF | `.pdf` | The text is read with OCR in Indonesian and English. |
-| Word processor and text documents | `.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.md`, `.txt` | Headings in the document become chapters. |
-| Kindle ebooks without DRM | `.mobi`, `.azw3` | Converted to EPUB. Files with DRM are refused, see the [DRM policy](/en/drm/). |
-| Comics | `.cbz`, `.cbr` | Fixed layout, one image per page. Right-to-left page order for manga is available in the [CLI](/en/cli/) with the `--rtl` option. |
+| Word processor and text documents | `.docx`, `.odt`, `.rtf`, `.html`, `.htm`, `.md`, `.markdown`, `.txt` | Headings in the document become chapters. |
+| Kindle ebooks without DRM | `.mobi`, `.azw3`, `.azw` | Converted to EPUB. Files with DRM are refused, see the [DRM policy](/en/drm/). |
+| Comics | `.cbz`, `.cbr`, `.zip`, `.rar` | Fixed layout, one image per page. A `.zip` is read as a comic only when every file in it is an image. Right-to-left page order for manga is available in the [CLI](/en/cli/) with the `--rtl` option. |
 
 ## EPUB files
 
