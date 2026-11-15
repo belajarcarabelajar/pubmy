@@ -4,6 +4,7 @@ import { dirname, join, posix, resolve } from "node:path";
 import { t, type Key } from "./src/i18n.ts";
 import { LIBARCHIVE_FILES } from "./src/libarchive-loader.ts";
 import { OCR_FILES, ocrSource } from "./src/ocr-assets.ts";
+import { sitemapXml, writeSupportPages } from "./site/pages.ts";
 
 const root = import.meta.dir;
 // An optional output directory lets tests build without touching dist.
@@ -25,6 +26,21 @@ const result = await Bun.build({
 });
 if (!result.success) {
   for (const log of result.logs) console.error(log);
+  process.exit(1);
+}
+
+// Support pages load only site.js. A build of its own keeps it out of the converter's chunk graph, so it can never
+// pull in a shared chunk of converter code.
+const siteResult = await Bun.build({
+  entrypoints: [join(root, "src/site.ts")],
+  outdir: out,
+  target: "browser",
+  format: "esm",
+  minify: true,
+  naming: { entry: "[name].js" },
+});
+if (!siteResult.success) {
+  for (const log of siteResult.logs) console.error(log);
   process.exit(1);
 }
 
@@ -54,6 +70,12 @@ await Bun.write(join(out, "index.html"), html2);
 await cp(join(root, "public"), out, { recursive: true }).catch((e: NodeJS.ErrnoException) => {
   if (e.code !== "ENOENT") throw e;
 });
+
+// Support pages, both 404 pages and sitemap.xml come from the route table, written after public/ so no file there
+// can replace them.
+const version = ((await Bun.file(join(root, "package.json")).json()) as { version: string }).version;
+await writeSupportPages({ out, contentDir: join(root, "content"), indexHtml: html, version });
+await Bun.write(join(out, "sitemap.xml"), sitemapXml());
 
 for (const f of OCR_FILES) {
   await mkdir(dirname(join(out, f.to)), { recursive: true });
