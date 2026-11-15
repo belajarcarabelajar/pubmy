@@ -115,11 +115,18 @@ describe("phone header", () => {
     expect(decl(code[0]!.body, "display")).not.toBe("none");
   });
 
-  test("narrow screens order the row brand, language control, Menu; wide screens restore nav before the control", () => {
-    const base = (sel: string) => Number(decl(where(sel, (c) => c === "")[0]?.body ?? "", "order"));
-    expect(base(".site-header .lang")).toBeLessThan(base(".site-nav"));
-    const wide = (sel: string) => Number(decl(where(sel, (c) => /min-width:\s*48rem/.test(c) && !c.includes("@supports"))[0]?.body ?? "", "order"));
-    expect(wide(".site-nav")).toBeLessThan(wide(".site-header .lang"));
+  // F3: the visual row must follow the DOM and Tab order (brand, Menu, language control) at every width.
+  test("the DOM puts the brand, then the nav with its Menu, then the language control", () => {
+    for (const converter of [false, true]) {
+      const inner = doc(siteHeader({ lang: "id", current: "guide", converter })).querySelector(".site-header-inner")!;
+      const kids = [...inner.children].filter((el) => !el.classList.contains("skip"));
+      expect(kids.map((el) => el.classList.contains("site-brand") ? "brand" : el.classList.contains("site-nav") ? "nav" : el.id)).toEqual(["brand", "nav", "lang"]);
+    }
+  });
+
+  test("no rule reorders the nav or the language control, so phones show brand, Menu, language control", () => {
+    const reorder = rules.filter((r) => (r.sel === ".site-nav" || r.sel === ".site-header .lang" || r.sel === ".site-brand") && decl(r.body, "order") !== undefined);
+    expect(reorder.map((r) => `${r.ctx || "(base)"} ${r.sel}{order:${decl(r.body, "order")}}`)).toEqual([]);
   });
 
   // Worst case with monospace glyphs (0.6em): the row must fit with 8 px to spare.

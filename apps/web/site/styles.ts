@@ -4,8 +4,8 @@
 // links, brand, button and gaps at the system font), and 48rem leaves room for a wider fallback font.
 // Closed <details> content is hidden by the browser's ::details-content box, not by child display, so wide screens
 // show the one link list by making that box visible; a browser without the selector keeps the Menu toggle.
-// Below 48rem the row is brand, language control, Menu (order); below 30rem the control shows only the language code,
-// because "Bahasa Indonesia" beside the brand and Menu wraps at 390 px. body:has(>.site-footer) lets the converter
+// The row keeps the DOM and Tab order (brand, Menu, language control) at every width; below 30rem the control shows only
+// the language code, because "Bahasa Indonesia" beside the brand and Menu wraps at 390 px. body:has(>.site-footer) lets the converter
 // page and the support pages both keep the footer at the bottom of a short page.
 export const SITE_CSS: string = [
   ".site-page{margin:0;min-width:320px;font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;line-height:1.5;color:var(--text);background:var(--bg)}",
@@ -17,7 +17,7 @@ export const SITE_CSS: string = [
   ".site-header-inner{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;max-width:64rem;min-height:3.5rem;margin:0 auto;padding:0 1rem}",
   ".site-brand{display:inline-flex;align-items:center;gap:.5rem;min-height:44px;margin-right:auto;color:var(--text);font-size:1.1rem;font-weight:700;text-decoration:none}",
   ".site-brand img{flex:none;border-radius:.375rem}",
-  ".site-nav{display:flex;align-items:center;order:2}",
+  ".site-nav{display:flex;align-items:center}",
   ".nav-menu>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 .75rem;border:1px solid var(--border);border-radius:.5rem;color:var(--text);cursor:pointer;list-style:none}",
   ".nav-menu>summary::-webkit-details-marker{display:none}",
   ".nav-menu[open]>summary{border-color:var(--accent-ink);color:var(--accent-ink)}",
@@ -25,12 +25,11 @@ export const SITE_CSS: string = [
   ".site-nav a{display:flex;align-items:center;min-height:44px;padding:0 1rem;color:var(--text);text-decoration:none}",
   ".site-nav a:hover{text-decoration:underline}",
   ".site-nav a[aria-current=\"page\"]{color:var(--accent-ink);font-weight:600;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:.35em}",
-  ".site-header .lang{order:1;display:inline-flex;align-items:center;gap:.4rem;min-height:44px;padding:.25rem .75rem;border:1px solid var(--border);border-radius:.5rem;background:transparent;color:var(--accent-ink);font:inherit;font-size:.9rem;text-decoration:none}",
+  ".site-header .lang{display:inline-flex;align-items:center;gap:.4rem;min-height:44px;padding:.25rem .75rem;border:1px solid var(--border);border-radius:.5rem;background:transparent;color:var(--accent-ink);font:inherit;font-size:.9rem;text-decoration:none}",
   ".site-header .lang svg{flex:none;width:1rem;height:1rem}",
   ".site-header .lang-short{display:none}",
   "@media (max-width:30rem){.site-header .lang-long{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.site-header .lang-short{display:inline}}",
   "@media (min-width:48rem){@supports selector(::details-content){.nav-menu>summary{display:none}.nav-menu::details-content{content-visibility:visible}.nav-menu>ul{position:static;display:flex;gap:.25rem;padding:0;background:transparent;border:0}.site-nav a{padding:0 .75rem}}}",
-  "@media (min-width:48rem){.site-nav{order:1}.site-header .lang{order:2}}",
   "body:has(>.site-footer){display:flex;flex-direction:column;min-height:100dvh}",
   "body:has(>.site-footer)>main{flex:1 0 auto;width:100%}",
   ".site-footer{margin-top:3rem;background:var(--surface);border-top:1px solid var(--border)}",
