@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { siteHeader } from "../site/layout.ts";
 
 // main.ts runs against the live DOM at import, so it cannot be loaded in a unit test.
 // These checks read both files as text: a typo in an id would only show up in a browser otherwise.
@@ -9,7 +10,9 @@ const main = readFileSync(join(web, "src", "main.ts"), "utf8");
 const html = readFileSync(join(web, "index.html"), "utf8");
 
 const idsInMain = () => [...main.matchAll(/\$(?:<[^>(]*>)?\("([\w-]+)"\)|getElementById\("([\w-]+)"\)/g)].map((m) => (m[1] ?? m[2])!);
-const htmlHasId = (id: string) => new RegExp(`\\sid="${id}"`).test(html);
+// The language button comes from the site header, which the build puts into the page in place of <!--site-header-->.
+const page = html + siteHeader({ lang: "id", current: "home", converter: true });
+const htmlHasId = (id: string) => new RegExp(`\\sid="${id}"`).test(page);
 
 describe("main.ts and index.html agree", () => {
   test("every id main.ts reads exists in index.html", () => {

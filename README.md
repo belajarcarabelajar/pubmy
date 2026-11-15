@@ -2,7 +2,7 @@
 
 pubmy turns your documents, ebooks, and comics into EPUB files that Kindle accepts. It comes in two forms:
 
-- **Website** at [pubmy.belajarcarabelajar.com](https://pubmy.belajarcarabelajar.com): drop up to 10 files (50 MB each), preview each EPUB in the page, and download one EPUB per file, or every ready file at once with Download all (ZIP). A file you drop that is already an EPUB (.epub) is not converted: it opens in the reader so you can read it.
+- **Website** at [pubmy.belajarcarabelajar.com](https://pubmy.belajarcarabelajar.com): drop up to 10 files (50 MB each), preview each EPUB in the page, and download one EPUB per file, or every ready file at once with Download all (ZIP). The site also has pages for the guide and FAQ, the supported formats, privacy, the DRM policy, the skill and CLI, about and licences, and the release notes, each in Indonesian and English. A file you drop that is already an EPUB (.epub) is not converted: it opens in the reader so you can read it.
 - **Agent skill and CLI**: give your coding agent (Claude Code, Codex, Cursor, OpenCode, Antigravity) a folder, and it converts every supported file in it, keeping the folder layout.
 
 Every EPUB is EPUB 3 with a table of contents, and is checked with an EPUB validator before it is written.

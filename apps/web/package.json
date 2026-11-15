@@ -17,6 +17,7 @@
     "@tesseract.js-data/eng": "1.0.0",
     "tesseract.js": "7.0.0",
     "wrangler": "4.162.0",
-    "linkedom": "0.18"
+    "linkedom": "0.18",
+    "markdown-it": "15"
   }
 }

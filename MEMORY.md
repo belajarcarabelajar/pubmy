@@ -80,3 +80,10 @@ Lessons from working sessions, as `WHEN <situation> → DO <action>, NOT <anti-p
 | M22 | WHEN a PDF rule deletes text by position and repetition (headers, footers, running labels) → DO anchor it to a block the existing band rule already detected, require a letter in the item, and add a keep-test for a per-page data row near the page edge, NOT a zone-wide rule (the first version deleted per-page totals rows at the page foot; the reviewer's P1 found it). |
 | M23 | WHEN a converted PDF shows doubled or leaked text → DO dump the pdf.js items (text, x, y, size) of that page and read them before naming a cause, NOT guess from the output (the "faux bold" guess was wrong: the running header was drawn twice at the same spot, and the leak came from rows just below the 10 percent band). |
 | M24 | WHEN writing the evidence tables of a PR body or a ledger after a context compaction → DO take every figure, line number and command from a log or a script run in this session, and re-measure when no log has it, NOT from the summary (five figures in the first draft of PR #22 had no log behind them). |
+
+## Task Group: site pages, global header and footer (plan 2026-11-16-pubmy-site-pages)
+
+| # | Rule |
+|---|---|
+| M25 | WHEN a page or doc states what the website keeps in the visitor's browser → DO check the libraries the page loads as well as the site's own code (tesseract.js caches its OCR language data in IndexedDB because `packages/core/src/ocr/load.ts` passes no `cacheMethod`), NOT grep `apps/web/src` for `localStorage` alone (the plan assumed "only `pubmy.lang`"; a content subagent found the IndexedDB cache before the privacy page shipped the wrong claim). |
+| M26 | WHEN moving an id, a constant or an element out of `apps/web/index.html` or `apps/web/src/main.ts` → DO grep `apps/web/test` for the bare name (`lang-label`, `MAX_FILES`) before listing `impacts`, NOT only for the attribute form `id="lang"` (`wiring.test.ts` builds its regex from the name and `epub-open-wiring.test.ts` pinned `const MAX_FILES = 10;`; both escaped the impacts list and failed mid-execution). |

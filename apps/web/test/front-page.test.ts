@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseHTML } from "linkedom";
 import { KEYS, t, type Key } from "../src/i18n.ts";
+import { siteHeader } from "../site/layout.ts";
+import { SITE_CSS } from "../site/styles.ts";
 
 // The front page after the UI review: formats are named once (the chips), the chips are passive text,
 // the privacy badge matches the drop zone, and the language toggle carries a globe icon.
@@ -14,9 +16,9 @@ const { document } = parseHTML(html);
 const css = /<style>([\s\S]*?)<\/style>/.exec(html)![1]!.replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** Declarations of every rule whose selector list contains `selector`, merged in source order. */
-function rule(selector: string): Record<string, string> {
+function rule(selector: string, from = css): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+  for (const m of from.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     if (!m[1]!.split(",").map((s) => s.trim()).includes(selector)) continue;
     for (const d of m[2]!.split(";")) {
       const i = d.indexOf(":");
@@ -27,7 +29,7 @@ function rule(selector: string): Record<string, string> {
 }
 
 /** Declaration text of a rule as one string, for "does any value mention X" checks. */
-const flat = (selector: string) => Object.entries(rule(selector)).map(([k, v]) => `${k}:${v}`).join(";");
+const flat = (selector: string, from = css) => Object.entries(rule(selector, from)).map(([k, v]) => `${k}:${v}`).join(";");
 
 const FORMAT_WORDS = ["TXT", "MD", "Markdown", "HTML", "DOCX", "ODT", "RTF", "PDF", "MOBI", "AZW3", "CBZ", "CBR"];
 const formatWordsIn = (text: string) => FORMAT_WORDS.filter((w) => new RegExp(`\\b${w}\\b`, "i").test(text));
@@ -142,27 +144,45 @@ describe("the drop zone border", () => {
   });
 });
 
-describe("the header", () => {
-  test("the logo is top-aligned with the title block by a small top margin", () => {
-    expect(rule(".brand")["align-items"]).toBe("flex-start");
-    const top = /^([\d.]+)rem$/.exec(rule(".logo")["margin-top"] ?? "");
-    expect(top).not.toBeNull();
-    expect(Number(top![1])).toBeGreaterThan(0);
-    expect(Number(top![1])).toBeLessThanOrEqual(0.5);
+describe("the hero", () => {
+  // The site header brand already shows the logo, so a second copy in the hero repeated it.
+  test("main shows no logo image", () => {
+    const icons = [...document.querySelectorAll("main img")].filter((img) => /(?:^|\/)icon\.svg$/.test(img.getAttribute("src") ?? ""));
+    expect(icons).toHaveLength(0);
   });
 
-  test("the narrow-screen rule still stacks the header with the toggle at the end", () => {
-    expect(/@media \(max-width:40rem\)\{[^@]*header\{flex-direction:column-reverse;align-items:stretch\}/.test(css)).toBe(true);
-    expect(rule("#lang")["align-self"]).toBe("flex-end");
+  test("the hero is the single h1 followed by the tagline and nothing else", () => {
+    expect(document.querySelectorAll("h1")).toHaveLength(1);
+    const kids = [...(document.querySelector(".hero")?.children ?? [])];
+    expect(kids.map((el) => el.tagName.toLowerCase())).toEqual(["h1", "p"]);
+    expect(kids[0]!.getAttribute("data-i18n")).toBe("title");
+    expect(kids[1]!.getAttribute("data-i18n")).toBe("tagline");
+  });
+
+  test("no rule is left for the logo or for a logo-beside-title row", () => {
+    expect(rule(".logo")).toEqual({});
+    expect(rule(".hero>div")).toEqual({});
+    expect(rule(".hero")["display"]).toBeUndefined();
+  });
+
+  // The toggle used to share the title row and a 40rem rule stacked it above the title. It now lives in the site
+  // header, so the title row has nothing to make room for, and no bare header rule may reach the site header.
+  test("the hero holds the title but no language button, and no rule targets a bare header", () => {
+    expect(document.querySelector(".hero h1")).not.toBeNull();
+    expect(document.querySelector(".hero button")).toBeNull();
+    expect(document.getElementById("lang")).toBeNull();
+    expect(rule("header")).toEqual({});
   });
 });
 
 describe("the language toggle", () => {
-  const toggle = document.getElementById("lang");
+  // The site header renders the toggle at build time; this is the markup build.ts puts on the converter page.
+  const header = parseHTML(`<!doctype html><html><body>${siteHeader({ lang: "id", current: "home", converter: true })}</body></html>`).document;
+  const toggle = header.getElementById("lang");
 
   test("holds a hidden globe icon that is a sibling of the label span", () => {
     expect(toggle).not.toBeNull();
-    const label = document.getElementById("lang-label");
+    const label = header.getElementById("lang-label");
     expect(label).not.toBeNull();
     expect(label?.tagName.toLowerCase()).toBe("span");
     expect(label?.parentElement?.id).toBe("lang");
@@ -180,24 +200,26 @@ describe("the language toggle", () => {
     expect(icon?.querySelectorAll("path, line, ellipse").length ?? 0).toBeGreaterThanOrEqual(2);
   });
 
-  test("the toggle has no text of its own and the label span is empty in source", () => {
+  test("the toggle has no text of its own and the label span ships the Indonesian label", () => {
     const own = [...(toggle?.childNodes ?? [])].filter((n) => n.nodeType === 3 && (n.textContent ?? "").trim() !== "");
     expect(toggle).not.toBeNull();
     expect(own).toHaveLength(0);
-    expect((document.getElementById("lang-label")?.textContent ?? "x").trim()).toBe("");
+    expect(header.getElementById("lang-label")?.textContent).toBe(t("lang-toggle", "id"));
   });
 
-  test("it is compact, framed and 1rem-iconed, and does not lower the 44px target", () => {
-    const lang = rule("#lang");
+  test("it is compact, framed and 1rem-iconed, and keeps the 44px target", () => {
+    const lang = rule(".site-header .lang", SITE_CSS);
     expect(lang["font-size"]).toBe(".9rem");
-    expect(lang["padding-block"]).toBe(".25rem");
-    expect(lang["padding-inline"]).toBe(".75rem");
+    expect(lang["padding"]).toBe(".25rem .75rem");
     expect(lang["gap"]).toBe(".4rem");
     expect(`${lang["border"] ?? ""} ${lang["border-color"] ?? ""}`).toContain("var(--border)");
-    for (const p of ["min-height", "height", "max-height"]) expect(lang[p], p).toBeUndefined();
-    expect(rule("button")["min-height"]).toBe("44px");
-    expect(rule("#lang svg")["width"]).toBe("1rem");
-    expect(rule("#lang svg")["height"]).toBe("1rem");
+    expect(lang["min-height"]).toBe("44px");
+    for (const p of ["height", "max-height"]) expect(lang[p], p).toBeUndefined();
+    expect(rule(".site-header .lang svg", SITE_CSS)["width"]).toBe("1rem");
+    expect(rule(".site-header .lang svg", SITE_CSS)["height"]).toBe("1rem");
+    // An id rule in the page would outrank the header's class rule.
+    expect(rule("#lang")).toEqual({});
+    expect(rule("#lang svg")).toEqual({});
   });
 
   test("main.ts writes the label span and never the button's own text", () => {
@@ -217,8 +239,11 @@ describe("the language toggle", () => {
 
 describe("colours come from the tokens", () => {
   test("none of the rules this page change touches hard-codes a colour", () => {
-    for (const sel of [".chip", ".chip+.chip::before", ".formats-label", ".privacy-badge", ".drop", ".brand", ".logo", "#lang", "#lang svg"]) {
+    for (const sel of [".chip", ".chip+.chip::before", ".formats-label", ".privacy-badge", ".drop", ".hero"]) {
       expect(flat(sel), sel).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+    }
+    for (const sel of [".site-header .lang", ".site-header .lang svg"]) {
+      expect(flat(sel, SITE_CSS), sel).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
     }
   });
 });

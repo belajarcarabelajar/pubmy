@@ -8,3 +8,7 @@
 - **Retention window:** the 3 minutes a converted or opened EPUB stays in the browser tab's memory (a converted one also stays downloadable) before it is wiped.
 - **Opened EPUB:** an EPUB the visitor dropped on the website with the `.epub` extension. It is read in the page and is not converted; its row has no Download link.
 - **Reading hold:** the retention window of an opened EPUB stops while its reader is open and starts again, in full, when the reader closes.
+- **Support page:** a static page of the website other than the converter (guide, formats, privacy, DRM, skill and CLI, about, releases, not found).
+- **Twin page:** the same support page in the other language; the language switch links to it.
+- **Site header:** the header shared by every page: logo, name, navigation and language switch.
+- **Site footer:** the footer shared by every page: link columns, GitHub, licence and version.
