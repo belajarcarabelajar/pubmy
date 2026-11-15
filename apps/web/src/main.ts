@@ -9,6 +9,7 @@ import type { ReaderUi } from "./reader.ts";
 import { refusalRow, renderRow, updateClock } from "./row.ts";
 import { createWorkerClient, type WorkerLike } from "./worker-client.ts";
 import { MAX_BYTES, MAX_FILES, RETENTION_MS } from "./limits.ts";
+import { applySiteLinks } from "./site-links.ts";
 
 const ZIP_NAME = "pubmy-epub.zip";
 // A variable keeps the bundler from trying to resolve the built worker file at build time.
@@ -417,6 +418,7 @@ function applyLang() {
   toggle.setAttribute("aria-label", t("lang-toggle-label", lang));
   toggle.lang = lang === "id" ? "en" : "id";
   document.title = t("title", lang);
+  applySiteLinks(document, lang);
   for (const row of rows.values()) render(row);
   renderRefusals();
 }

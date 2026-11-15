@@ -20,8 +20,8 @@ const files = readdirSync(out, { recursive: true, encoding: "utf8" }).filter((f)
 const openingTag = (id: string) => new RegExp(`<\\w+[^>]*\\sid="${id}"[^>]*>`).exec(built)?.[0] ?? "";
 
 describe("first paint shows the final text once", () => {
-  test("main stays hidden until the page is marked ready, and a timer shows it if the script fails", () => {
-    expect(html).toMatch(/html:not\(\.ready\) main\{visibility:hidden;animation:reveal 0s 1\.5s forwards\}/);
+  test("main, the site header and the site footer stay hidden until the page is marked ready, and a timer shows them if the script fails", () => {
+    expect(html).toMatch(/html:not\(\.ready\) main,html:not\(\.ready\) \.site-header,html:not\(\.ready\) \.site-footer\{visibility:hidden;animation:reveal 0s 1\.5s forwards\}/);
     expect(html).toMatch(/@keyframes reveal\{to\{visibility:visible\}\}/);
   });
 
@@ -44,7 +44,7 @@ describe("the built page hides its content without waiting for a second file", (
 
   test("the hide rule and its timer are an inline style in the head", () => {
     const head = /<head>([\s\S]*?)<\/head>/.exec(built)?.[1] ?? "";
-    expect(head).toMatch(/<style>[\s\S]*html:not\(\.ready\) main\{visibility:hidden;animation:reveal 0s 1\.5s forwards\}[\s\S]*<\/style>/);
+    expect(head).toMatch(/<style>[\s\S]*html:not\(\.ready\) main,html:not\(\.ready\) \.site-header,html:not\(\.ready\) \.site-footer\{visibility:hidden;animation:reveal 0s 1\.5s forwards\}[\s\S]*<\/style>/);
     expect(head).toMatch(/<style>[\s\S]*@keyframes reveal\{to\{visibility:visible\}\}[\s\S]*<\/style>/);
   });
 
@@ -62,7 +62,7 @@ describe("the static page is complete when the script never runs", () => {
 
   test("every element labelled by data-i18n-label ships its aria-label in Indonesian", () => {
     const labelled = [...built.matchAll(/<\w+[^>]*\sdata-i18n-label="[^"]+"[^>]*>/g)].map((m) => m[0]);
-    expect(labelled.length).toBe(6);
+    expect(labelled.length).toBe(7);
     for (const tag of labelled) expect(tag).toMatch(/\saria-label="[^"]+"/);
     const expected: Record<string, string> = {
       queue: "Antrean konversi",
@@ -73,5 +73,9 @@ describe("the static page is complete when the script never runs", () => {
       "pv-next": "Halaman berikutnya",
     };
     for (const [id, label] of Object.entries(expected)) expect(openingTag(id)).toContain(`aria-label="${label}"`);
+    // The site navigation is the seventh: the header renders its aria-label, and the build must not add a second one.
+    const nav = /<nav[^>]*\sclass="site-nav"[^>]*>/.exec(built)?.[0] ?? "";
+    expect(nav.match(/\saria-label="/g)).toEqual([' aria-label="']);
+    expect(nav).toContain('aria-label="Navigasi utama"');
   });
 });

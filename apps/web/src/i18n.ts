@@ -1,6 +1,11 @@
 import type { FailureCode } from "@pubmy/core";
+import { SITE_LABELS } from "../site/layout.ts";
+import { ROUTES, type RouteKey } from "../site/routes.ts";
 
 export type Lang = "id" | "en";
+
+/** The site header and footer labels on the converter page, switched by applyLang like the rest of the page. */
+const navLabels = (lang: Lang) => Object.fromEntries(ROUTES.map((r) => [`nav-${r.key}`, r.nav[lang]])) as Record<`nav-${RouteKey}`, string>;
 
 const id = {
   title: "pubmy: ubah file jadi EPUB",
@@ -55,6 +60,8 @@ const id = {
   "preview-toc": "Daftar isi",
   "preview-fullscreen": "Layar penuh",
   "preview-failed": "Pratinjau tidak bisa dibuka.",
+  ...SITE_LABELS.id,
+  ...navLabels("id"),
 };
 
 export type Key = keyof typeof id;
@@ -112,6 +119,8 @@ const en: Record<Key, string> = {
   "preview-toc": "Contents",
   "preview-fullscreen": "Full screen",
   "preview-failed": "The preview could not be opened.",
+  ...SITE_LABELS.en,
+  ...navLabels("en"),
 };
 
 const dict: Record<Lang, Record<Key, string>> = { id, en };

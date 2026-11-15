@@ -4,7 +4,9 @@ import { dirname, join, posix, resolve } from "node:path";
 import { t, type Key } from "./src/i18n.ts";
 import { LIBARCHIVE_FILES } from "./src/libarchive-loader.ts";
 import { OCR_FILES, ocrSource } from "./src/ocr-assets.ts";
+import { siteFooter, siteHeader } from "./site/layout.ts";
 import { sitemapXml, writeSupportPages } from "./site/pages.ts";
+import { SITE_CSS } from "./site/styles.ts";
 
 const root = import.meta.dir;
 // An optional output directory lets tests build without touching dist.
@@ -48,12 +50,25 @@ if (!siteResult.success) {
 // An inline rule is part of the document, so the hide rule `html:not(.ready) main` is in force from the first paint; as a
 // separate style.css it could not cover the one to four unstyled frames a reload painted before that file applied.
 const html = await Bun.file(join(root, "index.html")).text();
+const version = ((await Bun.file(join(root, "package.json")).json()) as { version: string }).version;
+// The site header and footer are rendered in Indonesian like the rest of the page; main.js switches them with it.
+// SITE_CSS joins the authored rules in the one inline style block, so the page still has no stylesheet to wait for.
+const placed = (source: string, marker: string, value: string) => {
+  if (!source.includes(marker)) throw new Error(`build: index.html has no ${marker}`);
+  return source.replace(marker, () => value);
+};
+let page = placed(html, "<!--site-header-->", siteHeader({ lang: "id", current: "home", converter: true }));
+page = placed(page, "<!--site-footer-->", siteFooter({ lang: "id", version, converter: true }));
+page = placed(page, "</style>", SITE_CSS + "</style>");
 // The page's own text ships in Indonesian (the page is lang="id"): filled in later by main.js, it moved the drop zone.
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const filled = html
+const filled = page
   .replace(/(<(\w+)[^>]*\sdata-i18n="([^"]+)"[^>]*>)<\/\2>/g, (_, open: string, tag: string, key: string) => `${open}${escape(t(key as Key, "id"))}</${tag}>`)
   // The same for accessible names, so the page is complete in the 1.5 s fallback state where main.js never ran.
-  .replace(/\sdata-i18n-label="([^"]+)"/g, (attr: string, key: string) => `${attr} aria-label="${escape(t(key as Key, "id"))}"`);
+  // An element that already names itself (the site nav) keeps its one aria-label.
+  .replace(/<[^>]*\sdata-i18n-label="([^"]+)"[^>]*>/g, (tag: string, key: string) =>
+    /\saria-label=/.test(tag) ? tag : tag.replace(/\sdata-i18n-label="[^"]+"/, (attr) => `${attr} aria-label="${escape(t(key as Key, "id"))}"`),
+  );
 // main.js imports chunks that import further chunks, and the browser finds each level only once the one before it has
 // arrived: three round trips on the live page, which put a slow first visit past the 1.5 s reveal timer (2026-11-14,
 // about 1.6 s from the HTML to ready at 400 ms latency). Preload hints for every chunk main.js imports statically, at
@@ -73,7 +88,6 @@ await cp(join(root, "public"), out, { recursive: true }).catch((e: NodeJS.ErrnoE
 
 // Support pages, both 404 pages and sitemap.xml come from the route table, written after public/ so no file there
 // can replace them.
-const version = ((await Bun.file(join(root, "package.json")).json()) as { version: string }).version;
 await writeSupportPages({ out, contentDir: join(root, "content"), indexHtml: html, version });
 await Bun.write(join(out, "sitemap.xml"), sitemapXml());
 

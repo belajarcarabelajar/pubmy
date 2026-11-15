@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseHTML } from "linkedom";
-import { t } from "../src/i18n.ts";
+import { t, type Key } from "../src/i18n.ts";
+import { SITE_CSS } from "../site/styles.ts";
 
 // PUBMY_INDEX_HTML points the test at another copy of the page; it exists so a mutation proof can run
 // against a scratch copy without touching the real file. The default is the shipped page.
@@ -50,8 +51,9 @@ function parse(text: string, ctx: string[]): Rule[] {
 }
 
 const rules = parse(css, []);
+const siteRules = parse(SITE_CSS, []);
 const DRAWER = "@media(max-width:60rem)";
-const HEADER = "@media(max-width:40rem)";
+const rem = (v: string | undefined): number => Number.parseFloat(v ?? "NaN") * 16;
 
 function declared(body: string, prop: string): string | undefined {
   return new RegExp(`(?:^|;)${prop}:([^;]+)`).exec(body)?.[1]?.trim();
@@ -82,62 +84,66 @@ describe("preview drawer breakpoint", () => {
     for (const r of find(".pv-toc", null)) {
       if (declared(r.body, "position") === "absolute") expect(r.ctx).toEqual([DRAWER]);
     }
-    expect(find(".pv-toc", HEADER)).toHaveLength(0);
   });
 
-  test("the header and language button rules stay in their own 40rem query", () => {
-    const header = find("header", HEADER);
-    expect(header).toHaveLength(1);
-    expect(declared(header[0]!.body, "flex-direction")).toBe("column-reverse");
-    expect(declared(header[0]!.body, "align-items")).toBe("stretch");
-    const lang = find("#lang", HEADER);
-    expect(lang).toHaveLength(1);
-    expect(declared(lang[0]!.body, "align-self")).toBe("flex-end");
-    // the same rules must not also apply from 60rem down
-    expect(find("header", DRAWER)).toHaveLength(0);
-    expect(find("#lang", DRAWER)).toHaveLength(0);
+  test("no hero or site header rule moves into the 60rem drawer query", () => {
+    for (const sel of [".hero", ".hero>div", ".logo", "#lang"]) expect(find(sel, DRAWER)).toHaveLength(0);
+    expect(siteRules.filter((r) => r.ctx.includes(DRAWER))).toEqual([]);
   });
 });
 
-describe("header row above 40rem", () => {
-  // Above 40rem the header is always 38rem (608 px) wide: main is 40rem with 1rem padding. The English
-  // title ("pubmy: turn files into EPUB") needs about 415 px beside the logo in a monospace system font, and
-  // the button reads "Bahasa Indonesia". With 1rem of padding the two did not fit by about 7 px and the
-  // button dropped to its own row (or the title broke before "EPUB"), so the button is slimmer instead.
-  const rem = (v: string | undefined): number => Number.parseFloat(v ?? "NaN") * 16;
-  const brand = find(".brand", "");
-  const lang = find("#lang", "");
+describe("hero row", () => {
+  // Above 40rem main is 40rem with 1rem padding, so the hero row is 38rem (608 px). The language button moved to the
+  // site header, so the title column now has the whole row beside the logo.
+  const hero = find(".hero", "");
 
-  test("the brand column keeps 25rem and the button hugs the right edge", () => {
-    expect(brand).toHaveLength(1);
-    expect(declared(brand[0]!.body, "flex")).toBe("1");
-    expect(declared(brand[0]!.body, "min-width")).toBe("min(100%,25rem)");
-    expect(lang).toHaveLength(1);
-    expect(declared(lang[0]!.body, "margin-left")).toBe("auto");
-    expect(declared(find("header", "")[0]!.body, "flex-wrap")).toBe("wrap");
+  test("the hero is the logo beside a title column that may shrink", () => {
+    expect(hero).toHaveLength(1);
+    expect(declared(hero[0]!.body, "display")).toBe("flex");
+    expect(declared(find(".hero>div", "")[0]?.body ?? "", "min-width")).toBe("0");
   });
 
-  // The 25rem threshold sits between what the title needs and what the button leaves free, so a font a
-  // few pixels wider breaks neither: 8 px of slack on each side.
-  test("beside the longest label the brand column still fits, so the button stays in the title row", () => {
-    const min = /^min\(100%,([\d.]+rem)\)$/.exec(declared(brand[0]!.body, "min-width") ?? "")?.[1];
-    const longest = Math.max(t("lang-toggle", "id").length, t("lang-toggle", "en").length);
-    // monospace glyphs are 0.6em wide at the 1rem button font; border is 1px a side
-    const button = longest * 0.6 * 16 + 2 * rem(declared(lang[0]!.body, "padding-inline")) + 2;
-    const free = 38 * 16 - rem(declared(find("header", "")[0]!.body, "gap")) - button;
-    expect(free - rem(min)).toBeGreaterThanOrEqual(8);
-  });
-
-  test("the longest title fits the brand text column with 8 px to spare, so a slightly wider font does not break it", () => {
-    const min = /^min\(100%,([\d.]+rem)\)$/.exec(declared(brand[0]!.body, "min-width") ?? "")?.[1];
+  test("the longest title fits beside the logo with 8 px to spare, so a slightly wider font does not break it", () => {
     const h1 = find("h1", "");
     expect(h1).toHaveLength(1);
     const longest = Math.max(t("title", "id").length, t("title", "en").length);
+    // monospace glyphs are 0.6em wide; the logo is 40 px wide (index.html width attribute)
     const title = longest * 0.6 * rem(declared(h1[0]!.body, "font-size"));
-    // the logo is 40 px wide (index.html width attribute) and the brand gap is .75rem
-    const column = rem(min) - 40 - rem(declared(brand[0]!.body, "gap"));
+    const column = 38 * 16 - 40 - rem(declared(hero[0]!.body, "gap"));
     expect(column - title).toBeGreaterThanOrEqual(8);
   });
+});
+
+describe("site header row at the menu breakpoint", () => {
+  // From the breakpoint up the five nav links show inline beside the brand and the language button. A row that does
+  // not fit would wrap the button under the links, so the worst case (monospace glyphs at 0.6em) must fit with 8 px
+  // to spare in each language: the Indonesian page shows "English", the English page "Bahasa Indonesia".
+  const wideCtx = siteRules.find((r) => r.sel === ".nav-menu>summary" && declared(r.body, "display") === "none")?.ctx ?? [];
+  const breakpoint = rem(/min-width:([\d.]+rem)/.exec(wideCtx.join("|"))?.[1]);
+  const one = (sel: string, ctx: string[]) => siteRules.find((r) => r.sel === sel && r.ctx.join("|") === ctx.join("|"))?.body ?? "";
+  const second = (v: string | undefined) => rem(v?.split(" ")[1]);
+  const inner = one(".site-header-inner", []);
+  const brand = one(".site-brand", []);
+  const lang = one(".site-header .lang", []);
+
+  test("the menu collapses below a breakpoint in rem", () => {
+    expect(breakpoint).toBeGreaterThan(0);
+  });
+
+  for (const pageLang of ["id", "en"] as const) {
+    test(`${pageLang}: brand, nav links and language button share one row`, () => {
+      const links = ["home", "guide", "formats", "privacy", "cli"].map((k) => t(`nav-${k}` as Key, pageLang));
+      const nav = links.reduce((w, l) => w + l.length * 0.6 * 16 + 2 * second(declared(one(".site-nav a", wideCtx), "padding")), 0) +
+        (links.length - 1) * rem(declared(one(".nav-menu>ul", wideCtx), "gap"));
+      // the logo is 32 px wide (layout.ts width attribute); "pubmy" is the brand text
+      const brandW = 32 + rem(declared(brand, "gap")) + 5 * 0.6 * rem(declared(brand, "font-size"));
+      const label = t("lang-toggle", pageLang);
+      const langW = label.length * 0.6 * rem(declared(lang, "font-size")) + 2 * second(declared(lang, "padding")) + 16 + rem(declared(lang, "gap")) + 2;
+      const row = brandW + nav + langW + 2 * second(declared(inner, "gap"));
+      const available = breakpoint - 2 * second(declared(inner, "padding"));
+      expect(available - row).toBeGreaterThanOrEqual(8);
+    });
+  }
 });
 
 describe("tap-away layer", () => {

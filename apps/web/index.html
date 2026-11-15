@@ -15,16 +15,13 @@ html{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-heigh
 body{margin:0;min-width:320px}
 main{max-width:40rem;margin:0 auto;padding:1rem}
 /* The static text is Indonesian for a desktop pointer; main.js picks the visitor's language and touch wording first. The timer shows the page anyway if the script never runs. */
-html:not(.ready) main{visibility:hidden;animation:reveal 0s 1.5s forwards}
+html:not(.ready) main,html:not(.ready) .site-header,html:not(.ready) .site-footer{visibility:hidden;animation:reveal 0s 1.5s forwards}
 @keyframes reveal{to{visibility:visible}}
-header{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;justify-content:space-between}
-/* The header is 38rem wide above 40rem. The brand needs about 389 px (logo plus the English title in a monospace font) and the slimmer button leaves it 416 px beside "Bahasa Indonesia"; 25rem sits between the two, and a wider font wraps the button to its own row. */
-.brand{display:flex;gap:.75rem;align-items:flex-start;flex:1;min-width:min(100%,25rem)}
-.brand>div{min-width:0}
+/* The language button lives in the site header, so the hero is the logo beside the title block across the full 38rem of main. */
+.hero{display:flex;gap:.75rem;align-items:flex-start}
+.hero>div{min-width:0}
 /* The title block starts with the h1's .25rem top margin; the same offset puts the logo's top edge level with the title. */
 .logo{flex:none;border-radius:.5rem;margin-top:.25rem}
-#lang{flex:none;margin-left:auto;gap:.4rem;padding-block:.25rem;padding-inline:.75rem;border:1px solid var(--border);font-size:.9rem}
-#lang svg{flex:none;width:1rem;height:1rem}
 h1{font-size:1.3rem;margin:.25rem 0}
 p{margin:.25rem 0 .75rem}
 .muted{color:var(--muted);font-size:.9rem}
@@ -105,24 +102,18 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
 .pv-arrow{flex:none;align-self:center;width:44px;padding:0;justify-content:center;background:transparent;border:0;color:#ececf1;font-size:2rem}
 /* The list slides over the page below 60rem; keep this width equal to PREVIEW_NARROW in src/main.ts. The tap-away layer sits under the list (z-index 1 < 2) and over the page. */
 @media (max-width:60rem){.pv-toc{position:absolute;inset:0 auto 0 0;width:min(85%,18rem);z-index:2;background:#17181c;box-shadow:4px 0 16px #0008}.pv-toc:not([hidden])~.pv-stage{position:relative}.pv-toc:not([hidden])~.pv-stage::after{content:"";position:absolute;inset:0;z-index:1;background:#0006}}
-@media (max-width:40rem){header{flex-direction:column-reverse;align-items:stretch}#lang{align-self:flex-end}}
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <div class="brand">
-      <img class="logo" src="./icon.svg" alt="" width="40" height="40">
-      <div>
-        <h1 data-i18n="title">pubmy: ubah file jadi EPUB</h1>
-        <p class="muted" data-i18n="tagline"></p>
-      </div>
+<!--site-header-->
+<main id="content">
+  <div class="hero">
+    <img class="logo" src="./icon.svg" alt="" width="40" height="40">
+    <div>
+      <h1 data-i18n="title">pubmy: ubah file jadi EPUB</h1>
+      <p class="muted" data-i18n="tagline"></p>
     </div>
-    <button type="button" id="lang" class="ghost">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a4 9 0 1 0 0 18a4 9 0 1 0 0-18z"/></svg>
-      <span id="lang-label" data-i18n="lang-toggle"></span>
-    </button>
-  </header>
+  </div>
   <p class="privacy-badge">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
     <span data-i18n="privacy"></span>
@@ -160,6 +151,7 @@ button:disabled{border-color:var(--disabled-bg);color:var(--muted);cursor:defaul
   <p id="kindle-hint" class="muted" data-i18n="kindle-hint" hidden></p>
   <p id="live" class="sr-only" role="status" aria-live="polite"></p>
 </main>
+<!--site-footer-->
 <dialog id="preview" class="preview" aria-labelledby="pv-title">
   <div class="pv">
     <div class="pv-bar">
