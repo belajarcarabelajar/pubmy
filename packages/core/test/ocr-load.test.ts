@@ -5,6 +5,21 @@ import { join } from "node:path";
 
 const src = join(import.meta.dir, "../src");
 
+// The website promises it keeps nothing in the browser but the language choice. tesseract.js writes its language
+// data to IndexedDB unless cacheMethod is "none" (worker-script/index.js reads the cache unless "refresh" or "none",
+// and writes it for "write", "refresh" or no value), so the browser loader must pass "none".
+describe("loadOcrBrowser", () => {
+  test("asks tesseract.js neither to read nor to write its language cache", async () => {
+    const { loadOcrBrowser } = await import("../src/ocr/load.ts");
+    let seen: Record<string, unknown> | undefined;
+    const fakeWorker = { recognize: async () => ({ data: { text: "", confidence: 0 } }), terminate: async () => {} };
+    const load = async () => ({ createWorker: async (_langs: string, _oem: number, options: Record<string, unknown>) => ((seen = options), fakeWorker) }) as never;
+    const ocr = await loadOcrBrowser({ workerPath: "/w.js", corePath: "/core/", langPath: "/lang" }, load);
+    await ocr.terminate();
+    expect(seen).toEqual({ workerPath: "/w.js", corePath: "/core/", langPath: "/lang", cacheMethod: "none" });
+  });
+});
+
 // tesseract.js decides browser or node once, when it is first loaded, so this runs in a fresh process:
 // in the shared test process an earlier file may already have loaded it.
 describe("loadOcrBun", () => {
