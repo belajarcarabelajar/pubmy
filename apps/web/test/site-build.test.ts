@@ -224,7 +224,23 @@ describe("renderContent", () => {
 
   test("wraps every table so it scrolls on a narrow screen", () => {
     const html = renderContent("| a | b |\n|---|---|\n| 1 | 2 |", {});
-    expect(html).toMatch(/^<div class="table-wrap"><table class="stack">[\s\S]*<\/table>\n?<\/div>/);
+    expect(html).toMatch(/^<div class="table-wrap"><table class="stack"[^>]*>[\s\S]*<\/table>\n?<\/div>/);
+  });
+
+  test("a stacked table keeps its table semantics through explicit ARIA roles", () => {
+    const html = renderContent("| Format | Engine |\n|---|:-:|\n| PDF | Calibre |\n| DOCX | Pandoc |", {});
+    const tags = (name: string) => [...html.matchAll(new RegExp(`<${name}(?:\\s[^>]*)?>`, "g"))].map((m) => m[0]);
+    const role = (tag: string) => tag.match(/ role="([^"]*)"/)?.[1];
+    expect(tags("table").map(role)).toEqual(["table"]);
+    expect(tags("table")[0]).toContain('class="stack"');
+    expect(tags("thead").map(role)).toEqual(["rowgroup"]);
+    expect(tags("tbody").map(role)).toEqual(["rowgroup"]);
+    expect(tags("tr").map(role)).toEqual(["row", "row", "row"]);
+    expect(tags("th").map(role)).toEqual(["columnheader", "columnheader"]);
+    const tds = tags("td");
+    expect(tds.map(role)).toEqual(["cell", "cell", "cell", "cell"]);
+    expect(tds.map((t) => t.match(/ data-label="([^"]*)"/)?.[1])).toEqual(["Format", "Engine", "Format", "Engine"]);
+    expect(html).toContain('<div class="table-wrap">');
   });
 
   test("external links get rel noopener and internal links do not", () => {

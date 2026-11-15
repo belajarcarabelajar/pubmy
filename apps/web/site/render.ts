@@ -44,22 +44,37 @@ md.core.ruler.push("heading_ids", (state) => {
 });
 
 // A phone shows a table with a header row as one block per row, each cell under its column name (SITE_CSS).
+// That CSS sets display:block on table, tbody, tr and td, which can drop the table semantics for a screen
+// reader, so every element of a stacked table also gets its ARIA role.
+const STACK_ROLES: Record<string, string> = {
+  thead_open: "rowgroup",
+  tbody_open: "rowgroup",
+  tr_open: "row",
+  th_open: "columnheader",
+  td_open: "cell",
+};
 md.core.ruler.push("table_labels", (state) => {
   const tokens = state.tokens;
   let table: Tokens[number] | undefined;
   let heads: string[] = [];
   let inHead = false;
+  let stacked = false;
   let col = 0;
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i]!;
-    if (tok.type === "table_open") [table, heads] = [tok, []];
+    if (tok.type === "table_open") [table, heads, stacked] = [tok, [], false];
+    else if (tok.type === "table_close") stacked = false;
     else if (tok.type === "thead_open") {
       inHead = true;
+      stacked = true;
       table?.attrJoin("class", "stack");
+      table?.attrSet("role", "table");
     } else if (tok.type === "thead_close") inHead = false;
     else if (tok.type === "tr_open") col = 0;
     else if (tok.type === "th_open" && inHead) heads.push(plainText(tokens, i));
     else if (tok.type === "td_open" && heads.length) tok.attrSet("data-label", heads[col++] ?? "");
+    const role = stacked ? STACK_ROLES[tok.type] : undefined;
+    if (role) tok.attrSet("role", role);
   }
 });
 
