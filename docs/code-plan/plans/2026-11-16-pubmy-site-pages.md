@@ -48,7 +48,7 @@ tasks:
   - id: T3
     depends_on: [T1, T2]
     impacts: ["build output every web test reads - rg -ln 'build.ts' apps/web/test", "sitemap and robots consumers - bun test apps/web/test/sitemap.test.ts", "Workers asset routing for unknown paths - rg -n 'not_found_handling' apps/web/wrangler.jsonc", "frozen lockfile in CI and colab runs (M1) - git diff --stat origin/main -- bun.lock apps/web/package.json", "release asset check script - rg -n 'dist' apps/web/scripts/check-assets.ts"]
-    files: { create: ["apps/web/site/render.ts", "apps/web/src/site.ts", "apps/web/test/site-build.test.ts"], modify: ["apps/web/build.ts", "apps/web/package.json", "bun.lock", "apps/web/wrangler.jsonc", "apps/web/test/sitemap.test.ts", "apps/web/public/sitemap.xml"], test: [] }
+    files: { create: ["apps/web/site/render.ts", "apps/web/site/pages.ts", "apps/web/src/site.ts", "apps/web/test/site-build.test.ts"], modify: ["apps/web/build.ts", "apps/web/package.json", "bun.lock", "apps/web/wrangler.jsonc", "apps/web/test/sitemap.test.ts", "apps/web/public/sitemap.xml"], test: [] }
     idempotency_key: "T3:page-renderer"
     skip_if: "HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-build.test.ts apps/web/test/sitemap.test.ts"
     verify_exit: 0
@@ -65,7 +65,7 @@ tasks:
   - id: T4
     depends_on: [T3]
     impacts: ["converter header tests pinned to the old header - rg -n 'header|brand|h1|id=.lang' apps/web/test/front-page.test.ts apps/web/test/preview-layout.test.ts apps/web/test/first-paint.test.ts", "theme tests read the first :root of index.html - bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts", "main.ts applyLang rewrites every data-i18n node - rg -n 'applyLang|data-i18n' apps/web/src/main.ts", "README website section and screenshot - rg -n 'Website' README.md"]
-    files: { create: ["apps/web/test/site-converter.test.ts", "apps/web/src/site-links.ts"], modify: ["apps/web/index.html", "apps/web/src/main.ts", "apps/web/src/i18n.ts", "apps/web/build.ts", "apps/web/test/front-page.test.ts", "apps/web/test/first-paint.test.ts", "apps/web/test/preview-layout.test.ts", "README.md"], test: [] }
+    files: { create: ["apps/web/test/site-converter.test.ts", "apps/web/src/site-links.ts"], modify: ["apps/web/index.html", "apps/web/src/main.ts", "apps/web/src/i18n.ts", "apps/web/build.ts", "apps/web/test/front-page.test.ts", "apps/web/test/first-paint.test.ts", "apps/web/test/preview-layout.test.ts", "apps/web/test/wiring.test.ts", "README.md"], test: [] }
     idempotency_key: "T4:converter-integration"
     skip_if: "HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-converter.test.ts apps/web/test/front-page.test.ts apps/web/test/first-paint.test.ts apps/web/test/preview-layout.test.ts"
     verify_exit: 0
@@ -79,8 +79,22 @@ tasks:
       - cmd: "HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/i18n.test.ts apps/web/test/readme-web.test.ts"
         expect_exit: 0
         retry: 1
-  - id: TV
+  - id: T5
     depends_on: [T4]
+    impacts: ["converter bundle weight and first paint - ls -l apps/web/dist/main.js after bun run --cwd apps/web build", "every built page header, footer and table - bun test apps/web/test/site-build.test.ts apps/web/test/site-converter.test.ts", "i18n keys the converter header reads - rg -n 'SITE_LABELS|nav-' apps/web/src/i18n.ts"]
+    files: { create: ["apps/web/site/labels.ts", "apps/web/test/site-polish.test.ts"], modify: ["apps/web/site/layout.ts", "apps/web/site/styles.ts", "apps/web/site/render.ts", "apps/web/site/routes.ts", "apps/web/src/i18n.ts", "apps/web/test/site-layout.test.ts", "apps/web/test/site-build.test.ts"], test: [] }
+    idempotency_key: "T5:phone-polish-and-bundle"
+    skip_if: "HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts"
+    verify_exit: 0
+    run:
+      - cmd: "HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts"
+        expect_exit: 1
+        retry: 0
+      - cmd: "HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts apps/web/test/site-layout.test.ts apps/web/test/site-build.test.ts apps/web/test/site-converter.test.ts apps/web/test/first-paint.test.ts apps/web/test/front-page.test.ts"
+        expect_exit: 0
+        retry: 1
+  - id: TV
+    depends_on: [T5]
     impacts: ["whole web app and its build - bun test apps/web/test", "core package untouched by this plan - git diff --stat origin/main -- packages apps/cli skills"]
     files: { create: [], modify: [], test: [] }
     idempotency_key: "TV:full-verification"
@@ -117,20 +131,21 @@ tasks:
 - [x] Plan validated (`ultra-plan-runner.mjs` Validation: OK) and published at Draft (`plan-sync.mjs`: publish exit 0, issue-sync exit 0, belajarcarabelajar/pubmy#38)
 - [x] Spec and plan approved (`Spec` and `Plan` gates: owner chose "Approve spec and plan", AskUserQuestion 2026-11-16)
 - [x] Workspace ready: `bun install --frozen-lockfile` exit 0 in the session worktree (121 packages, 2026-11-16)
-- [ ] T1 site core: route and layout tests exit 0
-- [ ] T2 content and limits: content test exit 0, converter tests exit 0
-- [ ] T3 page renderer: build and sitemap tests exit 0
-- [ ] T4 converter integration: converter, front-page, first-paint, layout tests exit 0
-- [ ] TV verification: web suite, typecheck, build, asset check exit 0
-- [ ] Visual check: headless Chromium screenshots of the built site at phone, tablet and desktop widths, viewed by the parent (owner opted in at the Plan gate, A42)
-- [ ] Parent diff audit and independent review (reviewer subagent report, findings resolved)
+- [x] T1 site core: route and layout tests exit 0 (parent re-run: 77 pass, 0 fail, exit 0; typecheck exit 0; commit e5377c3)
+- [x] T2 content and limits: content test exit 0, converter tests exit 0 (parent re-run of content, epub-open-wiring, wiring, countdown, queue: 113 pass, 0 fail, exit 0; commit 2165865)
+- [x] T3 page renderer: build and sitemap tests exit 0 (parent re-run: site-build + sitemap 127 pass, 0 fail, exit 0; build-output, headers, modulepreload, assets 30 pass, 1 skip (live-only), 0 fail, exit 0; `site/pages.ts` added to files.create)
+- [x] T4 converter integration: converter, front-page, first-paint, layout tests exit 0 (parent re-run: 71 pass + 88 pass, exit 0; whole web folder 839 pass, 1 skip, 0 fail, exit 0; wiring.test.ts fixed by the parent; commit 6ba506c)
+- [x] T5 phone polish and bundle weight (+1 item, from the screenshot check and the T4 report): polish test exit 0, built main.js back near its pre-T4 size (parent re-run of the six T5 test files: 245 pass, 0 fail, exit 0; built main.js 23,380 bytes vs 21,898 before T4 and 30,661 after; commit 73ee02c)
+- [x] TV verification: web suite, typecheck, build, asset check exit 0 (`ultra-plan-runner.mjs --execute` exit 0: T1-T5 SKIPPED-IDEMPOTENT on skip_if exit 0, TV PASSED; log kept as runner evidence)
+- [x] Visual check: headless Chromium screenshots of the built site at phone, tablet and desktop widths, viewed by the parent (owner opted in at the Plan gate, A42). Chromium 156 headless: guide 1280, formats 390, 404 1280, privacy 768, converter 1280 and 390, before and after T5; the T3 shots found the phone header wrap, squeezed table and floating footer that T5 fixed
+- [x] Parent diff audit and independent review (reviewer subagent report, findings resolved): staid verdict "correct", no blocking finding; should-fix (converter link did not carry the page language) and the CLI report nit fixed in fc8a754 with a RED test first (exit 1, then exit 0); whole web folder 864 tests, 1 skip, 0 fail, exit 0; typecheck exit 0; copy rules clean (exit 0, merge-base 5e5feb2); remaining nits go to the debt sweep
 - [ ] Commit on the session branch and PR opened (`Refs #<issue>`)
 - [ ] Session-close debt sweep
 
 **Goal:** turn the pubmy website from one converter page into a multi-page site with seven bilingual support pages, 404 pages, and one site header and footer shared by every page.
 **Architecture:** a route table and a pure layout module render the site header, the site footer and each support page; `build.ts` renders every route in both languages from Markdown content, writes the 404 pages and a generated sitemap, and injects the same header and footer into the converter page, whose client-side language toggle switches them with the rest of the page.
 **Tech Stack:** Bun 1.4.4, TypeScript 7, Bun.build, markdown-it 15 (already in `bun.lock` through `@pubmy/core`), linkedom for tests, Cloudflare Workers static assets (wrangler 4.162.0).
-**Active Project Profile:** repository `~/Proyek/pubmy` (session worktree `/mnt/belajarcarabelajar/pubmy-wt/pubmy-site-pages`, branch `2026-11-16-pubmy-site-pages/pubmy-site-pages` from `origin/main` 5e5feb2); target `apps/web`; config read from `package.json`, `apps/web/package.json`, `apps/web/build.ts`, `apps/web/wrangler.jsonc`, `apps/web/public/_headers`, `tsconfig.json`, `MEMORY.md`, `GLOSSARY.md`.
+**Active Project Profile:** repository `~/Proyek/pubmy` (session worktree `/mnt/belajarcarabelajar/wt/pubmy-wt/pubmy-site-pages`, branch `2026-11-16-pubmy-site-pages/pubmy-site-pages` from `origin/main` 5e5feb2); target `apps/web`; config read from `package.json`, `apps/web/package.json`, `apps/web/build.ts`, `apps/web/wrangler.jsonc`, `apps/web/public/_headers`, `tsconfig.json`, `MEMORY.md`, `GLOSSARY.md`.
 **Project Commands:** test `bun test <file>` (bun:test); typecheck `bun run typecheck` (root, `tsc --noEmit`); build `bun run --cwd apps/web build` (`bun build.ts [outdir]`); asset check `bun run --cwd apps/web check:assets`; deploy `bunx wrangler deploy` from `apps/web` (not part of this plan). No lint script exists. Heavy commands run locally with `HEAVY_LOCAL=pubmy-site-pages` (the instabox box is Snipset-only since 2026-11-14, so `colab-test` refuses this repo; MEMORY.md M1's colab note is stale here).
 **Protected Boundaries:** `packages/core`, `apps/cli`, `skills/pubmy` are not touched (TV checks with `git diff --quiet`); `apps/web/public/_headers` CSP unchanged; the first `:root` and the dark block in `index.html` stay the single source of colour tokens (theme tests); `html:not(.ready) main` hide rule and its 1.5 s timer stay; no inline `<script>`, no stylesheet link, no web font.
 **Spec:** `docs/code-plan/specs/2026-11-16-pubmy-site-pages-design.md`
@@ -148,7 +163,8 @@ flowchart TD
     T1 --> T3["T3 page renderer, 404, sitemap"]
     T2 --> T3
     T3 --> T4["T4 converter page integration"]
-    T4 --> TV["TV full verification"]
+    T4 --> T5["T5 phone polish and bundle weight"]
+    T5 --> TV["TV full verification"]
     TV --> D(["PR and debt sweep"])
 ```
 
@@ -182,6 +198,7 @@ sequenceDiagram
 - [ ] AC-7: `wrangler.jsonc` sets `not_found_handling` to `404-page`, and `404.html` and `en/404.html` ship with the header and footer.
 - [ ] AC-8: the converter page carries the same site header and footer; its first paint stays hidden until `main.js` applies the language, now including header and footer, and the static page is complete with Indonesian labels when the script never runs.
 - [ ] AC-9: the language switch on a support page links to the twin page and `site.js` stores the choice under `pubmy.lang`; on the converter page `applyLang` switches header and footer labels and link targets.
+- [ ] AC-11: on a phone the language control shares the header row with the menu button, tables stack into labelled rows, the footer sits at the bottom of short pages and carries the brand, and the converter bundle carries neither the site CSS nor the route descriptions.
 - [ ] AC-10: the whole web suite, typecheck, build and asset check exit 0, and `packages`, `apps/cli`, `skills` are unchanged.
 
 **Traceability:**
@@ -193,6 +210,7 @@ sequenceDiagram
 | AC-5 | T2 | `bun test apps/web/test/site-content.test.ts` | every page in both languages, allowed tokens only |
 | AC-4, AC-6, AC-7 | T3 | `bun test apps/web/test/site-build.test.ts apps/web/test/sitemap.test.ts` | built files, links, sitemap, 404s, wrangler key |
 | AC-8, AC-9 | T4 | `bun test apps/web/test/site-converter.test.ts apps/web/test/first-paint.test.ts` | converter header, hide rule, applyLang wiring |
+| AC-11 | T5 | `bun test apps/web/test/site-polish.test.ts` | built main.js free of site CSS and descriptions, data-label cells, compact language control, footer brand |
 | AC-10 | TV | `bun test apps/web/test` and `bun run typecheck` | exit 0 for each command |
 
 **Assumptions & Open Questions:**
@@ -346,6 +364,23 @@ sequenceDiagram
 - [ ] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-converter.test.ts apps/web/test/front-page.test.ts apps/web/test/first-paint.test.ts apps/web/test/preview-layout.test.ts` | expect: exit 0 | retry: 1
 - [ ] Step 5: Run regression | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/theme.test.ts apps/web/test/theme-dark.test.ts apps/web/test/theme-tints.test.ts apps/web/test/i18n.test.ts apps/web/test/readme-web.test.ts` | expect: exit 0 | retry: 1
 - [ ] Step 6: parent commits `feat(web): site header and footer on the converter page`
+
+### Task T5: Phone polish and converter bundle weight
+
+Added 2026-11-16 during execution: the parent's screenshot check of the T3 build (Chromium 156 headless, 390 px and 1280 px) showed the language control wrapping to a second header row on a phone, the formats table squeezed into thin columns, and the footer floating mid-screen on the short 404 page; the T4 report measured the built `main.js` at 30,661 bytes against 21,898 before T4, because `i18n.ts` now imports `site/layout.ts` (site CSS) and `site/routes.ts` (titles and descriptions).
+
+**Files:**
+- Create: `apps/web/site/labels.ts` (`SITE_LABELS` and the nav labels only, no CSS, no titles or descriptions), `apps/web/test/site-polish.test.ts`
+- Modify: `apps/web/site/layout.ts`, `apps/web/site/styles.ts`, `apps/web/site/render.ts`, `apps/web/site/routes.ts`, `apps/web/src/i18n.ts`, `apps/web/test/site-layout.test.ts`, `apps/web/test/site-build.test.ts`
+**Behavior & Acceptance:** AC-11.
+**Edge Cases & Failure Behavior:** the language control keeps its full accessible name when its visible text is the short code; a table without a header row keeps its plain layout.
+**Deliberate Shortcuts & Deferrals:** None.
+**Review & Evidence:** polish test exit 0, the listed regression tests exit 0, built `main.js` size reported before and after, screenshots repeated by the parent.
+- [ ] Step 1: write `site-polish.test.ts`
+- [ ] Step 2: Run RED | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts` | expect: exit 1 | retry: 0
+- [ ] Step 3: implement
+- [ ] Step 4: Run GREEN | cmd: `HEAVY_LOCAL=pubmy-site-pages timeout 600 bun test apps/web/test/site-polish.test.ts apps/web/test/site-layout.test.ts apps/web/test/site-build.test.ts apps/web/test/site-converter.test.ts apps/web/test/first-paint.test.ts apps/web/test/front-page.test.ts` | expect: exit 0 | retry: 1
+- [ ] Step 5: parent commits `fix(web): phone header, stacked tables, footer placement and converter bundle weight`
 
 ### Task TV: Full verification
 
