@@ -54,7 +54,7 @@ describe("release", () => {
     const check = index((s) => s.run?.includes('bun scripts/release-check.ts "$GITHUB_REF_NAME" dist/pubmy-skill.zip') ?? false);
     const release = index((s) => s.run?.includes("gh release create") ?? false);
 
-    expect(steps[setupBun]?.with?.["bun-version"]).toBe("1.4.4");
+    expect(steps[setupBun]?.with?.["bun-version"]).toBe("1.4.5");
     expect([checkout, setupBun, install, pack, check, release].every((i) => i >= 0)).toBe(true);
     expect(checkout < setupBun && setupBun < install && install < pack && pack < check && check < release).toBe(true);
     expect(steps[check]!.name).toBe("Check version and smoke-test the zip");
